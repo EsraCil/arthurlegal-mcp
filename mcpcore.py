@@ -16,6 +16,10 @@ There is **no authentication**. Binding to a public interface exposes every
 tool to anyone who can reach the port; that is an explicit opt-in via
 ``--host 0.0.0.0``.
 
+Opt-in observation hooks (``SESSION_IDS``, ``BILDIRIM_KANCASI``, ``istek_baglami``)
+are inert by default: unless an embedding application turns them on, responses
+and headers are exactly what they were without them.
+
 Usage
 -----
     from mcpcore import Tool, run
@@ -30,11 +34,13 @@ import argparse
 import json
 import os
 import sys
+import threading
 import traceback
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
-__all__ = ["Tool", "McpError", "run", "run_stdio", "run_http", "build_parser"]
+__all__ = ["Tool", "McpError", "run", "run_stdio", "run_http", "build_parser", "istek_baglami"]
 
 # Cap the JSON-RPC request body: without this a single Content-Length header can
 # drive the process out of memory.
@@ -43,6 +49,41 @@ _MAX_BODY = 4_000_000
 # Protocol revisions we can speak; we echo the client's if we recognise it.
 _SUPPORTED_PROTOCOLS = ("2025-06-18", "2025-03-26", "2024-11-05")
 _DEFAULT_PROTOCOL = "2025-06-18"
+
+# --------------------------------------------------------------------------- #
+# Opt-in request context and hooks — all inert unless an application sets them #
+# --------------------------------------------------------------------------- #
+# When True, an HTTP POST carrying an ``initialize`` request and no
+# ``Mcp-Session-Id`` header is answered with a fresh id in that header. Ids are
+# never validated or required afterwards: after a restart the server cannot know
+# yesterday's ids, and rejecting them would break every connected client for the
+# sake of a label. The id exists only so an observer can tell two clients'
+# JSON-RPC ids apart (each client numbers its requests from 1).
+SESSION_IDS = False
+
+# When set, called with every notification (method present, id absent) just
+# before it is dropped. Nothing else in the protocol reports that a client gave up
+# on a call; ``notifications/cancelled`` arrives here or nowhere. A failing hook
+# costs one stderr line, never the session.
+BILDIRIM_KANCASI: Optional[Callable[[Dict[str, Any]], Any]] = None
+
+# ThreadingHTTPServer serves each connection on its own thread and a connection
+# carries its requests one after another, so a thread-local holds exactly the
+# request being handled. stdio is one thread and has no session.
+_baglam = threading.local()
+
+
+def istek_baglami() -> Dict[str, Any]:
+    """The request being handled on this thread: ``session_id`` and ``request_id``.
+
+    ``session_id`` is the incoming ``Mcp-Session-Id`` header or the id just issued
+    to an ``initialize`` (None under stdio, or when the client sent none);
+    ``request_id`` is the JSON-RPC id of the message being dispatched (None for a
+    notification). Meaningful inside a tool handler or a hook; read anywhere
+    else it may still describe the previous request.
+    """
+    return {"session_id": getattr(_baglam, "session_id", None),
+            "request_id": getattr(_baglam, "request_id", None)}
 
 
 class McpError(Exception):
@@ -112,9 +153,17 @@ class Dispatcher:
         method = msg.get("method")
         msg_id = msg.get("id")
         params = msg.get("params") or {}
+        _baglam.request_id = msg_id
 
         # Notifications carry no id and get no response.
         if method is not None and msg_id is None:
+            kanca = BILDIRIM_KANCASI
+            if kanca is not None:
+                try:
+                    kanca(msg)
+                except Exception as exc:  # noqa: BLE001 - an observer must not break the session
+                    sys.stderr.write("mcpcore: notification hook failed (%s)\n"
+                                     % type(exc).__name__)
             return None
 
         if method == "initialize":
@@ -211,12 +260,36 @@ def _make_handler(dispatcher: Dispatcher):
             if os.environ.get("MCP_DEBUG"):
                 sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
-        def _send(self, code: int, body: bytes, ctype: str = "application/json") -> None:
+        def _send(self, code: int, body: bytes, ctype: str = "application/json",
+                  extra_headers: Optional[List[Tuple[str, str]]] = None) -> None:
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
+            for key, value in extra_headers or ():
+                self.send_header(key, value)
             self.end_headers()
             self.wfile.write(body)
+
+        def _oturum(self, msg: Any) -> Optional[List[Tuple[str, str]]]:
+            """Put this POST's session on the thread; return the header to issue, if any.
+
+            The incoming ``Mcp-Session-Id`` is taken as is, never checked. A new id is
+            issued only when ``SESSION_IDS`` is on, the client sent none, and the body
+            (or a batch member) is an ``initialize`` request — the one response a
+            client reads the header from.
+            """
+            gelen = self.headers.get("Mcp-Session-Id") or None
+            _baglam.session_id = gelen
+            _baglam.request_id = None
+            if not SESSION_IDS or gelen:
+                return None
+            mesajlar = msg if isinstance(msg, list) else [msg]
+            if not any(isinstance(m, dict) and m.get("method") == "initialize"
+                       and m.get("id") is not None for m in mesajlar):
+                return None
+            yeni = uuid.uuid4().hex
+            _baglam.session_id = yeni
+            return [("Mcp-Session-Id", yeni)]
 
         def do_GET(self):  # noqa: N802
             if self.path.rstrip("/") in ("/health", "/healthz"):
@@ -256,12 +329,13 @@ def _make_handler(dispatcher: Dispatcher):
                 body = json.dumps(_err(None, -32700, "Parse error")).encode("utf-8")
                 self._send(400, body)
                 return
+            oturum_basligi = self._oturum(msg)
 
             # A batch is a list; answer each and drop notification nulls.
             if isinstance(msg, list):
                 out = [r for r in (dispatcher.handle(m) for m in msg) if r is not None]
                 body = json.dumps(out, ensure_ascii=False, default=str).encode("utf-8")
-                self._send(200, body)
+                self._send(200, body, extra_headers=oturum_basligi)
                 return
 
             response = dispatcher.handle(msg)
@@ -272,7 +346,7 @@ def _make_handler(dispatcher: Dispatcher):
                 self.end_headers()
                 return
             body = json.dumps(response, ensure_ascii=False, default=str).encode("utf-8")
-            self._send(200, body)
+            self._send(200, body, extra_headers=oturum_basligi)
 
     return Handler
 

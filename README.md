@@ -163,6 +163,36 @@ Without a key the server still answers, on BM25 and fuzzy matching, and every
 response says `semantic: "off"` rather than passing a keyword match off as a
 conceptual one.
 
+## Denetim logu (yalnız test uygulaması)
+
+`AUDIT_LOG=1` ile açılan ağ geçidi, modelin "Madde kontrolü: … okundu" beyanını bağımsız bir
+kayıtla karşılaştırmak için her araç çağrısını tek satırlık bir JSON kaydı olarak HER ZAMAN
+standart hata (stderr) akışına yazar: fly logs stdout ile stderr'i birlikte toplar, stdio'da
+protokol kanalı (stdout) temiz kalır. Kayıt satırları `{"olay":` ile başlar; tüketiciler bu öneke
+göre süzer (stderr'de sunucunun başka satırları da vardır). Ayrıntı: `denetim.py`.
+
+- `olay: "cagri"`: `ts`, `session_id`, `request_id`, `tool`, `params`, `resolved`
+  (`tr_mevzuat_madde_getir`: kanun/madde/ok/mulga/durum; `durum` arka ucun ham madde durumu,
+  `mulga` yalnız `durum == "repealed"`; `tr_mevzuat_getir`: kanun/mevzuat_id), `pages` (sayfa,
+  toplam, ilk-son madde), `mulga`, `status` (ok, partial, error, rate_limited, upstream_blocked,
+  unavailable), `duration_ms`, `sure_siniri_asildi` (≥ 100 sn: Claude.ai çağrıyı keser),
+  `backend_version`, `returned` (modele giden metnin sha256'sı ve ilk 300 karakteri; yalnız
+  `denetim.DONEN_ARACLAR`'daki belge getiren araçlarda, arama araçlarında null).
+- `olay: "iptal"`: `notifications/cancelled`; çağrıyla `session_id` + `request_id` ile eşleşir.
+- Maskeleme: serbest metin ve adlar (`query`, `q`, `keyword(s)`, `initial_keyword`,
+  `heading_query`, `search`, `phrase`, `text`, `terms`, `title`, `name`, `subject`, `company_name`,
+  `corporate_group`, `city`, `konu`, `iddia`, `metin`, `sorgu`, `baslik`, `icerik`; adında
+  query/keyword/search geçen her anahtar) `{"maskeli": true, "uzunluk": N}` olur; `tkgm_`
+  araçlarında bütün değerler maskelidir. İstemcinin `session_id`, `request_id`, `reason`
+  metinleri en çok 200 karakter yazılır.
+- Yalnız açıkken `initialize` yanıtı `Mcp-Session-Id` başlığı taşır (kimlik doğrulanmaz,
+  bilinmeyen kimlik reddedilmez). Kapalıyken başlık yoktur, yanıtlar bayt bayt aynıdır.
+
+**Herkese açık uygulamada kapalı kalmalı.** Yalnız ayrı test uygulamasında:
+
+    fly secrets set AUDIT_LOG=1 -a <test-app>
+    fly logs -a <test-app> | grep '{"olay":'
+
 ---
 
 Source: [github.com/beerbottle90/arthurlegal-mcp](https://github.com/beerbottle90/arthurlegal-mcp)

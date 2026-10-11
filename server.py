@@ -687,4 +687,10 @@ if __name__ == "__main__":
         sys.stderr.write(" (%d backend yüklenemedi: %s)"
                          % (len(_failed), ", ".join(f["prefix"] for f in _failed)))
     sys.stderr.write("\n")
+    # Denetim logu yalnız test uygulamasında açılır (README: "Denetim logu"). Kapalıyken bu
+    # blok hiç çalışmaz: araçlar sarılmaz, oturum kimliği verilmez, yanıtlar aynı kalır.
+    if os.environ.get("AUDIT_LOG") == "1":
+        import denetim
+        _tools[:] = denetim.etkinlestir(_tools, denetim.arka_uc_surumleri(_loaded), __version__)
+        sys.stderr.write("arthurlegal-mcp: denetim logu AÇIK (AUDIT_LOG=1)\n")
     run(_tools, name="arthurlegal-mcp", version=__version__, instructions=text)
