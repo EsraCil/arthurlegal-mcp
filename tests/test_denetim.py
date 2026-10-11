@@ -51,7 +51,7 @@ TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
 KAYIT_ONEKI = '{"olay":'
 CAGRI_ALANLARI = ["olay", "ts", "session_id", "request_id", "tool", "params", "resolved",
                   "pages", "mulga", "status", "duration_ms", "sure_siniri_asildi",
-                  "backend_version", "returned"]
+                  "backend_version", "returned", "kimlikler"]
 IPTAL_ALANLARI = ["olay", "ts", "session_id", "request_id", "reason"]
 
 
@@ -564,8 +564,9 @@ class CagriKaydiTest(_Temel):
         self.assertEqual([k["backend_version"] for k in (k1, k2, k3)], ["0.5.1", "1.0.1", "1.0.1"])
         self.assertEqual(set(k1["returned"]), {"sha256", "ilk"})
         for k in (k2, k3):
-            self.assertEqual((k["resolved"], k["pages"], k["mulga"], k["returned"], k["status"]),
-                             (None, None, None, None, "ok"))
+            self.assertEqual((k["resolved"], k["pages"], k["mulga"], k["status"]),
+                             (None, None, None, "ok"))
+            self.assertEqual(set(k["returned"]), {"sha256", "ilk"})
 
     def test_arac_tanimi_ayni_yalniz_handler_sarili(self):
         h = lambda a: "x"  # noqa: E731
@@ -636,6 +637,7 @@ class CagriKaydiTest(_Temel):
         for hedef, basarili, istisnali in (("_yaz", 1, 1), ("_parametreler", 1, 1),
                                            ("_simdi", 1, 1), ("_cozulenler", 1, 0),
                                            ("_durum_sinifla", 1, 0), ("_donen", 1, 0),
+                                           ("_kimlikler", 1, 0),
                                            ("_hata_durumu", 0, 1)):
             with self.subTest(bozulan=hedef):
                 tools = self.ac([_arac("tr_mevzuat_madde_getir", deger),
@@ -693,76 +695,24 @@ class CagriKaydiTest(_Temel):
 # --------------------------------------------------------------------------- #
 # Maskeleme                                                                    #
 # --------------------------------------------------------------------------- #
-class MaskelemeTest(_Temel):
+class ParametreTest(_Temel):
+    """Maskeleme yok: test uygulamasında arama metni dahil her argüman olduğu gibi yazılır."""
 
-    @staticmethod
-    def m(n):
-        return {"maskeli": True, "uzunluk": n}
-
-    def test_serbest_metin_maskelenir_digerleri_kalir(self):
-        args = {"query": "müvekkil Ahmet", "q": "x", "keyword": "kira", "keywords": ["a", "bb"],
-                "initial_keyword": "önalım", "heading_query": "önalım hakkı", "search": "s",
-                "phrase": "tam cümle", "text": "metin", "konu": "enerji", "iddia": "iddia metni",
-                "Query": "BÜYÜK", "my_query_x": "z", "keyword_list": ["k"], "search_in": "fulltext",
-                "number": "6769", "madde_no": ["120", "geçici 1"], "page": 2, "madde_id": "1651731",
-                "courts": ["YARGITAYKARARI"], "date_from": "2024-01-01", "mevzuat_id": "104221"}
+    def test_parametreler_oldugu_gibi(self):
+        args = {"query": "müvekkil Ahmet", "keyword": "kira", "initial_keyword": "önalım",
+                "params": {"query": "iç", "filtre": [{"text": "abc", "yil": 2020}, "düz"]},
+                "number": "6769", "madde_no": ["120", "geçici 1"], "page": 2}
         k, _ = self.tek_cagri("tr_ictihat_ara", {"results": []}, args=args)
-        m = self.m
-        self.assertEqual(k["params"], {
-            "query": m(14), "q": m(1), "keyword": m(4), "keywords": m(10), "initial_keyword": m(6),
-            "heading_query": m(12), "search": m(1), "phrase": m(9), "text": m(5), "konu": m(6),
-            "iddia": m(11), "Query": m(5), "my_query_x": m(1), "keyword_list": m(5),
-            "search_in": m(8),
-            "number": "6769", "madde_no": ["120", "geçici 1"], "page": 2, "madde_id": "1651731",
-            "courts": ["YARGITAYKARARI"], "date_from": "2024-01-01", "mevzuat_id": "104221"})
-        self.assertNotIn("müvekkil", json.dumps(k["params"], ensure_ascii=False))
+        self.assertEqual(k["params"], args)
 
-    def test_arka_uc_taramasinda_bulunan_serbest_anahtarlar(self):
-        """Bütün arka uç şemaları tarandı: serbest metin/ad taşıyan string argümanlar maskeli."""
-        serbest = {"terms": "Gaswirtschaftsgesetz Haftung", "title": "Aktiengesetz",   # at_, pl_, uk_
-                   "name": "Acme Holding A.Ş.", "city": "Ankara",                       # gleif_
-                   "subject": "Bestuursrecht",                                          # nl_
-                   "company_name": "Acme", "corporate_group": "Acme Grubu",             # contracts_
-                   "text": "full text", "keyword": "日本", "query": "kira",
-                   "metin": "1234 ada 5 parsel", "sorgu": "Çankaya", "baslik": "özet",
-                   "icerik": "{...}"}
-        kalan = {"court": "Raad van State", "chamber": "H9", "resource": "Gold",
-                 "jurisdiction": "TR", "country": "az", "celex": "32016R0679", "ecli": "ECLI:NL:HR:2024:1",
-                 "boe_id": "BOE-A-2010-10544", "lei": "5299009N55YRQC69CN08", "doi": "10.1/x",
-                 "act_type": "Ustawa", "contract_type": "PSA", "language": "en", "year": "1996"}
-        self.assertLessEqual(set(serbest) - {"keyword", "query"}, set(denetim.SERBEST_ANAHTARLAR))
-        sonuc = denetim._parametreler(dict(serbest, **kalan), False)
-        for anahtar, deger in serbest.items():
-            with self.subTest(anahtar=anahtar):
-                self.assertEqual(sonuc[anahtar], self.m(len(deger)))
-        for anahtar, deger in kalan.items():
-            self.assertEqual(sonuc[anahtar], deger)
-        self.assertEqual(denetim._parametreler({"Title": "X", "NAME": "Y"}, False),
-                         {"Title": self.m(1), "NAME": self.m(1)})
-
-    def test_ic_ice_sozluk_ve_listede_anahtara_gore(self):
-        args = {"kurum": "rekabet", "params": {"query": "gizli", "year": 2024,
-                                               "filtre": [{"text": "abc", "yil": 2020}, "düz"]},
-                "liste": [[{"phrase": "xy"}]]}
-        k, _ = self.tek_cagri("tr_kurum_karari_ara", {"results": []}, args=args)
-        m = self.m
-        self.assertEqual(k["params"], {"kurum": "rekabet",
-                                       "params": {"query": m(5), "year": 2024,
-                                                  "filtre": [{"text": m(3), "yil": 2020}, "düz"]},
-                                       "liste": [[{"phrase": m(2)}]]})
-
-    def test_tkgm_butun_degerler_maskeli(self):
-        args = {"il": "Ankara", "ilce": "Çankaya", "ada": 101, "parsel": [1, 2],
-                "icerik": {"type": "FeatureCollection"}, "onay": True, "bos": None}
+    def test_tkgm_parametreleri_oldugu_gibi(self):
+        args = {"il": "Ankara", "ilce": "Çankaya", "ada": 101, "parsel": [1, 2], "onay": True,
+                "bos": None}
         k, _ = self.tek_cagri("tkgm_parsel_sorgu", {"ok": True}, args=args)
-        m = self.m
-        self.assertEqual(k["params"], {"il": m(6), "ilce": m(7), "ada": m(3), "parsel": m(5),
-                                       "icerik": m(len('{"type":"FeatureCollection"}')),
-                                       "onay": m(4), "bos": m(0)})
+        self.assertEqual(k["params"], args)
         self.assertEqual(k["backend_version"], "0.5.2")
-        self.assertIsNone(k["returned"])
 
-    def test_maskeleme_handlerin_argumanina_dokunmaz(self):
+    def test_kayit_handlerin_argumanina_dokunmaz(self):
         alinan = []
         args = {"query": "müvekkil", "params": {"query": "iç"}, "page": 1}
         kopya = copy.deepcopy(args)
@@ -776,15 +726,16 @@ class MaskelemeTest(_Temel):
         def degistiren(a):
             a.pop("number")
             a["page"] = 99
+            a["ic"]["liste"].append("sonradan")
             return _sayfa_sonucu("MADDE 1- a")
         k, _ = self.tek_cagri("tr_mevzuat_getir", degistiren,
-                              args={"mevzuat_id": "1", "number": "2004", "page": 1})
-        self.assertEqual(k["params"], {"mevzuat_id": "1", "number": "2004", "page": 1})
+                              args={"mevzuat_id": "1", "number": "2004", "page": 1,
+                                    "ic": {"liste": ["once"]}})
+        self.assertEqual(k["params"], {"mevzuat_id": "1", "number": "2004", "page": 1,
+                                       "ic": {"liste": ["once"]}})
         self.assertEqual(k["resolved"], [{"kanun": "2004", "mevzuat_id": "102993"}])
 
 
-# --------------------------------------------------------------------------- #
-# Durum sınıflandırması                                                        #
 # --------------------------------------------------------------------------- #
 class DurumTest(_Temel):
 
@@ -1117,35 +1068,33 @@ class GercekArkaUcTest(_Temel):
 # returned                                                                     #
 # --------------------------------------------------------------------------- #
 class DonenMetinTest(_Temel):
-    """returned yalnız belge GETİREN araçlarda; arama araçları sorguyu yanıtta geri yazar."""
+    """returned bütün araçlarda; kimlikler sonuç listelerindeki kayıtların kimlik alanları."""
 
-    IZINLI = {"tr_mevzuat_getir", "tr_mevzuat_madde_getir", "tr_mevzuat_gerekce",
-              "tr_mevzuat_icindekiler", "tr_ictihat_getir", "tr_aym_getir",
-              "tr_resmi_gazete_getir", "tr_uyusmazlik_getir", "tr_belge_getir",
-              "tr_kurum_karari_getir"}
     ARAMA = ("tr_mevzuat_ara", "tr_mevzuat_icinde_ara", "tr_ictihat_ara",
              "tr_ictihat_semantik_ara", "tr_aym_ara", "tr_uyusmazlik_ara", "tr_resmi_gazete_tara",
              "tr_resmi_gazete_fihrist", "tr_kurum_karari_ara", "tr_spk_bulten_icinde_ara",
              "tr_semantik_ara")
+    GETIR = ("tr_mevzuat_getir", "tr_mevzuat_madde_getir", "tr_mevzuat_gerekce",
+             "tr_mevzuat_icindekiler", "tr_ictihat_getir", "tr_aym_getir",
+             "tr_resmi_gazete_getir", "tr_uyusmazlik_getir", "tr_belge_getir",
+             "tr_kurum_karari_getir")
 
     @unittest.skipUnless(os.path.exists(os.path.join(TR_DIZINI, "server.py")), "tr arka ucu yok")
-    def test_izin_listesi_acik_ve_araclar_gercek(self):
-        self.assertEqual(set(denetim.DONEN_ARACLAR), self.IZINLI)
+    def test_test_edilen_araclar_gercek(self):
         # Ağ geçidi tr arka ucunun build_tools() içindeki Tool("ad", …) adlarını tr_ önekiyle sunar.
         with open(os.path.join(TR_DIZINI, "server.py"), encoding="utf-8") as f:
             agac = ast.parse(f.read())
         gercek = {"tr_" + n.args[0].value for n in ast.walk(agac)
                   if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
                   and n.func.id == "Tool" and n.args and isinstance(n.args[0], ast.Constant)}
-        self.assertLessEqual(self.IZINLI, gercek)
-        self.assertLessEqual(set(self.ARAMA), gercek)
-        self.assertEqual(self.IZINLI & set(self.ARAMA), set())
+        self.assertLessEqual(set(self.GETIR) | set(self.ARAMA), gercek)
 
     def test_sha256_modelin_aldigi_metnin_kendisi(self):
         ozel = {"tr_mevzuat_getir": {"text": "MADDE 1- " + "ç" * 1000, "page": 1},
                 "tr_ictihat_getir": "düz metin sonucu", "tr_aym_getir": {"a": 1},
-                "tr_resmi_gazete_getir": [1, "b"]}
-        for ad in sorted(self.IZINLI):
+                "tr_resmi_gazete_getir": [1, "b"],
+                "tr_ictihat_ara": {"query": "müvekkil Ahmet", "results": []}}
+        for ad in sorted(set(self.GETIR) | set(self.ARAMA) | {"nl_get_act", "tkgm_rapor", "status"}):
             sonuc = ozel.get(ad, {"text": "belge metni", "page": 1})
             with self.subTest(arac=ad):
                 k, yanit = self.tek_cagri(ad, sonuc)
@@ -1156,34 +1105,52 @@ class DonenMetinTest(_Temel):
                 self.assertEqual(k["returned"]["ilk"], metin[:300])
                 self.assertLessEqual(len(k["returned"]["ilk"]), 300)
 
-    def test_arama_araclarinda_null_ve_sorgu_kayda_sizmaz(self):
-        gizli = "müvekkil Ahmet Yılmaz kira borcu"
-        for ad in self.ARAMA:
-            with self.subTest(arac=ad):
-                # Gerçek arama sonuçları gibi sorguyu yanıtın başına geri yazan sahte araç.
-                tools = self.ac([_arac(ad, lambda a: {"query": a.get("query"), "results": []})])
-                with self.yakala() as (out, err):
-                    yanit = self.cagir(tools, ad, {"query": gizli, "page": 1})
-                self.assertIn(gizli, yanit["result"]["content"][0]["text"])
-                (k,) = self.kayitlar(err)
-                self.assertIsNone(k["returned"])
-                self.assertEqual(k["params"]["query"], {"maskeli": True, "uzunluk": len(gizli)})
-                self.assertNotIn(gizli, err.getvalue())       # kaydın hiçbir yerinde yok
-                self.assertEqual(out.getvalue(), "")
+    def test_arama_sonucunun_kimlikleri(self):
+        bedesten = {"query": "kira", "total": 2, "results": [
+            {"document_id": "123", "court": "Yargıtay", "chamber": "3. HD", "esas_no": "2024/1",
+             "karar_no": "2024/9", "karar_tarihi": "01.02.2024",
+             "citation": "Yargıtay 3. HD, E. 2024/1, K. 2024/9, T. 01.02.2024",
+             "source_url": "https://mevzuat.adalet.gov.tr/ictihat/123"},
+            {"document_id": "456", "esas_no": "2023/5", "karar_no": "2023/7", "citation": "c2"}],
+            "denenenler": [{"mod": "ifade", "toplam": 2}]}
+        k, _ = self.tek_cagri("tr_ictihat_ara", bedesten)
+        self.assertEqual(k["kimlikler"], [
+            {"document_id": "123", "esas_no": "2024/1", "karar_no": "2024/9",
+             "citation": "Yargıtay 3. HD, E. 2024/1, K. 2024/9, T. 01.02.2024"},
+            {"document_id": "456", "esas_no": "2023/5", "karar_no": "2023/7", "citation": "c2"}])
 
-    def test_diger_araclarda_ve_istisnada_null(self):
-        for ad in ("nl_get_act", "tkgm_rapor", "status", "tr_kurum_listesi",
-                   "tr_hukuk_arastirma_rehberi", "gleif_lookup", "de_search",
-                   "tr_mevzuat_getir_x"):                     # önek değil tam ad eşleşir
-            with self.subTest(arac=ad):
-                k, _ = self.tek_cagri(ad, {"text": "metin"})
-                self.assertIsNone(k["returned"])
+        rekabet = {"total": 1, "results": [{"karar_id": "g-1", "title": "Acme A.Ş. devralma",
+                                            "decision_number": "24-01/2", "citation": "RK c"}]}
+        k, _ = self.tek_cagri("tr_kurum_karari_ara", rekabet)
+        self.assertEqual(k["kimlikler"], [{"karar_id": "g-1", "citation": "RK c"}])
+
+        semantik = {"retrieval": {"ranking": "semantic"},
+                    "results": [{"ref": "rekabet:g-1", "title": "t", "citation": "RK c",
+                                 "score": 0.5}]}
+        k, _ = self.tek_cagri("tr_semantik_ara", semantik)
+        self.assertEqual(k["kimlikler"], [{"ref": "rekabet:g-1", "citation": "RK c"}])
+
+    def test_kimlik_yoksa_null_ve_tek_belge_sayilmaz(self):
+        for ad, sonuc in (("tr_ictihat_ara", {"results": []}),
+                          ("tr_ictihat_getir", {"document_id": "123", "text": "metin"}),
+                          ("status", {"by_kurum": {"rekabet": {"docs": 3}}}),
+                          ("tr_ictihat_getir", "düz metin")):
+            with self.subTest(arac=ad, sonuc=str(sonuc)[:30]):
+                k, _ = self.tek_cagri(ad, sonuc)
+                self.assertIsNone(k["kimlikler"])
+
+    def test_kimlik_azami(self):
+        sonuc = {"results": [{"id": str(i)} for i in range(denetim.KIMLIK_AZAMI + 20)]}
+        k, _ = self.tek_cagri("tr_aym_ara", sonuc)
+        self.assertEqual(len(k["kimlikler"]), denetim.KIMLIK_AZAMI)
+        self.assertEqual(k["kimlikler"][0], {"id": "0"})
+
+    def test_istisnada_null(self):
         k, _ = self.tek_cagri("tr_mevzuat_getir", hata=McpError("x"))
         self.assertIsNone(k["returned"])
+        self.assertIsNone(k["kimlikler"])
 
 
-# --------------------------------------------------------------------------- #
-# Akış: her zaman stderr                                                       #
 # --------------------------------------------------------------------------- #
 class AkisTest(_Temel):
 

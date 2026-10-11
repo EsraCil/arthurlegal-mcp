@@ -28,12 +28,8 @@ stderr'de sunucunun başka satırları da vardır: kayıt satırı ``{"olay":`` 
 
 * ``ts`` çağrının BAŞLADIĞI an (UTC, milisaniye, ``Z``); bitiş = ts + ``duration_ms``.
   ``session_id`` / ``request_id``: ``mcpcore.istek_baglami()``.
-* ``params``: argümanlar, serbest metin ve adlar maskeli (``SERBEST_ANAHTARLAR``, adında
-  query/keyword/search geçen her anahtar; iç içe sözlük ve listelerde anahtara göre). Liste
-  bütün arka uç şemaları taranarak çıkarıldı. ``tkgm_`` araçlarında (taşınmaz/parsel verisi)
-  bütün değerler maskelidir. Maske ``{"maskeli": true, "uzunluk": N}``: metinde karakter
-  sayısı, metin olmayan değerde sıkışık JSON'unun uzunluğu, None'da 0. Argümanlar handler'dan
-  ÖNCE kopyalanır.
+* ``params``: argümanların olduğu gibi derin kopyası; maskeleme yok (aşağıda "Kararlar ve
+  kısıtlar"). Argümanlar handler'dan ÖNCE kopyalanır.
 * ``resolved``: ``tr_mevzuat_madde_getir`` için ``items[]``'tan
   ``{"kanun", "madde", "ok", "mulga", "durum"}``. ``kanun`` sonucun ``law.number`` alanı
   (Bedesten onu int verir; burada metne çevrilir), yoksa ``args.number``. ``madde`` kalemin
@@ -71,14 +67,25 @@ stderr'de sunucunun başka satırları da vardır: kayıt satırı ``{"olay":`` 
   İptal çağrı anında bilinemez; ayrı ``iptal`` kaydına bakın.
 * ``duration_ms`` (time.monotonic), ``sure_siniri_asildi`` (≥ 100000 ms), ``backend_version``
   (aracın önekinin arka ucu; bulunamazsa ağ geçidi sürümü).
-* ``returned``: yalnız ``DONEN_ARACLAR`` izin listesindeki, kamuya açık hukuk metni GETİREN
-  araçlarda ``{"sha256", "ilk"}``: modele giden metnin (``mcpcore._as_text(value)``) UTF-8
-  baytlarının sha256'sı ve ilk 300 karakteri. Liste önek değil tam addır: aynı ailelerin arama
-  araçları (``*_ara``, ``*_tara``, ``tr_resmi_gazete_fihrist``, ``*_icinde_ara``) yanıtın
-  başında sorguyu geri yazar ve ``ilk``, ``params``'ta maskelenen serbest metni sızdırırdı.
-  Listedeki araçların arka uç handler'ları yalnız kimlik/sayfa argümanlarını okur ve çıktıya
-  serbest metin yazmaz (``tr_mevzuat_icindekiler`` ``heading_query``'yi yalnız satır süzmek için
-  kullanır). Diğer araçlarda ve istisnada null.
+* ``returned``: bütün araçlarda ``{"sha256", "ilk"}``: modele giden metnin
+  (``mcpcore._as_text(value)``) UTF-8 baytlarının sha256'sı ve ilk 300 karakteri. İstisnada null.
+* ``kimlikler``: sonuçtaki listelerde yer alan kayıtların kimlikleri, en çok ``KIMLIK_AZAMI``
+  kayıt: her kayıttan yalnız ``KIMLIK_ANAHTARLARI``'ndan bulunanlar (``document_id``,
+  ``karar_id``, ``ref``, ``esas_no``, ``karar_no``, ``citation`` …). Arama sonucundan yapılan
+  atıf (karar listede vardı ama ayrıca getirilmedi) böyle görünür. Liste yoksa ya da istisnada null.
+
+Kararlar ve kısıtlar
+--------------------
+* **Maskeleme yok.** Kayıt yalnız test uygulamasında ve sentetik sorularla (atıf sınav kümesi)
+  açılır. Maskelenen her alan ölçülemeyen bir davranıştır: arama metni gizliyken "aradım, bulamadım"
+  beyanı denetlenemez, modelin neyi aradığı ve arama sonucundan atıf yapıp yapmadığı görünmez.
+* **Kısıt: kimlik doğrulaması yok.** Sunucu kimlik doğrulamasız; test uygulamasının adresine
+  gerçek dosya bilgisiyle bağlanan olursa o bilgi de kayda girer. Uygulama yalnız sentetik
+  sorularla kullanılır, adresi paylaşılmaz.
+* **Dönen metnin tamamı değil özeti.** sha256 + ilk 300 karakter modelin hangi metni gördüğünü
+  kesin tanımlar; aynı parametrelerle metin yeniden getirilebilir. Tamamı yazılmaz: bir kanun
+  sayfası on binlerce karakter tutar ve log satırını şişirir. Bedeli: kaynak sonradan değişirse
+  yeniden getirilen metin özetle tutmaz; o zaman fark özetten görünür ama eski metin geri gelmez.
 
 ``olay: "iptal"`` — istemcinin ``notifications/cancelled`` bildirimi:
 ``{"olay", "ts", "session_id", "request_id": params.requestId, "reason": params.reason}``.
@@ -110,30 +117,15 @@ GETIR_ARACI = "tr_mevzuat_getir"
 # Claude.ai bu sürede çağrıyı keser; sonuç modele hiç ulaşmaz.
 SURE_SINIRI_MS = 100000
 
-# Dönen metnin özeti (returned) yalnız bu araçlarda tutulur: kamuya açık hukuk metnini (belge,
-# madde, gerekçe, madde ağacı) GETİREN ve çıktısına serbest metin argümanı yazmayan araçlar.
-# Önek değil tam ad: aynı ailelerin arama araçları sorguyu yanıtın başına geri yazar.
-DONEN_ARACLAR = frozenset({
-    "tr_mevzuat_getir", "tr_mevzuat_madde_getir", "tr_mevzuat_gerekce", "tr_mevzuat_icindekiler",
-    "tr_ictihat_getir", "tr_aym_getir", "tr_resmi_gazete_getir", "tr_uyusmazlik_getir",
-    "tr_belge_getir", "tr_kurum_karari_getir",
-})
 ILK_KARAKTER = 300
 
-# Serbest metin ya da ad taşıyan anahtarlar: değeri loga yazılmaz, yalnız uzunluğu. Bütün arka
-# uçların araç şemaları taranarak çıkarıldı (açıklaması serbest metin, başlık sözcüğü, terim, ad,
-# konu, anahtar kelime ya da tam metin diyen string argümanlar). metin/sorgu/baslik/icerik bugün
-# yalnız tkgm_ araçlarında geçer (orada zaten hepsi maskeli); yine de anahtar olarak listede.
-SERBEST_ANAHTARLAR = frozenset({
-    "query", "q", "keyword", "keywords", "initial_keyword", "heading_query", "search",
-    "phrase", "text", "konu", "iddia",
-    "terms", "title", "name", "subject",          # at_/pl_/uk_ terimleri ve başlık, gleif adı, nl alanı
-    "company_name", "corporate_group", "city",    # contracts_ şirket/grup adı, gleif şehir
-    "metin", "sorgu", "baslik", "icerik",         # Türkçe karşılıklar (tkgm_)
-})
-SERBEST_PARCALAR = ("query", "keyword", "search")
-# Taşınmaz/parsel verisi: bu önekteki araçların bütün argüman değerleri maskelenir.
-TUMU_MASKELI_ONEK = "tkgm_"
+# Sonuç listelerindeki kayıtlardan alınan kimlik alanları (sıra kayıttaki sırayı belirler).
+# Bedesten: document_id/esas_no/karar_no; Rekabet: karar_id; AYM: id; yerel indeks: ref;
+# AB/NL/AT: celex/ecli/eli; hemen hepsinde hazır künye: citation. Başlık ve metin alınmaz.
+KIMLIK_ANAHTARLARI = ("document_id", "documentId", "karar_id", "mevzuat_id", "id", "ref",
+                      "ecli", "celex", "eli", "esas_no", "karar_no", "citation")
+KIMLIK_AZAMI = 100
+KIMLIK_DERINLIK = 4
 # İstemcinin denetlediği metinlerin kayıttaki en büyük uzunluğu.
 ISTEMCI_AZAMI = 200
 
@@ -206,21 +198,19 @@ def _surum(arac: str) -> Optional[str]:
 def _sarmala(arac: str, handler: Callable[[Dict[str, Any]], Any],
              surum: Optional[str]) -> Callable[[Dict[str, Any]], Any]:
     """Handler'ı saran fonksiyon. Değer ve istisna AYNI nesne olarak geçer."""
-    tumu_maskeli = arac.startswith(TUMU_MASKELI_ONEK)
-    metin_tut = arac in DONEN_ARACLAR
 
     @functools.wraps(handler)
     def denetimli(args: Dict[str, Any]) -> Any:
         bas = time.monotonic()
-        on = _guvenli(arac, _on_bilgi, arac, args, tumu_maskeli)
+        on = _guvenli(arac, _on_bilgi, arac, args)
         try:
             deger = handler(args)
         except Exception as exc:
             if on is not None:
-                _guvenli(arac, _cagri_yaz, on, bas, surum, metin_tut, None, exc)
+                _guvenli(arac, _cagri_yaz, on, bas, surum, None, exc)
             raise
         if on is not None:
-            _guvenli(arac, _cagri_yaz, on, bas, surum, metin_tut, deger, None)
+            _guvenli(arac, _cagri_yaz, on, bas, surum, deger, None)
         return deger
 
     return denetimli
@@ -231,16 +221,16 @@ def _kisalt(deger: Any) -> Any:
     return deger[:ISTEMCI_AZAMI] if isinstance(deger, str) else deger
 
 
-def _on_bilgi(arac: str, args: Any, tumu_maskeli: bool) -> Dict[str, Any]:
-    """Handler'dan ÖNCE: bağlam ve argümanların maskeli kopyası (handler değiştirse de)."""
+def _on_bilgi(arac: str, args: Any) -> Dict[str, Any]:
+    """Handler'dan ÖNCE: bağlam ve argümanların derin kopyası (handler değiştirse de)."""
     baglam = mcpcore.istek_baglami()
     return {"ts": _simdi(), "session_id": _kisalt(baglam["session_id"]),
             "request_id": _kisalt(baglam["request_id"]), "tool": arac,
-            "params": _parametreler(args, tumu_maskeli),
+            "params": _parametreler(args),
             "args": dict(args) if isinstance(args, dict) else {}}
 
 
-def _cagri_yaz(on: Dict[str, Any], bas: float, surum: Optional[str], metin_tut: bool,
+def _cagri_yaz(on: Dict[str, Any], bas: float, surum: Optional[str],
                deger: Any, hata: Optional[BaseException]) -> None:
     sure_ms = int(round((time.monotonic() - bas) * 1000))
     arac = on["tool"]
@@ -249,16 +239,17 @@ def _cagri_yaz(on: Dict[str, Any], bas: float, surum: Optional[str], metin_tut: 
         pages = _sayfalar(on["args"], deger) if arac == GETIR_ARACI else None
         mulga = _mulga_ozeti(resolved) if arac == MADDE_ARACI else None
         status = _durum_sinifla(deger)
-        returned = _donen(deger) if metin_tut else None
+        returned = _donen(deger)
+        kimlikler = _kimlikler(deger)
     else:
-        resolved = pages = mulga = returned = None
+        resolved = pages = mulga = returned = kimlikler = None
         status = _hata_durumu(hata)
     _yaz({
         "olay": "cagri", "ts": on["ts"], "session_id": on["session_id"],
         "request_id": on["request_id"], "tool": arac, "params": on["params"],
         "resolved": resolved, "pages": pages, "mulga": mulga, "status": status,
         "duration_ms": sure_ms, "sure_siniri_asildi": sure_ms >= SURE_SINIRI_MS,
-        "backend_version": surum, "returned": returned,
+        "backend_version": surum, "returned": returned, "kimlikler": kimlikler,
     })
 
 
@@ -315,38 +306,11 @@ def _simdi() -> str:
 
 
 # --------------------------------------------------------------------------- #
-# Maskeleme                                                                    #
+# Parametreler                                                                 #
 # --------------------------------------------------------------------------- #
-def _serbest_mi(anahtar: Any) -> bool:
-    a = str(anahtar).lower()
-    return a in SERBEST_ANAHTARLAR or any(p in a for p in SERBEST_PARCALAR)
-
-
-def _maske(deger: Any) -> Dict[str, Any]:
-    if deger is None:
-        n = 0
-    elif isinstance(deger, str):
-        n = len(deger)
-    else:
-        n = len(json.dumps(deger, ensure_ascii=False, default=str, separators=(",", ":")))
-    return {"maskeli": True, "uzunluk": n}
-
-
-def _maskele(deger: Any) -> Any:
-    """Serbest metin anahtarlarının değerini maskeler; sözlük ve listelerde iner."""
-    if isinstance(deger, dict):
-        return {k: (_maske(v) if _serbest_mi(k) else _maskele(v)) for k, v in deger.items()}
-    if isinstance(deger, list):
-        return [_maskele(v) for v in deger]
-    return deger
-
-
-def _parametreler(args: Any, tumu_maskeli: bool) -> Any:
-    if tumu_maskeli:
-        if isinstance(args, dict):
-            return {k: _maske(v) for k, v in args.items()}
-        return _maske(args)
-    return _maskele(args)
+def _parametreler(args: Any) -> Any:
+    """Argümanların derin kopyası: handler iç içe bir değeri değiştirse de kayıt öncekini tutar."""
+    return copy.deepcopy(args)
 
 
 # --------------------------------------------------------------------------- #
@@ -530,3 +494,32 @@ def _donen(deger: Any) -> Dict[str, Any]:
     metin = mcpcore._as_text(deger)
     return {"sha256": hashlib.sha256(metin.encode("utf-8", "surrogatepass")).hexdigest(),
             "ilk": metin[:ILK_KARAKTER]}
+
+
+# --------------------------------------------------------------------------- #
+# Sonuç kimlikleri                                                             #
+# --------------------------------------------------------------------------- #
+def _kimlikler(deger: Any) -> Optional[List[Dict[str, Any]]]:
+    """Sonuçtaki listelerde, kimlik alanı taşıyan sözlüklerin yalnız kimlik alanları.
+
+    Kimlik taşıyan kayda inilmez (kaydın içindeki listeler o kaydın parçasıdır). Liste dışındaki
+    tek sözlük (getirilen belgenin kendisi) sayılmaz: onun kimliği ``params``/``resolved``'da.
+    """
+    bulunan: List[Dict[str, Any]] = []
+
+    def gez(d: Any, derinlik: int, listede: bool) -> None:
+        if len(bulunan) >= KIMLIK_AZAMI or derinlik > KIMLIK_DERINLIK:
+            return
+        if isinstance(d, dict):
+            kimlik = {k: d[k] for k in KIMLIK_ANAHTARLARI if d.get(k) not in (None, "")}
+            if listede and kimlik:
+                bulunan.append(kimlik)
+                return
+            for v in d.values():
+                gez(v, derinlik + 1, False)
+        elif isinstance(d, list):
+            for v in d:
+                gez(v, derinlik + 1, True)
+
+    gez(deger, 0, False)
+    return bulunan or None
