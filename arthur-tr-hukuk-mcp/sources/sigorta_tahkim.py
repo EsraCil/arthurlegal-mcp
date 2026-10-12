@@ -21,7 +21,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from net import Http, HttpError
-from textx import paginate, pdf_to_text, count_hits, excerpt
+from textx import iso_tarih, paginate, pdf_to_text, count_hits, excerpt
 from sources import Source
 
 BASE = "https://www.sigortatahkim.org"
@@ -130,10 +130,9 @@ def crawl(index, issues: Optional[List[int]] = None, log=print) -> Dict[str, Any
             continue
         decs = split_decisions(text)
         for d in decs:
-            dm = re.match(r"(\d{2})\.(\d{2})\.(\d{4})", d["heading"])
             index.upsert({"ref": "stk:%d:%s" % (issue, d["heading"][:80]), "title": d["heading"],
                           "body": d["body"][:80000], "url": pdf_url(issue), "lang": "tr",
-                          "date": "%s-%s-%s" % (dm.group(3), dm.group(2), dm.group(1)) if dm else "",
+                          "date": iso_tarih(d["heading"]),
                           "status": "dergi %d" % issue, "court": "Sigorta Tahkim Komisyonu", "subject": "sigorta",
                           "citation": "Sigorta Tahkim Komisyonu, %s (Hakem Karar Dergisi S. %d)" % (d["heading"], issue),
                           "meta": {"kurum": "sigorta_tahkim", "issue": issue}})

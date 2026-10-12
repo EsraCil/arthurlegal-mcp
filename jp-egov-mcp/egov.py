@@ -19,9 +19,19 @@ UA = "ArthurLegal-MCP/1.0 (+https://github.com/beerbottle90/arthurlegal-mcp)"
 
 LAW_ID = re.compile(r"^[0-9A-Z]{6,}$")
 
+# A statute before the orders made under it, when several titles contain the keyword.
+_TYPE_ORDER = {t: i for i, t in enumerate(
+    ("Constitution", "Act", "CabinetOrder", "ImperialOrder", "MinisterialOrdinance", "Rule", "Misc"))}
+# Some titles carry the law number in front: 昭和二十二年法律第五十四号（私的独占の禁止及び公正取引の確保に関する法律）.
+_NUMBERED_TITLE = re.compile(r"^(?:明治|大正|昭和|平成|令和)\S*?号（(.+)）$")
+
 
 class EgovError(RuntimeError):
     pass
+
+
+class EgovNotFound(EgovError):
+    """HTTP 404. On a search it means no result (e-Gov: 取得結果が０件です), not a missing endpoint."""
 
 
 def _get(path: str, params: Optional[Dict[str, Any]] = None, timeout: int = 90) -> Dict[str, Any]:
@@ -34,7 +44,7 @@ def _get(path: str, params: Optional[Dict[str, Any]] = None, timeout: int = 90) 
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
-            raise EgovError("not found: %s" % path) from exc
+            raise EgovNotFound("not found: %s" % path) from exc
         detail = ""
         try:
             detail = (json.loads(exc.read().decode("utf-8")) or {}).get("message", "")
@@ -141,9 +151,14 @@ class EgovClient:
         """
         if not (keyword or "").strip():
             raise EgovError("keyword is required")
-        data = _get("/keyword", {"keyword": keyword,
-                                 "limit": max(1, min(int(max_sentences), 100)),
-                                 "offset": max(0, int(offset))})
+        try:
+            data = _get("/keyword", {"keyword": keyword,
+                                     "limit": max(1, min(int(max_sentences), 100)),
+                                     "offset": max(0, int(offset))})
+        except EgovNotFound:
+            # No sentence matches: an abbreviation such as 独禁法 is never written in a
+            # statute. This used to reach the caller as "not found: /keyword".
+            data = {}
         results = []
         for item in data.get("items", []):
             rec = _summary(item.get("law_info") or {}, item.get("revision_info") or {})
@@ -161,6 +176,43 @@ class EgovClient:
             "next_offset": data.get("next_offset"),
             "results": results,
         }
+
+    def search_titles(self, keyword: str, limit: int = 10) -> Dict[str, Any]:
+        """Statutes whose title or abbreviation contains ``keyword``, best first.
+
+        ``/keyword`` is a full-text index returned in law-number order, oldest
+        first. A phrase that many statutes quote fills its first page with old
+        Acts and the statute itself never shows: 個人情報の保護 matched 513
+        statutes and the Act on the Protection of Personal Information was not
+        among the 20 on page one (2026-10-11). ``/laws?law_title=`` matches titles
+        and abbreviations (独禁法, 労基法, 個人情報保護法). Order: exact title or
+        abbreviation, then Acts before the orders made under them, unrepealed before
+        repealed, shorter title first.
+        """
+        kw = (keyword or "").strip()
+        if not kw:
+            return {"total": 0, "results": []}
+        try:
+            data = _get("/laws", {"law_title": kw, "limit": 100})
+        except EgovNotFound:
+            data = {}
+        found = []
+        for item in data.get("laws", []):
+            rev = item.get("current_revision_info") or item.get("revision_info") or {}
+            found.append(_summary(item.get("law_info") or {}, rev))
+
+        def rank(r: Dict[str, Any]) -> tuple:
+            m = _NUMBERED_TITLE.match(r["title"])
+            bare = m.group(1) if m else r["title"]
+            exact = kw in (r["title"], bare) or kw in (r.get("abbrev") or "").split(",")
+            # Repeal, not the in-force verdict: e-Gov marks the only enforced revision of a few
+            # live statutes PreviousEnforced (the Antimonopoly Act, 2026-10-12).
+            repealed = bool(r["status"]["repeal_date"]) or \
+                r["status"]["repeal_status"] not in ("", "None", "NotRepealed")
+            return (not exact, _TYPE_ORDER.get(r["law_type"], len(_TYPE_ORDER)), repealed, len(bare))
+
+        found.sort(key=rank)
+        return {"total": data.get("total_count", 0), "results": found[:max(1, int(limit))]}
 
     def list_laws(self, limit: int = 20, offset: int = 0) -> Dict[str, Any]:
         data = _get("/laws", {"limit": max(1, min(int(limit), 100)),

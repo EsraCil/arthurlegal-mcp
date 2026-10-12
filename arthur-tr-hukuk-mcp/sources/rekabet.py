@@ -18,11 +18,11 @@ Listing structure from saidsurucu/yargi-mcp (MIT).
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urljoin, urlparse
 
 from net import Http, HttpError
-from textx import paginate, pdf_to_text, strip_tags, HAS_PYPDF
+from textx import iso_tarih, paginate, pdf_to_text, strip_tags, HAS_PYPDF
 from sources import Source
 
 BASE = "https://www.rekabet.gov.tr"
@@ -143,21 +143,47 @@ def crawl(index, max_pages: int = 20, query: str = "", decision_type: str = "",
             if fetch_text:
                 g = get({"id": it["karar_id"], "page_chars": 200000})
                 body = (g.get("text") or it["title"])[:200000]
+            tarih, gorunen, kaynak = karar_tarihi(it["decision_date"], it["decision_number"],
+                                                  body if fetch_text else "")
+            meta = {"decision_number": it["decision_number"], "kurum": "rekabet"}
+            citation = it["citation"]
+            if kaynak == "karar metni" and tarih != iso_tarih(it["decision_date"]):
+                citation = "Rekabet Kurulu, %s tarih ve %s sayılı karar" % (gorunen, it["decision_number"])
+                meta["liste_tarihi"] = it["decision_date"]
             index.upsert({
                 "ref": "rekabet:%s" % it["karar_id"], "title": it["title"], "body": body,
-                "url": it["source_url"], "lang": "tr", "date": _iso(it["decision_date"]),
+                "url": it["source_url"], "lang": "tr", "date": tarih,
                 "status": it["decision_type"], "court": "Rekabet Kurulu",
-                "subject": "rekabet", "citation": it["citation"],
-                "meta": {"decision_number": it["decision_number"], "kurum": "rekabet"},
+                "subject": "rekabet", "citation": citation, "meta": meta,
             })
             n += 1
         log("rekabet: page %d, %d docs" % (page, n))
     return {"indexed": n}
 
 
-def _iso(d: str) -> str:
-    m = re.match(r"(\d{2})\.(\d{2})\.(\d{4})", d or "")
-    return "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else ""
+_KARAR_TARIHI = re.compile(r"Karar\s+Tarihi\s*:?\s*(\d{1,2}\s*[./]\s*\d{1,2}\s*[./]\s*\d{4})", re.I)
+
+
+def karar_tarihi(liste_tarihi: str, karar_sayisi: str, metin: str = "") -> Tuple[str, str, str]:
+    """Kararın tarihi: (ISO, atıfta yazılacak biçim, kaynak: 'liste' ya da 'karar metni').
+
+    Liste sayfasındaki tarih elle girilmiş. 11.10.2026'da 10.445 kararın 41'inde kararın
+    kendi "Karar Tarihi" satırından farklıydı (biri 17.8.2029; kararın kendisi 17.08.2023).
+    Karar sayısının ilk iki hanesi yıldır (23-39/726-249 → 2023). Karar metnindeki tarih
+    bu yılla uyuşuyorsa o esas alınır, uyuşmuyorsa yılla uyuşan liste tarihi (metinde de
+    yazım hatası olabiliyor); ikisi de uyuşmuyorsa metindeki.
+    """
+    liste = iso_tarih(liste_tarihi)
+    m = _KARAR_TARIHI.search((metin or "")[:5000])
+    govde = iso_tarih(m.group(1)) if m else ""
+    yil = re.match(r"\s*(\d{2})-", karar_sayisi or "")
+
+    def uyar(t: str) -> bool:
+        return bool(t and yil and t[2:4] == yil.group(1))
+
+    if govde and (uyar(govde) or not yil or not uyar(liste)):
+        return govde, re.sub(r"\s+", "", m.group(1)), "karar metni"
+    return liste, (liste_tarihi or "").strip(), "liste"
 
 
 SEARCH_SCHEMA = {
@@ -187,8 +213,10 @@ SOURCE = Source(
            "büyük olabilir (birleşme kararları 100+ sayfa). Kılavuz ve tebliğler için mevzuat_ara. "
            "Yerel indeks (semantik_ara, kurum='rekabet') kararların TAM METNİNİ de taşır (30.09.2026: 10.445 kararın "
            "10.433'ü; metni çıkmayan 12 karar yalnız başlıkla): kelime ve tırnaklı ifade gerekçede de aranır, sonuç "
-           "ilgiye göre sıralanır; anlam kanalı Rekabet'te karar konusu (başlık) vektörüyle çalışır. İndeks son "
-           "dağıtımdaki arşivdir; en yeni kararlar için bu canlı arama."),
+           "ilgiye göre sıralanır; anlam kanalı başlığa ve metnin ilk 8.000 karakterine bakar. İndeksteki tarih "
+           "ve atıf kararın kendi 'Karar Tarihi' satırıyla denetlidir (liste sayfası 41 kararda farklı tarih "
+           "yazıyor; canlı aramadaki atıf liste tarihini taşır). İndeks son dağıtımdaki arşivdir; en yeni "
+           "kararlar için bu canlı arama."),
     search=search, get=get, crawl=crawl, search_schema=SEARCH_SCHEMA, get_schema=GET_SCHEMA,
     homepage=BASE + "/tr/Kararlar",
 )

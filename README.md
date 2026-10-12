@@ -53,6 +53,13 @@ Rekabet, SPK, BDDK, KVKK, BTK, GİB, Sigorta Tahkim) behind one
 `tr_kurum_karari_ara` interface, plus a locally indexed
 archive for `tr_semantik_ara`. Source: the `arthur-tr-hukuk-mcp/` folder (formerly `ArthurLegalTR/`).
 
+The archive holds the decisions' text, not just their titles: 19,498 documents, every one vectorised.
+EPDK's decisions before 2016 were old Word files or scans; their text was read on the crawl
+workstation (Word files directly, scans with OCR), and when a live document yields no text
+`tr_kurum_karari_getir` answers from the archive, with a warning where the text came from OCR.
+Dates are checked against each decision's own date line, so a date filter sees every Rekabet
+decision (10,445; before 2026-10-12 most of them carried no date and fell outside any range).
+
 `tr_resmi_gazete_tara`, `tr_resmi_gazete_fihrist` and `tr_mevzuat_ara` also take a `konu` filter
 (`enerji`, `rekabet`, `vergi`, `icra`): a local, network-free topic triage over titles that finds
 items whose titles never mention the topic (in the labelled gazette corpus the topic word appears
@@ -115,7 +122,7 @@ Two sources stand behind the `de_` prefix:
 
 ## Indexes
 
-Five jurisdictions are searched from a local SQLite index (FTS5 + vectors); the
+Six jurisdictions are searched from a local SQLite index (FTS5 + vectors); the
 rest are queried upstream and reranked in memory. The indexes are built on a
 workstation and baked into the image at `baked/<jurisdiction>.db`:
 
@@ -127,7 +134,7 @@ Crawling is a maintenance task, not something a booting container does. Baking
 the databases in means a machine is never healthy-but-empty, and the corpus can
 never drift away from the code that was tested against it. `start.sh` still
 falls back to crawling when no baked index is present, and says which it used:
-`indexes present: N/5`.
+`indexes present: N/6`.
 
 `hybrid`, the default search mode, ranks keyword and meaning matches together,
 but not blindly. When the keyword channel found every word of the query, both

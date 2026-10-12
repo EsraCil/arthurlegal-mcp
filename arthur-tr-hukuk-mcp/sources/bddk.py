@@ -19,15 +19,17 @@ import re
 from typing import Any, Dict, List
 
 from net import Http, HttpError
-from textx import html_to_text, paginate, pdf_to_text, strip_tags, count_hits, excerpt
+from textx import html_to_text, iso_tarih, paginate, pdf_to_text, strip_tags, count_hits, excerpt
 from sources import Source
 
 BASE = "https://www.bddk.org.tr"
 LISTS = {"rg": "/Mevzuat/Liste/55", "diger": "/Mevzuat/Liste/56"}
 _http = Http(BASE, {"Accept": "text/html,application/pdf,*/*"})
 _cache: Dict[str, List[Dict[str, Any]]] = {}
-# Titles use a hyphen or an en dash between date and number: "(06.08.2026 - 11548) …" / "(23.05.2024 – 10914) …"
-_HEAD = re.compile(r"^\((\d{2}\.\d{2}\.\d{4})\s*[-–—]\s*(\d+)\)\s*(.*)$")
+# Titles use a hyphen or an en dash between date and number: "(06.08.2026 - 11548) …" / "(23.05.2024 – 10914) …",
+# some put a space before the closing parenthesis, and older ones use slashes: "(13.12.2018 - 8149 ) …",
+# "(26/07/2007 - 2248) …" (17 decisions were left undated).
+_HEAD = re.compile(r"^\((\d{1,2}[./]\d{1,2}[./]\d{4})\s*[-–—]\s*(\d+)\s*\)\s*(.*)$")
 
 
 def _list(kind: str) -> List[Dict[str, Any]]:
@@ -114,8 +116,7 @@ def crawl(index, fetch_text: bool = False, limit: int = 0, log=print) -> Dict[st
 
 
 def _iso(d: str) -> str:
-    m = re.match(r"(\d{2})\.(\d{2})\.(\d{4})", d or "")
-    return "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else ""
+    return iso_tarih(d)
 
 
 SEARCH_SCHEMA = {"type": "object", "properties": {

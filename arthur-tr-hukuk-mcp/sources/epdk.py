@@ -22,10 +22,10 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from net import Http, HttpError
-from textx import html_to_text, paginate, pdf_to_text, strip_tags, count_hits
+from textx import OLE_MAGIC, doc_to_text, html_to_text, iso_tarih, paginate, pdf_to_text, strip_tags, count_hits
 from sources import Source
 
 BASE = "https://www.epdk.gov.tr"
@@ -163,25 +163,69 @@ def get(args: Dict[str, Any]) -> Dict[str, Any]:
     except HttpError as exc:
         return {"error": str(exc)}
     ctype = (hdrs.get("Content-Type") or "").lower()
-    text, pages = "", 0
+    text, pages, bicim = metin_cikar(body, ctype, ocr=bool(args.get("ocr")))
+    out = paginate(text, args.get("page") or 1, int(args.get("page_chars") or 8000))
+    out.update({"source_url": url, "pdf_pages": pages, "content_type": ctype, "metin_bicimi": bicim})
+    if not text:
+        out["error"] = "Belge metni çıkarılamadı (taranmış PDF ya da okunamayan dosya). URL'yi kaynak olarak verin."
+    return out
+
+
+_KASE = 200     # bundan kısa PDF metni belge değil, sayfadaki kaşe ya da başlıktır
+
+
+def metin_cikar(body: bytes, ctype: str = "", ocr: bool = False) -> Tuple[str, int, str]:
+    """Belge baytları → (metin, sayfa, biçim). Biçim: pdf, ocr, docx, doc, html ya da ''.
+
+    EPDK aynı adresten PDF, DOCX ve eski Word (.doc) verir; 2016 öncesi kararların çoğu .doc'tur,
+    bir kısmı da taranmış PDF. .doc için ``olefile`` gerekir (sunucuda yoksa o kararlar indeksten
+    gelir); taranmış PDF ve Word'e resim olarak konmuş taranmış sayfa ancak ``ocr=True`` ve
+    ``ocr.hazir()`` ise okunur (yalnız tarama makinesi).
+    """
     if "pdf" in ctype or body.startswith(b"%PDF"):
         text, pages = pdf_to_text(body)
-    elif body[:2] == b"PK":
+        # Taranmış belgede metin katmanı ya hiç yok ya yalnız kaşe ya da Resmî Gazete başlığı (6 kararda
+        # 33-199 karakter); OCR istenince ikisi de okutulur.
+        if len(text) < _KASE and ocr:
+            import ocr as _ocr
+            if _ocr.hazir():
+                okunan, pages = _ocr.pdf_ocr(body)
+                if len(okunan) > len(text):
+                    return okunan, pages, "ocr"
+        return text, pages, "pdf" if text else ""
+    if body[:2] == b"PK":
         import io
         import zipfile
         try:
             with zipfile.ZipFile(io.BytesIO(body)) as z:
-                xml = z.read("word/document.xml").decode("utf-8", "replace")
-            text = html_to_text(re.sub(r"</w:p>", "\n", xml))
+                if "word/document.xml" in z.namelist():
+                    xml = z.read("word/document.xml").decode("utf-8", "replace")
+                    text = html_to_text(re.sub(r"</w:p>", "\n", xml))
+                    if text or not ocr:
+                        return text, 0, "docx" if text else ""
+                    # Taranmış sayfa Word'e resim olarak konmuş (11 karar, 2016-2018).
+                    resimler = [z.read(ad) for ad in sorted(z.namelist())
+                                if ad.startswith("word/media/") and ad.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))]
+                    import ocr as _ocr
+                    if resimler and _ocr.hazir():
+                        text = _ocr.goruntu_ocr(resimler)
+                    return text, 0, "ocr" if text else ""
+                # Karar ve ekleri tek arşivde (3 karar, 2003-2017): içindeki Word dosyaları sırayla.
+                parcalar = [metin_cikar(z.read(ad))[0] for ad in sorted(z.namelist())
+                            if ad.lower().endswith((".doc", ".docx"))]
         except Exception:  # noqa: BLE001
-            text = ""
-    elif b"<html" in body[:4000].lower():
+            return "", 0, ""
+        text = "\n\n".join(p for p in parcalar if p)
+        return text, 0, "zip" if text else ""
+    if body.startswith(OLE_MAGIC):
+        text = doc_to_text(body)
+        return text, 0, "doc" if text else ""
+    if b"<html" in body[:4000].lower():
+        if b"<title>EPDK |" in body[:4000]:
+            return "", 0, ""                  # portalın kendi sayfası (menü), karar belgesi değil
         text = html_to_text(body.decode("utf-8", "replace"))
-    out = paginate(text, args.get("page") or 1, int(args.get("page_chars") or 8000))
-    out.update({"source_url": url, "pdf_pages": pages, "content_type": ctype})
-    if not text:
-        out["error"] = "Belge metni çıkarılamadı (taranmış PDF ya da eski .doc). URL'yi kaynak olarak verin."
-    return out
+        return text, 0, "html" if text else ""
+    return "", 0, ""
 
 
 def crawl(index, markets: Optional[List[str]] = None, fetch_text: bool = False, limit: int = 0,
@@ -223,8 +267,7 @@ def crawl(index, markets: Optional[List[str]] = None, fetch_text: bool = False, 
 
 
 def _iso(d: str) -> str:
-    m = re.match(r"(\d{2})[./](\d{2})[./](\d{4})", d or "")
-    return "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else ""
+    return iso_tarih(d)
 
 
 SEARCH_SCHEMA = {"type": "object", "properties": {
@@ -243,7 +286,10 @@ SOURCE = Source(
     key="epdk", label="EPDK — Enerji Piyasası Düzenleme Kurulu kararları", kind="kurum",
     notes=("Beş piyasa sayfası (elektrik, dogalgaz, petrol, lpg, denetim) × onlarca kategori; kategori başına bir istek. "
            "market ve category ile daraltın. Yalnız 'yapısal' Kurul kararları listelenir (lisans tadilleri değil); "
-           "bireysel lisans işlemleri için RG fihristi ve apigateway.epdk.gov.tr lisans sorguları ayrı kaynaktır."),
+           "bireysel lisans işlemleri için RG fihristi ve apigateway.epdk.gov.tr lisans sorguları ayrı kaynaktır. "
+           "2016 öncesi kararların çoğu eski Word (.doc), bir kısmı taranmış PDF; metinleri yerel indekste "
+           "(semantik_ara, kurum='epdk'). Canlı belgeden metin çıkmazsa kurum_karari_getir indeksteki metni "
+           "verir; taranmış belgede OCR uyarısıyla (rakam ve özel isimde okuma hatası olabilir)."),
     search=search, get=get, crawl=crawl, search_schema=SEARCH_SCHEMA, get_schema=GET_SCHEMA,
     homepage=BASE + PAGES["elektrik"],
 )
