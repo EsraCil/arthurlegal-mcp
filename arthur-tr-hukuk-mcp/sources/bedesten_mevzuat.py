@@ -83,10 +83,28 @@ _RG_EN_YENI = "2100-01-01T21:00:00.000Z"
 # Kanunu (RG 32951) 2025-06..12 listesinde yok; 4857, 2004, 213, 488 de RG tarihsiz. Bunu
 # söylemeden verilen liste "bu dönemde başka kanun yok" diye okunur.
 _RG_TARIHSIZ_UYARI = (
-    "RG tarih süzgeci kullanıldı: Bedesten kaydında RG tarihi BOŞ olan mevzuat bu listeye HİÇ "
-    "girmez (ör. 7552 sayılı İklim Kanunu, RG sayı 32951; 4857 İş Kanunu). Liste eksik olabilir. "
+    "RG tarih süzgeci kullanıldı: Bedesten kaydında RG tarihi BOŞ olan mevzuat Bedesten'in tarih "
+    "süzgecine girmez (ör. 7552 sayılı İklim Kanunu, RG sayı 32951; 4857 İş Kanunu); bulunabilenler "
+    "RG sayısıyla eklenir (rg_tarihsiz_notu). Liste yine eksik olabilir. "
     "Dönem taraması için ayrıca rg_number ile ya da number/query ile arayın; boş sonuç 'o dönemde "
     "mevzuat yok' demek değildir.")
+
+# Bedesten yeni mevzuatı haftalarca geç işler (canlı, 2026-10-26): en yeni RG tarihli kayıt
+# 17.09.2026 (RG 33373); 24.09.2026'daki Türkiye Yeşil Taksonomisi Yönetmeliği yok, 18.09–26.10
+# aralığı BOŞ döner. Kapsam sınırı bir istekle bulunur, 6 saat saklanır; sınırın ötesine taşan
+# tarih aralığında çağırana söylenir. Aralığın sonu bu kadar günden eskiyse sınır sorulmaz.
+_KAPSAM_TTL_S = 6 * 3600
+_KAPSAM_GECIKME_GUN = 7           # sınır ile aralık sonu arasında bundan uzun boşluk = uyarı
+_KAPSAM_YAKIN_GUN = 120
+_KAPSAM_ADAY = 5
+_kapsam_onbellek: Dict[str, Any] = {"t": 0.0, "deger": None}
+
+# RG tarihi boş kayıtlar (7552 İklim, 7545 Siber Güvenlik, 7578…) RG SAYISINI taşır. Tarih
+# aralığının RG sayı aralığı fihristten bulunur; aynı süzgeçlerle MEVZUAT_NO sırasıyla taranan
+# ilk sayfalardaki tarihsiz kayıtlardan sayısı aralığa düşenler sonuca eklenir.
+_TARIHSIZ_SAYFA = 2
+_RG_ARAMA_GUN = 7                 # tatil/bayram: o gün RG yoksa en çok bu kadar gün öteye bakılır
+_rg_sayi_onbellek: Dict[str, Optional[int]] = {}
 
 # Bir çağrıda metni açılacak torba kanun sayısı (her biri bir Bedesten isteği).
 TORBA_AZAMI = 5
@@ -584,6 +602,113 @@ def _konu_ele(items: List[Dict[str, Any]], konu: str, motor: Any, e: float):
     return tutulan, belirsiz
 
 
+def _gun_oku(d: str) -> datetime:
+    """'YYYY-MM-DD' ya da 'DD/MM/YYYY' → gün (``_rg_iso`` ile aynı biçimler)."""
+    d = d.strip()
+    return datetime.strptime(d, "%Y-%m-%d") if "-" in d[:5] else datetime.strptime(d, "%d/%m/%Y")
+
+
+def _bugun() -> datetime:
+    """Türkiye yerel günü (UTC+3), saat sıfırlanmış."""
+    t = datetime.now(timezone.utc) + timedelta(hours=3)
+    return datetime(t.year, t.month, t.day)
+
+
+def _kapsam_siniri() -> Optional[Dict[str, str]]:
+    """Bedesten'deki en yeni RG TARİHLİ kayıt: {"rg_date", "rg_number"}. Önbellekli (6 saat).
+
+    Kayıtlarda yanlış tarih var (canlı, 2026-10-27: RG 32913'ün tarihi 2027-05-28 yazılı). Bu yüzden
+    aralık bugünle biter ve tarihe göre ilk beş kayıttan RG SAYISI en büyük olanı alınır."""
+    o = _kapsam_onbellek
+    if o["deger"] is not None and time.monotonic() - o["t"] < _KAPSAM_TTL_S:
+        return o["deger"]
+    bugun = _bugun().strftime("%Y-%m-%d")
+    data = {"pageSize": _KAPSAM_ADAY, "pageNumber": 1, "sortFields": ["RESMI_GAZETE_TARIHI"],
+            "sortDirection": "desc",
+            "resmiGazeteTarihiStart": _rg_iso((_bugun() - timedelta(days=400)).strftime("%Y-%m-%d")),
+            "resmiGazeteTarihiEnd": _rg_iso(bugun, end=True)}
+    lst = (_call("/searchDocuments", data, paging=True) or {}).get("mevzuatList") or []
+    adaylar = [m for m in lst if _rg_tarih(m.get("resmiGazeteTarihi"))
+               and str(m.get("resmiGazeteSayisi") or "").strip().isdigit()]
+    if not adaylar:
+        return None
+    m = max(adaylar, key=lambda x: int(str(x["resmiGazeteSayisi"]).strip()))
+    o["deger"] = {"rg_date": _rg_tarih(m.get("resmiGazeteTarihi")), "rg_number": str(m["resmiGazeteSayisi"]).strip()}
+    o["t"] = time.monotonic()
+    return o["deger"]
+
+
+def _rg_sayisi(gun: str) -> Optional[int]:
+    """O günün Resmî Gazete sayısı (fihristten); o gün RG yoksa None. Sonuç saklanır."""
+    if gun not in _rg_sayi_onbellek:
+        from sources import resmi_gazete       # döngüsel içe aktarımdan kaçınmak için burada
+        r = resmi_gazete.fihrist({"date": gun})
+        if r.get("error") and "tatil" not in r["error"]:
+            raise RuntimeError("RG fihristi alınamadı (%s): %s" % (gun, r["error"]))
+        n = str(r.get("number") or "")
+        _rg_sayi_onbellek[gun] = int(n) if n.isdigit() else None
+    return _rg_sayi_onbellek[gun]
+
+
+def _rg_sayi_siniri(gun: datetime, yon: int) -> Optional[int]:
+    """Aralığın ucundaki ilk (yon=+1) ya da son (yon=-1) Resmî Gazete'nin sayısı."""
+    bugun = _bugun()
+    for k in range(_RG_ARAMA_GUN + 1):
+        d = gun + timedelta(days=k * yon)
+        if d > bugun:
+            if yon > 0:
+                return None
+            continue
+        n = _rg_sayisi(d.strftime("%Y-%m-%d"))
+        if n is not None:
+            return n if _rg_makul(d, n) else None
+    return None
+
+
+# Fihristin eski sayfalarında sayı başka biçimde yazılı; ayrıştırıcı 10.06.2003 için 25134 yerine
+# 4736 okuyor (canlı, 2026-10-27). Okunan sayı, RG'nin yayım hızına göre beklenenden çok uzaksa
+# (günde ~0,969 sayı: 25134 = 10.06.2003, 33412 = 26.10.2026) kullanılmaz; tamamlama yapılmaz.
+_RG_DAYANAK = (datetime(2026, 10, 26), 33412)
+_RG_GUNLUK = 0.969
+
+
+def _rg_makul(gun: datetime, n: int) -> bool:
+    gunler = (gun - _RG_DAYANAK[0]).days
+    beklenen = _RG_DAYANAK[1] + _RG_GUNLUK * gunler
+    return abs(n - beklenen) <= 30 + 0.02 * abs(gunler)
+
+
+def _tarihsiz_tamamla(data: Dict[str, Any], bas_gun: Optional[datetime], son_gun: datetime,
+                      gorulen: set) -> Dict[str, Any]:
+    """RG tarihi boş olup RG sayısı tarih aralığına düşen kayıtlar (aynı ad/no/tür süzgeçleriyle).
+    ``bas_gun`` yoksa (yalnız rg_date_to) alt sınır yoktur."""
+    lo = _rg_sayi_siniri(bas_gun, +1) if bas_gun else 0
+    hi = _rg_sayi_siniri(min(son_gun, _bugun()), -1)
+    if lo is None or hi is None or lo > hi:
+        return {"items": [], "rg_sayi_araligi": None, "taranan": 0,
+                "neden": "RG tarihi boş kayıtlar eklenmedi: aralığın Resmî Gazete sayıları fihristten "
+                         "güvenilir biçimde okunamadı."}
+    ek = {k: v for k, v in data.items() if k not in ("resmiGazeteTarihiStart", "resmiGazeteTarihiEnd")}
+    ek.update(pageSize=PAGE_MAX, sortFields=["MEVZUAT_NO"], sortDirection="desc")
+    bulunan: List[Dict[str, Any]] = []
+    taranan = 0
+    for n in range(_TARIHSIZ_SAYFA):
+        ek["pageNumber"] = n + 1
+        lst = (_call("/searchDocuments", dict(ek), paging=True) or {}).get("mevzuatList") or []
+        taranan += len(lst)
+        for m in lst:
+            sayi = str(m.get("resmiGazeteSayisi") or "").strip()
+            if (_rg_tarih(m.get("resmiGazeteTarihi")) or not sayi.isdigit()
+                    or not lo <= int(sayi) <= hi or str(m.get("mevzuatId")) in gorulen):
+                continue
+            _kayit_hatirla(m)
+            bulunan.append(dict(_satir(m), rg_date_bos=True))
+            gorulen.add(str(m.get("mevzuatId")))
+        if len(lst) < PAGE_MAX:
+            break
+    return {"items": bulunan, "rg_sayi_araligi": [lo, hi], "taranan": taranan}
+
+
 def search(args: Dict[str, Any]) -> Dict[str, Any]:
     q = (args.get("query") or "").strip()
     number = str(args.get("number") or "").strip()
@@ -662,6 +787,29 @@ def search(args: Dict[str, Any]) -> Dict[str, Any]:
         taranan += 1
         if len(lst) < page_size:
             break
+
+    # Tarih süzgecinin iki kör noktası: RG tarihi boş kayıtlar ve Bedesten'in henüz işlemediği dönem.
+    tarihsiz: Dict[str, Any] = {}
+    kapsam: Optional[Dict[str, str]] = None
+    ek_hata: List[str] = []
+    if bas or son:
+        bas_gun = _gun_oku(args["rg_date_from"]) if args.get("rg_date_from") else datetime(1850, 1, 2)
+        son_gun = _gun_oku(args["rg_date_to"]) if args.get("rg_date_to") else _bugun()
+        if page == 1:
+            try:
+                tarihsiz = _tarihsiz_tamamla(data, bas_gun if args.get("rg_date_from") else None, son_gun,
+                                             {str(r.get("mevzuat_id")) for r in items})
+            except Exception as exc:  # noqa: BLE001 - tamamlama yapılamadı; ana sonuç yine döner
+                ek_hata.append("RG tarihi boş kayıtlar eklenemedi: %s" % exc)
+            if tarihsiz.get("items"):
+                items.extend(tarihsiz["items"])
+                items.sort(key=lambda r: int(r.get("rg_number") or 0) if str(r.get("rg_number") or "").isdigit()
+                           else 0, reverse=True)
+        if son_gun >= _bugun() - timedelta(days=_KAPSAM_YAKIN_GUN):
+            try:
+                kapsam = _kapsam_siniri()
+            except Exception as exc:  # noqa: BLE001
+                ek_hata.append("Bedesten'in kapsam sınırı alınamadı: %s" % exc)
     out: Dict[str, Any] = {
         "query": q or number or "(liste)", "total": total, "page": page, "results": items,
         "note": "Madde metni + başlık + hazır atıf TEK çağrıda: tr_mevzuat_madde_getir(number=…, "
@@ -680,6 +828,35 @@ def search(args: Dict[str, Any]) -> Dict[str, Any]:
     if bas or son:
         out["possibly_incomplete"] = True
         out["rg_date_warning"] = _RG_TARIHSIZ_UYARI
+        if tarihsiz.get("neden"):
+            out["rg_tarihsiz_notu"] = tarihsiz["neden"]
+        elif tarihsiz.get("rg_sayi_araligi") and not tarihsiz["taranan"]:
+            out["rg_tarihsiz_notu"] = ("RG tarihi boş kayıtlar taranamadı: Bedesten tür ya da ad süzgeci "
+                                       "olmadan listelemez. types ya da query vererek yeniden arayın.")
+        elif tarihsiz.get("rg_sayi_araligi"):
+            lo, hi = tarihsiz["rg_sayi_araligi"]
+            out["rg_tarihsiz_eklenen"] = len(tarihsiz["items"])
+            out["rg_tarihsiz_notu"] = (
+                "Bedesten'de RG tarihi boş olup RG sayısı bu aralığa (S. %d–%d, fihristten) düşen %d kayıt "
+                "eklendi (rg_date_bos: true). Aynı süzgeçlerle mevzuat numarasına göre en yeni %d kayıt "
+                "tarandı; daha eski tarihsiz kayıt kaçabilir." % (lo, hi, len(tarihsiz["items"]),
+                                                                  tarihsiz["taranan"]))
+        if kapsam:
+            out["kapsam_siniri"] = kapsam
+            sinir = _gun_oku(kapsam["rg_date"])
+            if son_gun - sinir > timedelta(days=_KAPSAM_GECIKME_GUN):
+                bos_bas = max(sinir + timedelta(days=1), bas_gun)
+                bos_son = min(son_gun, _bugun())
+                out["coverage_warning"] = (
+                    "Bedesten'deki en yeni RG tarihli kayıt %s (RG %s). Bu tarihten sonra yayımlanan mevzuat "
+                    "Bedesten'e henüz işlenmemiş olabilir; %s–%s dönemi için boş ya da kısa liste 'mevzuat "
+                    "yok' demek değildir. O dönemi tr_resmi_gazete_tara(date_from=\"%s\", date_to=\"%s\") ile "
+                    "Resmî Gazete fihristinden tarayın." % (
+                        sinir.strftime("%d.%m.%Y"), kapsam.get("rg_number") or "?",
+                        bos_bas.strftime("%d.%m.%Y"), bos_son.strftime("%d.%m.%Y"),
+                        bos_bas.strftime("%Y-%m-%d"), bos_son.strftime("%Y-%m-%d")))
+        if ek_hata:
+            out["tamamlama_hatasi"] = ek_hata
     if konu:
         motor, e = hazir
         tutulan, belirsiz = _konu_ele(items, konu, motor, e)
@@ -2138,7 +2315,11 @@ SEARCH_SCHEMA = {
         "search_in": {"type": "string", "enum": ["title", "fulltext"], "default": "title"},
         "exact_phrase": {"type": "boolean", "default": False},
         "rg_date_from": {"type": "string", "description": "Resmî Gazete tarihi ≥, YYYY-MM-DD. RG tarihi "
-                                                          "boş kayıtlar tarih süzgecine girmez."},
+                                                          "boş kayıtlardan RG sayısı aralığa düşenler "
+                                                          "eklenir (rg_date_bos: true). Bedesten yeni "
+                                                          "mevzuatı haftalarca geç işler: aralık kapsam "
+                                                          "sınırını aşarsa coverage_warning döner; o "
+                                                          "dönem için tr_resmi_gazete_tara."},
         "rg_date_to": {"type": "string", "description": "Resmî Gazete tarihi ≤, YYYY-MM-DD"},
         "rg_number": {"type": "string", "description": "Resmî Gazete sayısı"},
         "page": {"type": "integer", "minimum": 1, "default": 1},

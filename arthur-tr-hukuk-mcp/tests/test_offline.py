@@ -405,28 +405,55 @@ from sources import bedesten_mevzuat as _mv  # noqa: E402
 
 
 class _SahteBedesten:
-    """_mv._call ve _mv.get'i geçici olarak değiştirir; ağ yok."""
+    """_mv._call, _mv.get ve RG fihristi sayısını geçici olarak değiştirir; ağ yok.
 
-    def __init__(self, sayfalar, metinler=None, cagri_yasak=False):
+    Tarih süzgeçli aramada iki ek istek olur: kapsam sınırı (pageSize=_KAPSAM_ADAY) ve RG tarihi boş
+    kayıtların taraması (sortFields=MEVZUAT_NO). ``kapsam`` ve ``tarihsiz`` bunların cevabıdır;
+    ``rg_sayilari`` gün → RG sayısı (yoksa o gün RG yok sayılır, tamamlama yapılmaz)."""
+
+    def __init__(self, sayfalar, metinler=None, cagri_yasak=False, kapsam=None, tarihsiz=None,
+                 rg_sayilari=None, bugun=None):
         self.sayfalar, self.metinler, self.cagri_yasak = sayfalar, metinler or {}, cagri_yasak
+        self.kapsam, self.tarihsiz, self.rg_sayilari = kapsam or [], tarihsiz or [], rg_sayilari or {}
+        self.bugun = bugun
         self.istekler = []
+
+    def ana_istekler(self):
+        return [i for i in self.istekler if i.get("pageSize") != _mv._KAPSAM_ADAY and i.get("sortFields") != ["MEVZUAT_NO"]]
 
     def __enter__(self):
         self._call, self._get = _mv._call, _mv.get
+        self._rg, self._bugun = _mv._rg_sayisi, _mv._bugun
+        _mv._kapsam_onbellek.update(t=0.0, deger=None)
 
         def call(path, data, paging=False):
             assert not self.cagri_yasak, "doğrulama ağa çıkmadan yapılmalıydı"
             self.istekler.append(dict(data))
+            if data.get("pageSize") == _mv._KAPSAM_ADAY:
+                return {"total": len(self.kapsam), "mevzuatList": self.kapsam[:_mv._KAPSAM_ADAY]}
+            if data.get("sortFields") == ["MEVZUAT_NO"]:
+                return {"total": len(self.tarihsiz), "mevzuatList": self.tarihsiz if data["pageNumber"] == 1 else []}
             i = data["pageNumber"] - 1
             lst = self.sayfalar[i] if i < len(self.sayfalar) else []
             return {"total": sum(len(x) for x in self.sayfalar), "mevzuatList": lst}
 
+        def rg_sayisi(gun):
+            v = self.rg_sayilari.get(gun)
+            if isinstance(v, Exception):
+                raise v
+            return v
+
         _mv._call = call
         _mv.get = lambda args: {"text": self.metinler.get(str(args.get("mevzuat_id")), "")}
+        _mv._rg_sayisi = rg_sayisi
+        if self.bugun:
+            _mv._bugun = lambda: self.bugun
         return self
 
     def __exit__(self, *a):
         _mv._call, _mv.get = self._call, self._get
+        _mv._rg_sayisi, _mv._bugun = self._rg, self._bugun
+        _mv._kapsam_onbellek.update(t=0.0, deger=None)
 
 
 def _kayit(i, tur, ad):
@@ -457,9 +484,71 @@ def test_mevzuat_tek_tarafli_rg_araligi_tamamlanir():
     with _SahteBedesten([[], []]) as b:
         _mv.search({"types": ["KANUN"], "rg_date_from": "2024-09-01"})
         _mv.search({"types": ["KANUN"], "rg_date_to": "2024-09-01"})
-    ilk, ikinci = b.istekler
+    ilk, ikinci = b.ana_istekler()
     assert ilk["resmiGazeteTarihiStart"].startswith("2024-08-31") and ilk["resmiGazeteTarihiEnd"].startswith("2100")
     assert ikinci["resmiGazeteTarihiStart"].startswith("1850") and ikinci["resmiGazeteTarihiEnd"].startswith("2024-09-01")
+
+
+def _tarihsiz(i, ad, rg_sayisi):
+    return {"mevzuatId": str(i), "mevzuatNo": str(7500 + i), "mevzuatAdi": ad, "mevzuatTur": {"name": "KANUN"},
+            "resmiGazeteTarihi": None, "resmiGazeteSayisi": rg_sayisi}
+
+
+def test_mevzuat_rg_tarihi_bos_kayit_rg_sayisiyla_eklenir():
+    """7578 sayılı Kanunun Bedesten kaydında RG tarihi boş (RG 33240): tarih süzgeci onu hiç
+    döndürmüyordu (canlı, 2026-10-26). RG sayısı aralığa düşen tarihsiz kayıt eklenir."""
+    from datetime import datetime as _dt
+    tarihli = dict(_kayit(1, "KANUN", "TAPU KANUNU İLE BAZI KANUNLARDA DEĞİŞİKLİK"), resmiGazeteSayisi="33261")
+    with _SahteBedesten([[tarihli]], bugun=_dt(2026, 10, 26),
+                        tarihsiz=[tarihli, _tarihsiz(78, "SOSYAL HİZMETLER KANUNU", "33240"),
+                                  _tarihsiz(52, "İKLİM KANUNU", "32951")],
+                        rg_sayilari={"2026-05-01": 33240, "2026-08-31": 33357}) as b:
+        r = _mv.search({"types": ["KANUN"], "rg_date_from": "2026-05-01", "rg_date_to": "2026-08-31"})
+    adlar = [x["title"] for x in r["results"]]
+    assert adlar == ["TAPU KANUNU İLE BAZI KANUNLARDA DEĞİŞİKLİK", "SOSYAL HİZMETLER KANUNU"], adlar
+    assert r["results"][1]["rg_date_bos"] is True and r["results"][1]["rg_number"] == "33240"
+    assert r["rg_tarihsiz_eklenen"] == 1 and "S. 33240–33357" in r["rg_tarihsiz_notu"]
+    ek = [i for i in b.istekler if i.get("sortFields") == ["MEVZUAT_NO"]][0]
+    assert ek["mevzuatTurList"] == ["KANUN"] and "resmiGazeteTarihiStart" not in ek
+
+
+def test_mevzuat_kapsam_sinirini_asan_aralik_uyarilir():
+    """Bedesten'de en yeni kayıt 17.09.2026 iken 01.09–26.10 aralığı 17.09 sonrasını sessizce boş
+    döndürüyordu (canlı, 2026-10-26). Uyarı boş dönemi ve RG fihrist taramasını söyler."""
+    from datetime import datetime as _dt
+    son = dict(_kayit(9, "KKY", "TÜRK OPTİSYEN-GÖZLÜKÇÜLER BİRLİĞİ YÖNETMELİĞİ"),
+               resmiGazeteTarihi="2026-09-17T10:07:00", resmiGazeteSayisi="33373")
+    yanlis = dict(_kayit(8, "KKY", "TARİHİ YANLIŞ GİRİLMİŞ KAYIT"), resmiGazeteTarihi="2026-10-20T00:00:00",
+                  resmiGazeteSayisi="32913")          # canlıda RG 32913 "2027-05-28" tarihli görünüyor
+    with _SahteBedesten([[son]], kapsam=[yanlis, son], bugun=_dt(2026, 10, 26)):
+        r = _mv.search({"rg_date_from": "2026-09-01", "rg_date_to": "2026-10-26"})
+        r2 = _mv.search({"rg_date_from": "2026-09-01", "rg_date_to": "2026-09-20"})
+    assert r["kapsam_siniri"] == {"rg_date": "2026-09-17", "rg_number": "33373"}
+    w = r["coverage_warning"]
+    assert "17.09.2026 (RG 33373)" in w and "18.09.2026–26.10.2026" in w
+    assert 'tr_resmi_gazete_tara(date_from="2026-09-18", date_to="2026-10-26")' in w
+    assert "coverage_warning" not in r2                  # sınırdan 3 gün sonrası: uyarı eşiğinin içinde
+
+
+def test_mevzuat_eski_aralikta_kapsam_sorulmaz_ve_rg_hatasi_sonucu_bozmaz():
+    from datetime import datetime as _dt
+    with _SahteBedesten([[_kayit(1, "KANUN", "BİR KANUN")]], bugun=_dt(2026, 10, 26),
+                        rg_sayilari={"2020-01-01": RuntimeError("RG fihristi alınamadı")}) as b:
+        r = _mv.search({"types": ["KANUN"], "rg_date_from": "2020-01-01", "rg_date_to": "2020-12-31"})
+    assert not [i for i in b.istekler if i.get("pageSize") == _mv._KAPSAM_ADAY]
+    assert len(r["results"]) == 1 and "kapsam_siniri" not in r
+    assert "RG tarihi boş kayıtlar eklenemedi" in r["tamamlama_hatasi"][0]
+
+
+def test_mevzuat_rg_fihristinden_okunan_sayi_makul_degilse_kullanilmaz():
+    """Eski fihrist sayfasında ayrıştırıcı 10.06.2003 için 25134 yerine 4736 okuyor (canlı, 2026-10-27)."""
+    from datetime import datetime as _dt
+    assert _mv._rg_makul(_dt(2003, 6, 10), 25134) and not _mv._rg_makul(_dt(2003, 6, 10), 4736)
+    assert _mv._rg_makul(_dt(2026, 9, 17), 33373) and _mv._rg_makul(_dt(2026, 5, 1), 33240)
+    with _SahteBedesten([[_kayit(1, "KANUN", "BİR KANUN")]], bugun=_dt(2026, 10, 26),
+                        rg_sayilari={"2003-06-10": 4736, "2003-12-31": 25333}) as b:
+        r = _mv.search({"types": ["KANUN"], "rg_date_from": "2003-06-10", "rg_date_to": "2003-12-31"})
+    assert "okunamadı" in r["rg_tarihsiz_notu"] and not [i for i in b.istekler if i.get("sortFields") == ["MEVZUAT_NO"]]
 
 
 def test_mevzuat_konu_gecersizse_AGA_CIKMADAN_hata_verir():

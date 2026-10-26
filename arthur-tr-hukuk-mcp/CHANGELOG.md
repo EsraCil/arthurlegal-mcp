@@ -2,6 +2,18 @@
 
 ## Yayımlanmamış
 
+- `mevzuat_ara` tarih süzgeci: Eylül–Ekim 2026 aralığı boş dönüyordu. İki ayrı neden (canlı, 2026-10-27):
+  (1) Bedesten yeni mevzuatı haftalarca geç işliyor; en yeni RG tarihli kayıt 17.09.2026 (RG 33373), 24.09.2026'daki
+  Türkiye Yeşil Taksonomisi Yönetmeliği yok. Tarih aralığı son 120 günü kapsıyorsa yanıt Bedesten'in kapsam sınırını
+  (`kapsam_siniri`) verir; aralık sınırı 7 günden fazla aşarsa `coverage_warning` boş dönemi ve
+  `tr_resmi_gazete_tara` çağrısını yazar. Sınır bir istekle bulunur ve 6 saat saklanır; kayıtlarda yanlış tarih
+  olduğu için (RG 32913 "2027-05-28") aralık bugünle biter ve ilk beş kayıttan RG sayısı en büyük olan alınır.
+  (2) RG tarihi boş kayıtlar (7578, 7552 İklim, 7545 Siber Güvenlik) Bedesten'in tarih süzgecine hiç girmiyordu. Aynı
+  süzgeçlerle mevzuat numarasına göre ilk iki sayfa taranır; RG sayısı, aralığın RG fihristinden bulunan sayı
+  aralığına düşen tarihsiz kayıt sonuca `rg_date_bos: true` ile eklenir (`rg_tarihsiz_notu`). 2026 kanun listesinde
+  7578, 2025'te 7552 ve 7545 artık geliyor. Ek istek yalnız ilk sayfada; RG fihristi ya da Bedesten cevap vermezse
+  ana sonuç döner, neden `tamamlama_hatasi`'nda. Fihristin eski sayfalarında sayı yanlış okunuyor (10.06.2003: 25134
+  yerine 4736); okunan sayı RG'nin yayım hızına göre beklenenden uzaksa tamamlama yapılmaz ve bu söylenir.
 - `mevzuat_madde_getir` (F-196): TBK m.428 getirilemiyordu; Bedesten metninde başlık "MADDE 428 İşyerinin…" diye
   tiresiz. Tiresiz başlık artık yalnız güvenli durumda kabul edilir: satır başında büyük harfli MADDE, ardından
   büyük harf ya da "(", numara iki komşu başlığın arasında (komşu yoksa metnin ilk satırı). "Madde 12 uyarınca…"

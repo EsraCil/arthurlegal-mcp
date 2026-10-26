@@ -7,7 +7,7 @@ Turkish legal research MCP server. Standard library only (+ optional `pypdf`).
 ```bash
 python server.py                                  # stdio
 python server.py --transport http --port 8080     # POST /mcp, GET /health
-python tests/test_offline.py                      # 51 offline tests, no network
+python tests/test_offline.py                      # 55 offline tests, no network
 python crawl.py --source kvkk,bddk --embed        # build data/index.db
 ```
 
