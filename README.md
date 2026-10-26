@@ -92,7 +92,7 @@ and the tools that write files, fetch elevation data or read title records are d
 
 Every tool carries its jurisdiction as a prefix -- `nl_` `pl_` `at_` `ie_` `fi_`
 `es_` `uk_` `eu_` `jp_` `gleif_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
-`get_act` means five different things and `search_legislation` three, so the
+`get_act` means six different things and `search_legislation` four, so the
 prefix is what keeps a Spanish question from being answered with Finnish law.
 
 `status` reports every jurisdiction at once: which backends loaded, how many

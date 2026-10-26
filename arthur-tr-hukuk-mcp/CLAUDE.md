@@ -7,7 +7,7 @@ Turkish legal research MCP server. Standard library only (+ optional `pypdf`).
 ```bash
 python server.py                                  # stdio
 python server.py --transport http --port 8080     # POST /mcp, GET /health
-python tests/test_offline.py                      # 33 offline tests, no network
+python tests/test_offline.py                      # 51 offline tests, no network
 python crawl.py --source kvkk,bddk --embed        # build data/index.db
 ```
 
@@ -42,7 +42,7 @@ python crawl.py --source kvkk,bddk --embed        # build data/index.db
 - **Sayıştay** — WAF answers 418 to every DataTables POST, browsers included (also from Fly's IP).
 - **TÜRKPATENT** — no public decision database; research portal is reCAPTCHA-gated.
 - **İSTAÇ** — istac.org.tr did not resolve from Fly nor from the workstation (nor by forced IP) on 2026-09-06.
-  Rules PDFs are static; re-add when the host is back (old adapter in git history: `git show 784eb95:sources/istac.py`).
+  Rules PDFs are static; re-add when the host is back (old adapter in git history: `git show db9a7ea^:ArthurLegalTR/sources/istac.py`).
 
 ## Aggregator integration
 

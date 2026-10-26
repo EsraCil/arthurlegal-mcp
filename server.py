@@ -587,9 +587,9 @@ def _t_status(args: Dict[str, Any]) -> Any:
         **_runtime(),
         "backends_loaded": _loaded,
         "tools_exposed": len(_tools),
-        "note": "Every tool is prefixed with its jurisdiction (nl_, pl_, at_, ie_, "
+        "note": "Every tool is prefixed with its jurisdiction (tr_, nl_, pl_, at_, ie_, "
                 "fi_, es_, uk_, eu_, jp_, gleif_, tkgm_, az_, scholar_, contracts_, de_). Across the underlying "
-                "servers `get_act` means five different things, so the prefix is "
+                "servers `get_act` means six different things, so the prefix is "
                 "what keeps a Spanish question from being answered with Finnish law.",
     }
     if _failed:
@@ -665,7 +665,7 @@ koordinat ya da yer adı; dosya İSTEMEYİN), rapor, ölçü, kroki; ilk canlı 
 TÜRKİYE İÇİN GİRİŞ NOKTASI: karmaşık Türk hukuku sorusunda önce `tr_hukuk_arastirma_rehberi`
 (hangi soru için hangi araç), sonra `tr_kurum_listesi` (8 kurumun filtreleri).
 
-Bu kozmetik değil: `get_act` alttaki sunucularda beş ayrı şeydir; önek, İspanyol
+Bu kozmetik değil: `get_act` alttaki sunucularda altı ayrı şeydir; önek, İspanyol
 sorusunun Fin mevzuatıyla cevaplanmasını engeller.
 
 DURUM. Sonuçlar ince görünürse **önce `status`** (yüklenen yargı çevreleri, indeks, taranan

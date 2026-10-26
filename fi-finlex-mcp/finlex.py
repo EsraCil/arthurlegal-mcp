@@ -40,7 +40,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from typing import Any, Dict, List, Optional
 
-__version__ = "1.0.0"
+__version__ = "1.1.1"
 
 BASE = "https://opendata.finlex.fi/finlex/avoindata/v1/akn/fi"
 UA = "arthurlegal-fi-finlex-mcp/%s (+https://github.com/beerbottle90/arthurlegal-mcp)" % __version__

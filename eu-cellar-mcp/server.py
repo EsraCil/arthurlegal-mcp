@@ -36,7 +36,7 @@ that works, and it is what these tools use.
 
 CELEX IS THE KEY, AND IT IS NOT GUESSABLE. A CELEX number encodes sector, year,
 type and running number (32016R0679 = GDPR). Never construct one: a wrong CELEX
-resolves to a different instrument, not to an error. Get it from `search` or
+resolves to a different instrument, not to an error. Get it from `search_eu_law` or
 from the user.
 
 CONSOLIDATED ≠ ORIGINAL. A CELEX beginning with 0 and carrying a date suffix

@@ -80,7 +80,7 @@ TOOLS = [
           "required": ["kanun", "norm"]},
          _t_norm),
     Tool("gesetz_ara",
-         "gesetze-im-internet.de içindekiler listesinde kanun adı arar (yaklaşık 6.900 kanun ve "
+         "gesetze-im-internet.de içindekiler listesinde kanun adı arar (yaklaşık 6.100 kanun ve "
          "yönetmelik). Kısaltmasını bilmediğiniz kanunun sayfa adını (slug) bulur; norm_getir'e verin.",
          {"type": "object", "properties": {
              "sorgu": {"type": "string", "description": "Kanun adı ya da adından bir parça."},

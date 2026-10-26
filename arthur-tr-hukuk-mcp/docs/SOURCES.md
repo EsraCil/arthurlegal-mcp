@@ -104,7 +104,7 @@ titles; `--fetch-text` crawls the PDFs.
 | TÜRKPATENT | no decision database; research portal needs a reCAPTCHA v3 token per call | `/yidk-kararlari` 404 shell, `/api/research` 500 |
 | İSTAÇ | `istac.org.tr` does not resolve (Fly, workstation) and does not answer by IP | `getaddrinfo failed` / connect timeout |
 
-The adapters live in git history (`git show 784eb95:sources/<name>.py`). Re-adding one requires a
+The adapters live in git history (`git show db9a7ea^:ArthurLegalTR/sources/<name>.py`). Re-adding one requires a
 live search **and** fetch to pass from the deployed machine, not from a browser.
 
 ## Not included (and why)

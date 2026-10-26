@@ -9,7 +9,7 @@ Yargıtay · Danıştay · BAM · yerel mahkeme · KYB · Anayasa Mahkemesi · U
 mevzuat (12 tür, madde ağacı, gerekçe) · Resmî Gazete · **Rekabet Kurumu · EPDK · SPK · BDDK ·
 KVKK · BTK · GİB · Sigorta Tahkim Komisyonu**
 
-25 araç. Standart kütüphane; tek opsiyonel bağımlılık `pypdf`. Ücretli arama anahtarı yok
+24 araç. Standart kütüphane; tek opsiyonel bağımlılık `pypdf`. Ücretli arama anahtarı yok
 (Brave / Tavily / OpenRouter gerekmez). Yerel SQLite indeks: FTS5 + trigram + vektör
 (Voyage, OpenAI-uyumlu veya yerel Ollama).
 
@@ -175,7 +175,7 @@ asla crawl yapmaz. `flyctl secrets set EMBEDDINGS_API_KEY=…` semantik kanalı 
 ## Test
 
 ```bash
-PYTHONIOENCODING=utf-8 python tests/test_offline.py     # ağ yok, 11 test
+PYTHONIOENCODING=utf-8 python tests/test_offline.py     # ağ yok, 51 test
 ```
 
 ## Lisans
