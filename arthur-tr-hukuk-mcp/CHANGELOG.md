@@ -2,6 +2,14 @@
 
 ## Yayımlanmamış
 
+- `mevzuat_madde_getir` (F-196): TBK m.428 getirilemiyordu; Bedesten metninde başlık "MADDE 428 İşyerinin…" diye
+  tiresiz. Tiresiz başlık artık yalnız güvenli durumda kabul edilir: satır başında büyük harfli MADDE, ardından
+  büyük harf ya da "(", numara iki komşu başlığın arasında (komşu yoksa metnin ilk satırı). "Madde 12 uyarınca…"
+  başlık sayılmaz. TBK m.464'te tireden önce yumuşak tire (U+00AD) vardı; o da tanınır. Tam metin modunda m.427
+  artık 428'in metnini almaz; tam metinde başlığı bulunamayan madde maddenin kendi düğümünden denenir. Fıkra
+  araması "(8)" yanında "8." biçimini de tanır (İYUK m.45/8): yalnız maddede "(1)" biçimi yoksa ve gövde doğrudan
+  "1." ile başlıyorsa; "Mücbir sebepler: 1. …" gibi bent listeleri fıkra sayılmaz. 12 kanunun tam metninde
+  (5.985 başlık) eklenen başlık yalnız TBK 428 ve 464, kaybolan yok.
 - EPDK: 3.745 kararın 2.019'unun gövdesi yalnız liste kaydıydı (konu + kategori). 2016 öncesinin ~%97'si böyleydi;
   belgeler eski Word (.doc) ya da taranmış PDF olduğu için metin çıkmıyordu. 2.007'sine metin eklendi: 1.722 Word
   dosyası (`textx.doc_to_text`, olefile), 281 taranmış belge OCR'la (`ocr.py`: pypdfium2 + Tesseract 5, Türkçe
