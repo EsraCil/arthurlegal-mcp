@@ -46,9 +46,9 @@ import urllib.request
 from typing import Any, Callable, Dict, List, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mcpcore import McpError, Tool, run  # noqa: E402
+from mcpcore import McpError, Resource, Tool, run  # noqa: E402
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Deployed bundle: every backend sits next to this file.
@@ -672,6 +672,57 @@ def build() -> None:
         {"type": "object", "properties": {}},
         _t_status,
     ))
+    _attach_views()
+
+
+# --------------------------------------------------------------------------- #
+# MCP Apps: ArthurLegal Masası and the in-chat cards
+# --------------------------------------------------------------------------- #
+# The views live in arayuz/ (a copy; their home is the private arthurlegal-app4all
+# repository, synced with its sunucu/esitle.py). A host that renders MCP Apps
+# (Claude on the web, desktop and mobile) draws the card beside the call; every
+# other client keeps reading the same JSON text, so no tool contract changes.
+# Without arayuz/ the server runs as before, text only.
+sys.path.insert(0, os.path.join(HERE, "arayuz"))
+try:
+    import al_arayuz  # noqa: E402
+except ImportError:
+    al_arayuz = None
+
+# The tools the desk calls directly. Modules that run on the lawyer's computer
+# (memory, masking, UYAP) are marked "masaustu" here: this endpoint serves the web
+# and phone, where they do not exist by design. Land registry goes through Claude
+# (the tkgm_ tools below are on this endpoint).
+MASA_TOOLS = ("tr_mevzuat_madde_getir", "tr_ictihat_ara", "tr_ictihat_getir", "status")
+REMOTE_MODULES = {
+    "tapu": {"durum": "claude"}, "beyin": {"durum": "masaustu"}, "mask": {"durum": "masaustu"},
+    "uyap": {"durum": "masaustu"}, "donna": {"durum": "hazir"},
+}
+
+_resources: List[Resource] = []
+
+
+def _attach_views() -> None:
+    """Give carded tools their _meta, add al_masasi and register the views.
+
+    A tool whose backend failed to load is simply absent, so it gets no card; the
+    desk then reports that source as unavailable instead of pointing at nothing.
+    """
+    if al_arayuz is None:
+        return
+    for tool in _tools:
+        meta = al_arayuz.arac_meta(tool.name)
+        if meta:
+            tool.meta = meta
+    tanim = al_arayuz.masa_araci()
+    able = [t.name for t in _tools if t.name in MASA_TOOLS]
+    _tools.append(Tool(
+        tanim["name"], tanim["description"], tanim["inputSchema"],
+        lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum")),
+        meta=al_arayuz.arac_meta("al_masasi")))
+    for k in al_arayuz.kaynaklar():
+        _resources.append(Resource(k["uri"], k["name"], k["text"], mime_type=k["mimeType"],
+                                   description=k["description"], meta=k["_meta"]))
 
 
 INSTRUCTIONS_HEADER = """MADDE ATFI KURALI: Bir kanun maddesini (not, sözleşme, protokol, dilekçe veya karar gövdesi dâhil) yazmadan önce tr_mevzuat_madde_getir(number="6769", madde_no="120") ile metnini ve başlığını çekin; yanıttaki citation alanını birebir kullanın ve maddeye yüklediğiniz içeriğin (hakkın sahibi, şart, süre, sonuç) başlık ve metinle örtüştüğünü kontrol edin. Çekilemeyen maddeyi ezberden yazmayın; açıkça "UYARI: veri çekilemedi, teyidiniz gerekli: https://www.mevzuat.gov.tr/" yazın.
@@ -715,4 +766,5 @@ if __name__ == "__main__":
         sys.stderr.write(" (%d backend yüklenemedi: %s)"
                          % (len(_failed), ", ".join(f["prefix"] for f in _failed)))
     sys.stderr.write("\n")
-    run(_tools, name="arthurlegal-mcp", version=__version__, instructions=text)
+    run(_tools, name="arthurlegal-mcp", version=__version__, instructions=text,
+        resources=_resources)

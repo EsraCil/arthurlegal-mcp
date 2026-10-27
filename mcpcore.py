@@ -34,7 +34,7 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional
 
-__all__ = ["Tool", "McpError", "run", "run_stdio", "run_http", "build_parser"]
+__all__ = ["Tool", "Resource", "McpError", "run", "run_stdio", "run_http", "build_parser"]
 
 # Cap the JSON-RPC request body: without this a single Content-Length header can
 # drive the process out of memory.
@@ -55,9 +55,14 @@ class McpError(Exception):
 
 
 class Tool:
-    """One tool: JSON Schema in, handler out. Single source of truth for both transports."""
+    """One tool: JSON Schema in, handler out. Single source of truth for both transports.
 
-    __slots__ = ("name", "description", "input_schema", "handler")
+    ``meta`` is the tool's ``_meta`` object. An MCP Apps host reads
+    ``_meta.ui.resourceUri`` from it and renders that ``ui://`` resource next to
+    the call; hosts without MCP Apps ignore it and keep reading the text result.
+    """
+
+    __slots__ = ("name", "description", "input_schema", "handler", "meta")
 
     def __init__(
         self,
@@ -65,18 +70,64 @@ class Tool:
         description: str,
         input_schema: Dict[str, Any],
         handler: Callable[[Dict[str, Any]], Any],
+        meta: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.name = name
         self.description = description
         self.input_schema = input_schema
         self.handler = handler
+        self.meta = meta
 
     def public(self) -> Dict[str, Any]:
-        return {
+        out = {
             "name": self.name,
             "description": self.description,
             "inputSchema": self.input_schema,
         }
+        if self.meta:
+            out["_meta"] = self.meta
+        return out
+
+
+class Resource:
+    """One readable resource with fixed text, e.g. an MCP Apps view (``ui://...``).
+
+    ``meta`` rides on both the listing and the read result: the host takes the
+    view's sandbox settings (``_meta.ui.csp``, ``prefersBorder``) from the content
+    it reads, and some hosts only look at the listing.
+    """
+
+    __slots__ = ("uri", "name", "text", "mime_type", "description", "meta")
+
+    def __init__(
+        self,
+        uri: str,
+        name: str,
+        text: str,
+        mime_type: str = "text/plain",
+        description: str = "",
+        meta: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.uri = uri
+        self.name = name
+        self.text = text
+        self.mime_type = mime_type
+        self.description = description
+        self.meta = meta
+
+    def listing(self) -> Dict[str, Any]:
+        out = {"uri": self.uri, "name": self.name, "mimeType": self.mime_type}
+        if self.description:
+            out["description"] = self.description
+        if self.meta:
+            out["_meta"] = self.meta
+        return out
+
+    def contents(self) -> Dict[str, Any]:
+        out = {"uri": self.uri, "mimeType": self.mime_type, "text": self.text}
+        if self.meta:
+            out["_meta"] = self.meta
+        return out
 
 
 # --------------------------------------------------------------------------- #
@@ -105,12 +156,15 @@ class Dispatcher:
         name: str,
         version: str,
         instructions: str = "",
+        resources: Optional[List[Resource]] = None,
     ) -> None:
         self.tools = tools
         self.by_name = {t.name: t for t in tools}
         self.name = name
         self.version = version
         self.instructions = instructions
+        self.resources = list(resources or [])
+        self.resource_by_uri = {r.uri: r for r in self.resources}
 
     def handle(self, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Return a response dict, or None for notifications (no reply)."""
@@ -125,9 +179,12 @@ class Dispatcher:
         if method == "initialize":
             asked = (params.get("protocolVersion") or "").strip()
             protocol = asked if asked in _SUPPORTED_PROTOCOLS else _DEFAULT_PROTOCOL
+            capabilities: Dict[str, Any] = {"tools": {"listChanged": False}}
+            if self.resources:
+                capabilities["resources"] = {"listChanged": False}
             result = {
                 "protocolVersion": protocol,
-                "capabilities": {"tools": {"listChanged": False}},
+                "capabilities": capabilities,
                 "serverInfo": {"name": self.name, "version": self.version},
             }
             if self.instructions:
@@ -143,6 +200,19 @@ class Dispatcher:
         if method == "tools/call":
             return self._call(msg_id, params)
 
+        if method == "resources/list":
+            return _ok(msg_id, {"resources": [r.listing() for r in self.resources]})
+
+        if method == "resources/templates/list":
+            return _ok(msg_id, {"resourceTemplates": []})
+
+        if method == "resources/read":
+            resource = self.resource_by_uri.get(params.get("uri"))
+            if resource is None:
+                # -32002 is the code the MCP spec reserves for an unknown resource.
+                return _err(msg_id, -32002, "Resource not found: %s" % params.get("uri"))
+            return _ok(msg_id, {"contents": [resource.contents()]})
+
         return _err(msg_id, -32601, "Method not found: %s" % method)
 
     def _call(self, msg_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -153,8 +223,12 @@ class Dispatcher:
             return _err(msg_id, -32602, "Unknown tool: %s" % name)
         try:
             value = tool.handler(args)
-            payload = _as_text(value)
-            return _ok(msg_id, {"content": [{"type": "text", "text": payload}]})
+            result: Dict[str, Any] = {"content": [{"type": "text", "text": _as_text(value)}]}
+            # A tool with a view hands the view the same object as data: the view
+            # reads structuredContent, the model keeps reading the identical text.
+            if tool.meta and isinstance(value, dict):
+                result["structuredContent"] = value
+            return _ok(msg_id, result)
         except McpError as exc:
             # A handled, explainable failure — hand it to the model as text so it
             # can recover (try another query, another tool) instead of stalling.
@@ -353,9 +427,11 @@ def run(
     version: str,
     instructions: str = "",
     argv: Optional[List[str]] = None,
+    resources: Optional[List[Resource]] = None,
 ) -> None:
     args = build_parser(name).parse_args(argv)
-    dispatcher = Dispatcher(tools, name=name, version=version, instructions=instructions)
+    dispatcher = Dispatcher(tools, name=name, version=version, instructions=instructions,
+                            resources=resources)
     if args.transport == "http":
         run_http(dispatcher, args.host, args.port)
     else:

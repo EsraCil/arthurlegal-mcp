@@ -104,6 +104,25 @@ it live (`de_live`); Azerbaijan's probe reports whether e-qanun.az answers now.
 On the hosted endpoint it also names the image that answered (`build`) and the
 memory in use (`memory`).
 
+## Interactive views (MCP Apps)
+
+In Claude (web, desktop and the iOS/Android apps) results come with ArthurLegal views. The tools'
+JSON is unchanged, so clients without MCP Apps read exactly what they read before.
+
+- `tr_mevzuat_madde_getir`: an article card with the law and Official Gazette details, each
+  article's heading (with its parent headings for codes such as TBK and TMK), the text, the
+  citation to quote with a copy button, a link to the official text and a verified / partly
+  verified / not verified badge. An article that could not be fetched carries the `UYARI` line.
+- `tr_ictihat_ara`: a decision list with chamber, docket numbers and date; each decision's text
+  opens inside the card and can be handed to Claude for a summary.
+- `al_masasi`: ArthurLegal Masası, a full-screen desk with legislation and citation check,
+  case law, source status and the other ArthurLegal modules in one panel. On this endpoint the
+  modules that run on the lawyer's computer (memory, masking, UYAP) are shown as desktop-only.
+
+The views are in `arayuz/` (served as `ui://arthurlegal/...`). Light theme by default, dark and
+automatic on request; the device's system font; the only origin the sandbox allows is unpkg, for
+the pinned MCP Apps client (`@modelcontextprotocol/ext-apps`).
+
 ## Germany (`de_`)
 
 Two sources stand behind the `de_` prefix:
