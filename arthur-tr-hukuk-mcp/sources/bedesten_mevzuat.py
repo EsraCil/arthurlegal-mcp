@@ -1000,6 +1000,12 @@ _EK_CETVEL = re.compile(r"^[ \t]*\(\s*[0-9ivxlc]{1,4}\s*\)\s*sayili\s+(?:tarife|
                         re.M)
 _DIPNOT_SATIRI = re.compile(r"^[ \t]*\[(\d{1,4})\][ \t]*(?=\S)", re.M)
 _DIPNOT_REF_SON = re.compile(r"(?:\s*\[\d{1,4}\])+\s*$")
+# Bedesten metninde başlığın dipnot işareti üst simge değil, kelimeye yapışık rakamdır: "BELİRLENMESİ2".
+_DIPNOT_YAPISIK = re.compile(r"(?<=[^\W\d_])(\d{1,2})$")
+# Kademeli kenar başlığı etiketi (TBK, TMK): "E. KİRA BEDELİ", "II. Belirlenmesi", "1. İlke", "a. Şekil".
+_ETIKET = re.compile(r"^\s*([IVXLC]{1,6}|[A-ZÇĞİÖŞÜ]|\d{1,2}|[a-zçğıöşü]{1,2})\.\s+(?=\S)")
+# Boş sayılan satır: HTML'den kalan "&NBSP;" artığı da.
+_BOS_SATIR = re.compile(r"^(?:\s|&nbsp;|\xa0)*$", re.I)
 _KUCUK = re.compile(r"[a-zçğıöşüâîû]")
 _YAPI = re.compile(r"^(?:[a-z]+\s+){1,3}(?:alt\s+)?(?:kitap|kisim|bolum|ayirim|bap|bab|fasil|kesim)"
                    r"(?:\s*[-–:.]\s*.{0,80})?$")
@@ -1028,6 +1034,92 @@ def _baslik_gibi(satir: str) -> bool:
     return any(ch.isalpha() for ch in govde)
 
 
+def _bos_satir(satir: str) -> bool:
+    return bool(_BOS_SATIR.match(satir))
+
+
+def _etiket_duzeyi(satir: str) -> Optional[int]:
+    """Kademeli kenar başlığının kademesi: A.=0, I.=1, 1.=2, a.=3, aa.=4; etiketsiz satır None.
+
+    Tek harfli I, V, X Roma rakamı sayılır: harf dizisi bu harflere nadiren ulaşır.
+    """
+    m = _ETIKET.match(satir or "")
+    if not m:
+        return None
+    e = m.group(1)
+    if re.fullmatch(r"[IVXLC]+", e) and (len(e) > 1 or e in "IVX"):
+        return 1
+    if len(e) == 1 and e.isupper():
+        return 0
+    if e.isdigit():
+        return 2
+    return 3 if len(e) == 1 else 4
+
+
+_HARFLER = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ"
+
+
+def _belirsiz_harf(satir: str) -> Optional[str]:
+    """Tamamı büyük harfli başlıkta tek harfli etiket: 'A. HAZIR OLANLAR ARASINDA' resmî metinde
+    'a. Hazır olanlar arasında' olabilir (Bedesten bazı başlıkları büyük harfe çevirir). Harfi döndürür."""
+    m = _ETIKET.match(satir or "")
+    if not m or _etiket_duzeyi(satir) != 0 or _KUCUK.search(satir[m.end():]):
+        return None
+    return m.group(1)
+
+
+def _onceki_harf(h: str) -> Optional[str]:
+    i = _HARFLER.find(h)
+    return _HARFLER[i - 1] if i > 0 else None
+
+
+def _etiketli_baslik(satir: str) -> bool:
+    """'E. KİRA BEDELİ', '1. Süreli öneri', 'a. Şekil' gibi kademeli kenar başlığı satırı mı?
+
+    Cümleyle biten satır başlık değildir; bu, '1. Kiracı … öder.' gibi numaralı fıkraları dışarıda tutar.
+    """
+    s = (_baslik_temiz(satir)[0] or "").strip()
+    m = _ETIKET.match(s)
+    if not m or len(s) > 160 or s[-1] in ".;,:" or " | " in s:
+        return False
+    if _BASLIK_SATIRI.match(fold_same_len(s)):
+        return False
+    return any(ch.isalpha() for ch in s[m.end():])
+
+
+def _baslik_blogu(lines: List[str], k: int, son_dolu: Callable[[int], Optional[int]]) -> Optional[List[int]]:
+    """k satırında biten kademeli kenar başlığı bloğu (satır sıraları, üstten alta) ya da None.
+
+    TBK ve TMK başlıkları kat kattır ('E. KİRA BEDELİ' / 'I. GENEL OLARAK' / 'MADDE 343'): üstteki her
+    satır alttakinden daha üst kademedendir. Liste maddesinden ayırmak için: başlığın üstünde ya cümle
+    biter ya daha üst kademeden bir başlık durur. Üstte aynı ya da daha alt kademeden etiketli bir satır
+    ('2. Merkezi' üstünde '1. Unvanı') ya da iki noktayla biten bir giriş varsa satır listedir.
+    """
+    if not _etiketli_baslik(lines[k]):
+        return None
+    blok = [k]
+    while True:
+        p = son_dolu(blok[0])
+        if p is None:
+            return blok
+        ust = lines[p].strip()
+        if ust.endswith(":"):
+            return None
+        ust_d = _etiket_duzeyi(ust)
+        tepe_d = _etiket_duzeyi(lines[blok[0]])
+        ust_baslik = _etiketli_baslik(ust)
+        if ust_baslik and ust_d == 2 and tepe_d == 0 and _belirsiz_harf(lines[blok[0]]):
+            tepe_d = 3                                   # '2. SÜRESİZ ÖNERİ' başlığı altında 'A. …' = 'a. …'
+        if ust_baslik:
+            if ust_d >= tepe_d:
+                return None                              # kardeş ya da alt kademe: liste
+            blok.insert(0, p)
+            continue
+        if ust_d is not None and len(blok) == 1 and ust_d <= tepe_d:
+            return None                                  # '1. Kiracı … öder.' fıkrasının ardından gelen fıkra
+        return blok
+
+
 def _yapi_basligi(satir: str) -> bool:
     """'İKİNCİ KISIM', 'Birinci Bölüm', 'GEÇİCİ MADDELER' gibi yapı başlığı mı?"""
     s = " ".join(satir.split())
@@ -1052,7 +1144,7 @@ def _kunye_parcasi(satir: str) -> bool:
 
 def _norm_baslik(s: Optional[str]) -> str:
     """Başlık karşılaştırması için: katla, bent işareti / dipnot / noktalama at."""
-    s = _DIPNOT_REF_SON.sub("", s or "").strip()
+    s = _baslik_temiz(s)[0] or ""
     s = _LISTE_ISARETI.sub("", s)
     s = tr_fold(s)
     s = re.sub(r"[^\w\s]", " ", s)
@@ -1060,13 +1152,22 @@ def _norm_baslik(s: Optional[str]) -> str:
 
 
 def _baslik_temiz(s: Optional[str]) -> Tuple[Optional[str], List[str]]:
-    """Metinden alınan başlık: sondaki [n] dipnot işaretleri ayrılır."""
+    """Metinden alınan başlık: sondaki dipnot işaretleri ayrılır, hem [n] hem yapışık rakam.
+
+    'II. BELİRLENMESİ2[3][4]' -> ('II. BELİRLENMESİ', ['2', '3', '4']). Boşlukla ayrılmış rakama
+    ('Geçici Madde 2') dokunulmaz.
+    """
     if not s:
         return None, []
     s = s.strip()
     m = _DIPNOT_REF_SON.search(s)
     refs = re.findall(r"\[(\d+)\]", m.group(0)) if m else []
-    return (_DIPNOT_REF_SON.sub("", s).strip() or None), refs
+    s = _DIPNOT_REF_SON.sub("", s).strip()
+    y = _DIPNOT_YAPISIK.search(s)
+    if y:
+        refs = [y.group(1)] + refs
+        s = s[:y.start()].rstrip()
+    return (s or None), refs
 
 
 def _satirlar(text: str, bas: int, son: int) -> Tuple[List[str], List[int]]:
@@ -1079,67 +1180,124 @@ def _satirlar(text: str, bas: int, son: int) -> Tuple[List[str], List[int]]:
 
 
 def _kuyruk(text: str, seg_bas: int, govde_bas: int, seg_son: int,
-            sonra_baslik_var: bool) -> Tuple[int, Optional[str]]:
-    """Maddenin gerçek sonu ve (varsa) BİR SONRAKİ maddenin kenar başlığı.
+            sonra_baslik_var: bool) -> Tuple[int, List[str], bool]:
+    """Maddenin gerçek sonu, BİR SONRAKİ maddenin kenar başlık bloğu ve araya yapı başlığı girip girmediği.
 
     Metin '…119 gövdesi\\n\\nÇalışanın önalım hakkı\\n\\nMADDE 120- …' diye akar: başlık
     satırı bir önceki parçanın sonunda kalır. Eski bölücü onu 119'a veriyordu (SMK
     119/120 karışıklığının aynısı, TR-BED-01). Burada o satır bir sonraki maddeye
     taşınır; 'İKİNCİ KISIM / Diğer Hükümler' gibi yapı başlıkları iki maddeye de verilmez.
+
+    Kademeli kenar başlıkları (TBK, TMK) birden çok satırdır: '…gövde.\\n\\nE. KİRA BEDELİ\\n\\n
+    I. GENEL OLARAK\\n\\nMADDE 343-'. Bloğun hepsi 343'ündür; hiçbiri 342'nin metninde kalmaz.
+    Bedesten'in madde düğümleri de bir sonraki maddenin bloğuyla biter: sonrası olmayan parçada
+    (düğüm) etiketli blok metinden atılır.
     """
     lines, offs = _satirlar(text, seg_bas, seg_son)
 
     def son_dolu(j: int) -> Optional[int]:
         k = j - 1
-        while k >= 0 and not lines[k].strip():
+        while k >= 0 and _bos_satir(lines[k]):
             k -= 1
         if k < 0 or offs[k] <= govde_bas:        # başlık satırının kendisine dokunulmaz
             return None
         return k
 
     j = len(lines)
-    sonraki: Optional[str] = None
-    if sonra_baslik_var:
-        k = son_dolu(j)
-        if k is not None and _baslik_gibi(lines[k]) and not _yapi_basligi(lines[k]):
+    blok: List[str] = []
+    yapi = False
+    k = son_dolu(j)
+    if k is not None:
+        satirlar = _baslik_blogu(lines, k, son_dolu)
+        if satirlar:
+            j = satirlar[0]
+            if sonra_baslik_var:
+                blok = [lines[x].strip() for x in satirlar]
+        elif sonra_baslik_var and not _etiketli_baslik(lines[k]) and _baslik_gibi(lines[k]) \
+                and not _yapi_basligi(lines[k]):
             p = son_dolu(k)
             if p is not None and _yapi_basligi(lines[p]):
                 j = p                            # bölüm alt başlığı: iki satır da düşer
+                yapi = True
             else:
-                sonraki = lines[k].strip()
+                blok = [lines[k].strip()]
                 j = k
     while True:
         k = son_dolu(j)
         if k is None:
             break
         if _yapi_basligi(lines[k]) or _kunye_parcasi(lines[k]):
+            yapi = yapi or _yapi_basligi(lines[k])
             j = k
             continue
         if _baslik_gibi(lines[k]):
             p = son_dolu(k)
             if p is not None and _yapi_basligi(lines[p]):
                 j = p
+                yapi = True
                 continue
         break
     k = j - 1
-    while k >= 0 and not lines[k].strip():
+    while k >= 0 and _bos_satir(lines[k]):
         k -= 1
     son = offs[k] + len(lines[k]) if k >= 0 else seg_bas
-    return max(son, min(seg_son, govde_bas)), sonraki
+    return max(son, min(seg_son, govde_bas)), blok, yapi
 
 
-def _onsoz_basligi(text: str, bas: int) -> Optional[str]:
-    """İlk başlıktan önceki son satır kenar başlık mı? (Düğüm metni başlıkla başlar.)"""
-    lines = text[:bas].rstrip().split("\n")
-    lines = [ln for ln in lines if ln.strip()]
+def _onsoz_blogu(text: str, bas: int) -> List[str]:
+    """İlk başlıktan önceki kenar başlık bloğu (düğüm metni başlıkla başlar; tam metinde ilk madde)."""
+    lines = [ln for ln in text[:bas].rstrip().split("\n") if not _bos_satir(ln)]
     if not lines:
-        return None
+        return []
+    satirlar = _baslik_blogu(lines, len(lines) - 1, lambda j: j - 1 if j > 0 else None)
+    if satirlar:
+        return [lines[x].strip() for x in satirlar]
     son = lines[-1]
-    if not _baslik_gibi(son) or _yapi_basligi(son):
-        return None
+    if _etiketli_baslik(son) or not _baslik_gibi(son) or _yapi_basligi(son):
+        return []
     if len(lines) >= 2 and _yapi_basligi(lines[-2]):
-        return None
-    return son.strip()
+        return []
+    return [son.strip()]
+
+
+def _harf_kademesi(harf: str, yigin: List[Tuple[int, str]]) -> int:
+    """Büyük harfli tek harf etiketi A. (0) mı a. (3) mı: alfabe sırası ve yığındaki kardeşe göre.
+
+    'B. …' bir önceki 'a. …' kardeşinin ardındaysa 3, bir önceki 'A. …' üst başlığının ardındaysa 0.
+    Sıra karar vermezse: rakamlı bir başlığın altında 3, değilse 0.
+    """
+    kardes = {d: (_ETIKET.match(s).group(1) if _ETIKET.match(s) else "") for d, s in yigin}
+    onceki = _onceki_harf(harf)
+    if harf != "A" and onceki:
+        if kardes.get(3, "").upper() == onceki:
+            return 3
+        if kardes.get(0, "").upper() == onceki:
+            return 0
+    return 3 if yigin and yigin[-1][0] >= 2 else 0
+
+
+def _baslik_yollari(basliklar: List[Dict[str, Any]]) -> None:
+    """Kademeli kenar başlıklarından her maddenin başlık yolu: ['E. KİRA BEDELİ', 'II. BELİRLENMESİ'].
+
+    Etiketli başlıklar bir yığında tutulur: yeni başlık kendi kademesindeki ve altındaki eskileri
+    düşürür. Yapı başlığı (KISIM, BÖLÜM, AYIRIM) yığını sıfırlar. Kendi bloğu olmayan maddeye yol
+    verilmez: yığının tepesi bir önceki maddenin başlığıdır.
+    """
+    yigin: List[Tuple[int, str]] = []
+    for b in basliklar:
+        if b.get("yapi_once"):
+            yigin = []
+        blok = b.get("on_blok") or []
+        for satir in blok:
+            temiz = _baslik_temiz(satir)[0] or ""
+            d = _etiket_duzeyi(temiz)
+            harf = _belirsiz_harf(temiz)
+            if harf:
+                d = _harf_kademesi(harf, yigin)
+            if d is not None:
+                yigin = [x for x in yigin if x[0] < d] + [(d, temiz)]
+        son = _baslik_temiz(blok[-1])[0] if blok else None
+        b["baslik_yolu"] = [s for _, s in yigin] if son and _etiket_duzeyi(son) is not None else []
 
 
 def _govde_sonu(text: str, f: str) -> int:
@@ -1229,11 +1387,14 @@ def _kaynak_coz(text: str) -> Dict[str, Any]:
         break
     for i, b in enumerate(basliklar):
         seg_son = basliklar[i + 1]["bas"] if i + 1 < len(basliklar) else govde_son
-        b["son"], sonraki = _kuyruk(text, b["bas"], b["govde_bas"], seg_son, i + 1 < len(basliklar))
+        b["son"], blok, yapi = _kuyruk(text, b["bas"], b["govde_bas"], seg_son, i + 1 < len(basliklar))
         if i + 1 < len(basliklar):
-            basliklar[i + 1]["on_baslik"] = sonraki
+            sonraki = basliklar[i + 1]
+            sonraki["on_blok"], sonraki["on_baslik"], sonraki["yapi_once"] = blok, (blok[-1] if blok else None), yapi
     if basliklar:
-        basliklar[0]["on_baslik"] = _onsoz_basligi(text, basliklar[0]["bas"])
+        blok = _onsoz_blogu(text, basliklar[0]["bas"])
+        basliklar[0]["on_blok"], basliklar[0]["on_baslik"], basliklar[0]["yapi_once"] = blok, (blok[-1] if blok else None), True
+    _baslik_yollari(basliklar)
     dipnotlar: Dict[str, str] = {}
     ms = list(_DIPNOT_SATIRI.finditer(f, dipnot_bas))
     for i, dm in enumerate(ms):
@@ -1696,6 +1857,23 @@ def _fikra(metin: str, n: int) -> Optional[str]:
     return metin[bas: e.start() if e else len(metin)].strip()
 
 
+def _tam_metin_basligi(mid: str, kind: str, no: int, harf: Optional[str]) -> Optional[Tuple[str, List[str], List[str]]]:
+    """Ağacında başlık olmayan maddenin kenar başlığı tam metinden: (başlık, dipnotlar, yol) ya da None.
+
+    Tam metin önbellekte durur ya da tek istekle gelir (Bedesten sınırı paylaşılır). Getirilemezse madde
+    başlıksız kalır; metin ve atıf bundan etkilenmez.
+    """
+    try:
+        c, _ = _icerik("MEVZUAT", mid)
+    except (HttpError, _SureDoldu, _BosIcerik, OSError, ValueError):
+        return None
+    for b in _cozumle(c)["basliklar"]:
+        if b["kind"] == kind and b["no"] == no and b["harf"] == harf:
+            baslik, refs = _baslik_temiz(b["on_baslik"])
+            return (baslik, refs, list(b.get("baslik_yolu") or [])) if baslik else None
+    return None
+
+
 def _kalem(k: Dict[str, Any], kaynak: Dict[str, Any], i: int, kaynak_turu: str, dugum_id: Optional[str],
            idx: Optional[Dict[str, Any]], law: Optional[Dict[str, Any]], azami: int,
            c: Dict[str, Any], yas: float, uyari: Optional[str]) -> Dict[str, Any]:
@@ -1704,6 +1882,7 @@ def _kalem(k: Dict[str, Any], kaynak: Dict[str, Any], i: int, kaynak_turu: str, 
     metin = text[b["bas"]:b["son"]].strip()
     govde = text[b["govde_bas"]:b["son"]]
     on_baslik, on_refs = _baslik_temiz(b["on_baslik"])
+    yol = list(b.get("baslik_yolu") or [])
 
     sahip = None
     if kaynak_turu != "full_text" and dugum_id:
@@ -1726,6 +1905,13 @@ def _kalem(k: Dict[str, Any], kaynak: Dict[str, Any], i: int, kaynak_turu: str, 
         heading, h_kaynak, refs = on_baslik, "text", on_refs
     else:
         heading, h_kaynak, refs = None, None, []
+    # Ağaçta başlık yoksa (TBK'nın bütün maddeleri böyle) tek madde de tam metinden okunur: başlık,
+    # maddenin tek başına mı listeyle mi istendiğine bağlı kalmaz.
+    if heading is None and kaynak_turu != "full_text" and law and law.get("mevzuat_id"):
+        tm = _tam_metin_basligi(str(law["mevzuat_id"]), b["kind"], b["no"], b["harf"])
+        if tm:
+            heading, refs, yol = tm
+            h_kaynak = "text"
     madde_id = sahip.get("madde_id") if sahip else None
     if kaynak_turu == "full_text":
         host = madde_id or _ev_sahibi_tam_metin(kaynak, i, idx)
@@ -1747,7 +1933,9 @@ def _kalem(k: Dict[str, Any], kaynak: Dict[str, Any], i: int, kaynak_turu: str, 
         "madde_id": madde_id, "host_madde_id": host, "source": source,
         "header": b["etiket"], "fetched_at": c.get("fetched_at"), "cache_age_s": yas,
     }
-    if sahip and sahip.get("placeholder") and kaynak_turu != "full_text" and idx:
+    if heading and yol and (h_kaynak == "text" or _norm_baslik(yol[-1]) == _norm_baslik(heading)):
+        item["heading_path"] = yol
+    if heading is None and sahip and sahip.get("placeholder") and kaynak_turu != "full_text" and idx:
         item["heading_note"] = "Bedesten ağacında bu maddenin başlığı yok ('Madde No: %d')." % sahip["no"]
     if sahip and sahip.get("heading") and on_baslik and _norm_baslik(sahip["heading"]) != _norm_baslik(on_baslik):
         item["heading_text"] = on_baslik
@@ -1768,7 +1956,7 @@ def _kalem(k: Dict[str, Any], kaynak: Dict[str, Any], i: int, kaynak_turu: str, 
     if item["range"]:
         item["range_note"] = ("'%s' başlığı %d-%d maddelerini TEK düğümde toplar; madde %d'in kendi "
                               "metni yoktur." % (b["etiket"], b["no"], b["aralik_son"], k["no"]))
-    for n in sorted(set(re.findall(r"\[(\d{1,4})\]", (b["on_baslik"] or "") + metin)), key=int):
+    for n in sorted(set(re.findall(r"\[(\d{1,4})\]", (b["on_baslik"] or "") + metin)) | set(refs), key=int):
         if n in kaynak["dipnotlar"]:
             item["footnotes"][n] = kaynak["dipnotlar"][n]
     ek = " " + ("m." if b["kind"] == "madde" else _KIND_TR[b["kind"]].strip() + " m.") + " " + str(k["no"])

@@ -2,6 +2,22 @@
 
 ## Yayımlanmamış
 
+- `mevzuat_madde_getir`: kademeli kenar başlıkları (TBK, TMK, TTK). TBK m.344 tek başına istenince başlıksız,
+  listeyle istenince "II. BELİRLENMESİ2" dönüyordu. Üç kusur: (1) başlık, maddenin nasıl istendiğine bağlıydı
+  (Bedesten ağacında TBK'nın hiçbir maddesinin başlığı yok; tam metne yalnız liste yolu bakıyordu); (2) dipnot işareti
+  Bedesten metninde kelimeye yapışık rakam ("…MESİ2") ve silinmiyordu; (3) kat kat başlıklardan ("E. KİRA BEDELİ" /
+  "II. BELİRLENMESİ") yalnız son satır alınıyor, üst satırlar önceki maddenin metnine kalıyordu: TMK m.23'ün metni
+  m.24'ün "II. Saldırıya karşı / 1. İlke" başlıklarıyla bitiyordu. Şimdi maddenin üstündeki etiketli başlık satırları
+  (A., I., 1., a.) tek blok olarak o maddeye verilir; `heading_path` üst kademeleri taşır (m.344:
+  ["E. KİRA BEDELİ", "II. BELİRLENMESİ"]); yapı başlığı (KISIM, BÖLÜM, AYIRIM) yolu sıfırlar. Ağaçta başlığı olmayan
+  madde tek başına istense de tam metinden okunur (önbellekte değilse bir istek). Yapışık ve köşeli dipnotlar
+  `heading_footnote_refs`'e ayrılır. Numaralı liste başlık sayılmaz: üstte aynı kademeden kardeş ya da iki noktayla
+  biten giriş varsa satır metinde kalır. Tamamı büyük harfli tek harf etiketi ("A. HAZIR OLANLAR ARASINDA", resmî
+  metinde "a.") kademesini alfabe sırasından ve rakamlı üst başlıktan alır. Düğüm sonundaki "&NBSP;" artığı atılır.
+  12 kanunun tam metninde (5.392 madde): 1.241 başlık eklendi (TBK 213, TMK 518, TTK 510), 1.540 maddenin metninden
+  bir sonraki maddenin başlığı çıktı, 5 başlıktan dipnot rakamı silindi; kaybolan ya da değişen başlık ve uzayan metin
+  yok. Etiketsiz başlık kullanan 9 kanunda (İİK, HMK, TCK, CMK, İş K., SMK, KVKK, İYUK, KMK) değişiklik yok.
+  `tests/test_madde_baslik.py`.
 - `mevzuat_ara` tarih süzgeci: Eylül–Ekim 2026 aralığı boş dönüyordu. İki ayrı neden (canlı, 2026-10-27):
   (1) Bedesten yeni mevzuatı haftalarca geç işliyor; en yeni RG tarihli kayıt 17.09.2026 (RG 33373), 24.09.2026'daki
   Türkiye Yeşil Taksonomisi Yönetmeliği yok. Tarih aralığı son 120 günü kapsıyorsa yanıt Bedesten'in kapsam sınırını
