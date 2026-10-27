@@ -44,6 +44,11 @@ _MAX_BODY = 4_000_000
 _SUPPORTED_PROTOCOLS = ("2025-06-18", "2025-03-26", "2024-11-05")
 _DEFAULT_PROTOCOL = "2025-06-18"
 
+# Small fixed files answered on GET and HEAD beside the JSON-RPC endpoint, such as
+# the favicon a connector directory shows next to a server's name. Path ->
+# (content type, body). Empty unless the embedding server fills it.
+STATIC_FILES: Dict[str, tuple] = {}
+
 
 class McpError(Exception):
     """A tool failure that should reach the model as readable text, not a crash."""
@@ -218,7 +223,31 @@ def _make_handler(dispatcher: Dispatcher):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_static(self, head: bool) -> bool:
+            # The query string is ignored: /favicon.ico?v=2 is the same file.
+            hit = STATIC_FILES.get(self.path.split("?", 1)[0])
+            if hit is None:
+                return False
+            ctype, body = hit
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            if not head:
+                self.wfile.write(body)
+            return True
+
+        def do_HEAD(self):  # noqa: N802
+            # Favicon fetchers may probe with HEAD. Every other path keeps the 501
+            # BaseHTTPRequestHandler gives a method it has no do_ for.
+            if not self._send_static(head=True):
+                self.send_error(501, "Unsupported method (%r)" % self.command)
+
         def do_GET(self):  # noqa: N802
+            if self._send_static(head=False):
+                return
             if self.path.rstrip("/") in ("/health", "/healthz"):
                 self._send(200, b'{"status":"ok"}')
                 return

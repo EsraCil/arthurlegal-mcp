@@ -190,6 +190,34 @@ def _load_legacy(prefix: str, directory: str, dotted: str, label: str) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Favicon and logo
+# --------------------------------------------------------------------------- #
+# The Claude connector directory, and Claude itself, show the favicon of the
+# server's URL next to its name. GET /favicon.ico answered 405 here, so the listing
+# fell back to a generic icon. mcpcore serves whatever is in STATIC_FILES; the
+# files sit in varlik/, which the Dockerfile copies with everything else. A missing
+# file leaves only its own path unanswered: no tool depends on it.
+_VARLIK = os.path.join(HERE, "varlik")
+_STATIC = {
+    "/favicon.ico": ("favicon.ico", "image/x-icon"),
+    "/logo.png": ("logo.png", "image/png"),
+}
+
+
+def _register_static() -> None:
+    import mcpcore  # the module `run` came from; the backends import the same one
+    for path, (filename, ctype) in _STATIC.items():
+        try:
+            with open(os.path.join(_VARLIK, filename), "rb") as fh:
+                mcpcore.STATIC_FILES[path] = (ctype, fh.read())
+        except OSError as exc:
+            sys.stderr.write("arthurlegal-mcp: %s not served (%s)\n" % (path, exc))
+
+
+_register_static()
+
+
+# --------------------------------------------------------------------------- #
 # de-eli proxy
 # --------------------------------------------------------------------------- #
 class _DeEliProxy:
