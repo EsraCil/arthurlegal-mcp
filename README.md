@@ -6,7 +6,7 @@ Türkiye - Netherlands - Poland - Austria - Ireland - Finland - Spain - United
 Kingdom - European Union - Japan - Azerbaijan - Germany - legal scholarship -
 signed resource contracts - GLEIF entity identity.
 
-123 tools, one hosted endpoint, no authentication:
+124 tools, one hosted endpoint, no authentication:
 
     https://arthurlegal-mcp.fly.dev/mcp
 

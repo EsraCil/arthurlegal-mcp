@@ -175,7 +175,7 @@ asla crawl yapmaz. `flyctl secrets set EMBEDDINGS_API_KEY=…` semantik kanalı 
 ## Test
 
 ```bash
-PYTHONIOENCODING=utf-8 python tests/test_offline.py     # ağ yok, 51 test
+PYTHONIOENCODING=utf-8 python tests/test_offline.py     # ağ yok, 55 test
 ```
 
 ## Lisans
