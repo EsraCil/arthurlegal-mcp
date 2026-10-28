@@ -693,7 +693,7 @@ except ImportError:
 # (memory, masking, UYAP) are marked "masaustu" here: this endpoint serves the web
 # and phone, where they do not exist by design. Land registry goes through Claude
 # (the tkgm_ tools below are on this endpoint).
-MASA_TOOLS = ("tr_mevzuat_madde_getir", "tr_ictihat_ara", "tr_ictihat_getir", "status")
+MASA_TOOLS = ("tr_mevzuat_madde_getir", "tr_mevzuat_ara", "tr_mevzuat_icindekiler", "tr_ictihat_ara", "tr_ictihat_getir", "status")
 REMOTE_MODULES = {
     "tapu": {"durum": "claude"}, "beyin": {"durum": "masaustu"}, "mask": {"durum": "masaustu"},
     "uyap": {"durum": "masaustu"}, "donna": {"durum": "hazir"},
