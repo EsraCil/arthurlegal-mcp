@@ -155,6 +155,25 @@ never drift away from the code that was tested against it. `start.sh` still
 falls back to crawling when no baked index is present, and says which it used:
 `indexes present: N/6`.
 
+### Code-only deploys
+
+A full image carries the indexes, so every full deploy uploads about 2.3 GB of build
+context. Most releases change only code. [`Dockerfile.code`](Dockerfile.code) starts
+from the last full image in the app's registry and copies the code over it, so the
+upload is a few megabytes and a deploy takes minutes:
+
+    git worktree add --detach ../deploy origin/master   # clean checkout: no baked/
+    cd ../deploy
+    flyctl deploy . --dockerfile Dockerfile.code --depot=false --image-label <label>
+
+Run it from a clean checkout: `*.db` files are ignored by git, so a fresh worktree has
+no `baked/` and nothing large is sent. `--depot=false` uses Fly's own builder, which
+pulls the base image from the app's registry. Build a full image (`Dockerfile`) when
+the indexes, the Python packages or the base Python image change, then use its tag
+from then on: `--build-arg BASE=registry.fly.io/arthurlegal-mcp:<full-image-tag>`.
+Files deleted from the code since the base image stay in the image until the next
+full build.
+
 `hybrid`, the default search mode, ranks keyword and meaning matches together,
 but not blindly. When the keyword channel found every word of the query, both
 count; when it matched only some of the words -- the usual case for a question

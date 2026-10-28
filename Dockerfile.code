@@ -1,0 +1,10 @@
+# Code-only deploy. The six baked indexes (~2 GB) come from an earlier full image
+# built with ./Dockerfile; only the code is sent. Run it from a clean checkout
+# (no baked/ directory), see README "Code-only deploys". When the indexes, the
+# Python packages or the base image change, build a full image again and pass
+# its tag as BASE from then on.
+ARG BASE=registry.fly.io/arthurlegal-mcp:onyuz-20261028
+FROM ${BASE}
+
+COPY . /app
+RUN chmod +x start.sh
