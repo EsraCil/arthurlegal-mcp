@@ -10,6 +10,10 @@ signed resource contracts - GLEIF entity identity.
 
     https://arthurlegal-mcp.fly.dev/mcp
 
+The same server also answers at `/directory/mcp` with the 107 read-only tools listed in the
+Claude connector directory: everything except the land-registry `tkgm_` tools. See
+[Claude connector directory](#claude-connector-directory).
+
 Anyone with the URL can call every tool. Self-hosting? Deploy your own copy (see
 [Indexes](#indexes)) and use `https://<your-app>.fly.dev/mcp` instead.
 
@@ -71,9 +75,42 @@ out-of-fold sensitivity 92-100% per topic; on 60 unseen legislation titles vergi
 enerji 0/3. Every response says how many items it dropped, `esik=0` disables it, and `status`
 reports the model and both measurements. Do not use it for publication verification.
 
+## Claude connector directory
+
+The directory listing points at a narrower profile of the same server:
+
+    https://arthurlegal-mcp.fly.dev/directory/mcp
+
+- **107 tools, all read-only.** Every tool carries a `title` and `readOnlyHint: true`
+  (`tool_titles.py`), so Claude can run them without asking each time. Nothing on this
+  endpoint writes, deletes or sends anything on your behalf.
+- **No land-registry tools.** The `tkgm_` tools stay on `/mcp` only; the desk shows
+  ArthurTapu as available in the ArthurLegal install.
+- **The same interactive views** as `/mcp`: the article card, the decision list and the desk
+  (see [Interactive views](#interactive-views-mcp-apps)).
+- **Instructions describe the tools** (in English) instead of directing Claude; the facts
+  are the same as on `/mcp`.
+- **No account and no authentication.** Add it from the directory, or as a custom connector
+  with the URL above.
+
+Example prompts:
+
+1. "Quote Article 21 of the Turkish Labour Law (Law 4857) with its citation."
+2. "Search Turkish Court of Cassation decisions on reinstatement (işe iade) and open the most
+   recent one."
+3. "Compare the definition of personal data in the Turkish Personal Data Protection Law (6698,
+   Article 3) with section 3 of the UK Data Protection Act 2018."
+4. "Which Act governs arbitration in Ireland? Quote the section on the arbitrator's
+   jurisdiction."
+5. "Which EU regulation lays down harmonised rules on artificial intelligence, and is it in
+   force? Give its CELEX number."
+
+Privacy: [PRIVACY.md](PRIVACY.md). Support: ertug@datsproject.io or
+[open an issue](https://github.com/beerbottle90/arthurlegal-mcp/issues).
+
 ## Turkish land-registry parcel tools (`tkgm_`)
 
-`tkgm_` tools fetch single parcels live from TKGM's Parsel Sorgu -- by province, district and
+On `/mcp` only (not on `/directory/mcp`), `tkgm_` tools fetch single parcels live from TKGM's Parsel Sorgu -- by province, district and
 neighbourhood with block and parcel, by coordinates, or by place name -- and work with them:
 plane-projected area and edge lengths, a to-scale A4 SVG sketch, an OSM map, format conversion
 (DXF/KML/CSV), route-corridor intersection, 2026 title-deed fee and revolving-fund tariff lookups
@@ -90,10 +127,14 @@ and the tools that write files, fetch elevation data or read title records are d
 
 ## Tool naming
 
-Every tool carries its jurisdiction as a prefix -- `nl_` `pl_` `at_` `ie_` `fi_`
-`es_` `uk_` `eu_` `jp_` `gleif_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
+Every tool carries its jurisdiction as a prefix -- `tr_` `nl_` `pl_` `at_` `ie_` `fi_`
+`es_` `uk_` `eu_` `jp_` `gleif_` `tkgm_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
 `get_act` means six different things and `search_legislation` four, so the
 prefix is what keeps a Spanish question from being answered with Finnish law.
+
+Every tool also carries a readable `title` and a safety hint (`tool_titles.py`): research tools
+are `readOnlyHint: true`; the few land-registry tools that write a file when run locally are
+marked as not read-only and not destructive.
 
 `status` reports every jurisdiction at once: which backends loaded, how many
 documents each has indexed, how many are vectorised, and whether semantic
@@ -117,7 +158,8 @@ JSON is unchanged, so clients without MCP Apps read exactly what they read befor
   opens inside the card and can be handed to Claude for a summary.
 - `al_masasi`: ArthurLegal Masası, a full-screen desk with legislation and citation check,
   case law, source status and the other ArthurLegal modules in one panel. On this endpoint the
-  modules that run on the lawyer's computer (memory, masking, UYAP) are shown as desktop-only.
+  modules that run on the lawyer's computer (memory, masking, UYAP) are shown as desktop-only;
+  on `/directory/mcp` land registry is shown that way too.
 
 The views are in `arayuz/` (served as `ui://arthurlegal/...`). Light theme by default, dark and
 automatic on request; the device's system font; the only origin the sandbox allows is unpkg, for
@@ -210,4 +252,4 @@ conceptual one.
 
 ---
 
-Source: [github.com/beerbottle90/arthurlegal-mcp](https://github.com/beerbottle90/arthurlegal-mcp)
+Source: [github.com/beerbottle90/arthurlegal-mcp](https://github.com/beerbottle90/arthurlegal-mcp) · License: [MIT](LICENSE); each backend folder carries its own copy.

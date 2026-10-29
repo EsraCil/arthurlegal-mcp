@@ -43,12 +43,20 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mcpcore import McpError, Resource, Tool, run  # noqa: E402
+from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
+from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
+
+# The Claude connector directory listing points here, not at /mcp. Same server,
+# narrower profile: the land-registry tools stay on /mcp only, and the
+# instructions describe the tools instead of directing Claude. Every other tool
+# is the same object on both paths.
+DIRECTORY_PATH = "/directory/mcp"
+DIRECTORY_EXCLUDED_PREFIXES: Tuple[str, ...] = ("tkgm",)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Deployed bundle: every backend sits next to this file.
@@ -108,6 +116,8 @@ _loaded: List[Dict[str, Any]] = []
 _failed: List[Dict[str, str]] = []
 _tools: List[Tool] = []
 _instructions: List[str] = []
+# The same sections with their prefix, so a profile can leave one out.
+_instruction_parts: List[Tuple[str, str]] = []
 
 
 # --------------------------------------------------------------------------- #
@@ -149,6 +159,7 @@ def _load_stdlib(prefix: str, directory: str, modname: str, label: str) -> None:
         text = getattr(module, "INSTRUCTIONS", "")
         if text:
             _instructions.append("### %s  (araç öneki: `%s_`)\n%s" % (label, prefix, text))
+            _instruction_parts.append((prefix, _instructions[-1]))
         _loaded.append({"prefix": prefix, "label": label, "tools": count,
                         "mode": "in-process", "module": modname})
     except Exception as exc:  # noqa: BLE001 - one bad backend must not sink the rest
@@ -607,28 +618,32 @@ def _runtime() -> Dict[str, Any]:
     return out
 
 
-def _t_status(args: Dict[str, Any]) -> Any:
-    """One health answer for the whole package."""
+def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any:
+    """One health answer for the whole package, or for a profile that leaves
+    the ``exclude`` prefixes out."""
+    loaded = [e for e in _loaded if e["prefix"] not in exclude]
+    failed = [f for f in _failed if f["prefix"] not in exclude]
+    prefixes = list(dict.fromkeys(e["prefix"] for e in loaded))
     out: Dict[str, Any] = {
         "server": "arthurlegal-mcp",
         "version": __version__,
         **_runtime(),
-        "backends_loaded": _loaded,
-        "tools_exposed": len(_tools),
-        "note": "Every tool is prefixed with its jurisdiction (tr_, nl_, pl_, at_, ie_, "
-                "fi_, es_, uk_, eu_, jp_, gleif_, tkgm_, az_, scholar_, contracts_, de_). Across the underlying "
+        "backends_loaded": loaded,
+        "tools_exposed": len(_tools) if exposed is None else exposed,
+        "note": "Every tool is prefixed with its jurisdiction (%s). Across the underlying "
                 "servers `get_act` means six different things, so the prefix is "
-                "what keeps a Spanish question from being answered with Finnish law.",
+                "what keeps a Spanish question from being answered with Finnish law."
+                % ", ".join("%s_" % p for p in prefixes),
     }
-    if _failed:
-        out["backends_failed"] = _failed
+    if failed:
+        out["backends_failed"] = failed
         out["warning"] = (
             "%d backend did not load. Its jurisdiction is UNAVAILABLE — not empty. "
-            "Do not read a missing result as 'no such law'." % len(_failed)
+            "Do not read a missing result as 'no such law'." % len(failed)
         )
     # Ask each in-process backend what it knows about itself.
     detail = {}
-    for entry in _loaded:
+    for entry in loaded:
         mod = sys.modules.get(entry.get("module", ""))
         if mod is None:
             continue
@@ -654,6 +669,10 @@ def _t_status(args: Dict[str, Any]) -> Any:
     return out
 
 
+def _t_status(args: Dict[str, Any]) -> Any:
+    return _status()
+
+
 def build() -> None:
     for prefix, directory, modname, label in STDLIB_BACKENDS:
         _load_stdlib(prefix, directory, modname, label)
@@ -673,6 +692,8 @@ def build() -> None:
         _t_status,
     ))
     _attach_views()
+    for tool in _tools:
+        annotate(tool)
 
 
 # --------------------------------------------------------------------------- #
@@ -700,6 +721,9 @@ REMOTE_MODULES = {
     "tapu": {"durum": "claude"}, "beyin": {"durum": "masaustu"}, "mask": {"durum": "masaustu"},
     "uyap": {"durum": "masaustu"}, "donna": {"durum": "hazir"},
 }
+# The directory profile has no tkgm_ tools, so the desk shows land registry as
+# available in the ArthurLegal install instead of handing Claude a parcel request.
+DIRECTORY_MODULES = dict(REMOTE_MODULES, tapu={"durum": "masaustu"})
 
 _resources: List[Resource] = []
 
@@ -758,15 +782,75 @@ hukukun doğru alıntılanması için gereken disiplinlerdir.
 """
 
 
+# Directory profile: describes what the tools return, in English, and gives no
+# orders to Claude (the directory rejects instructions that tell Claude how to
+# behave). The facts are the same as in INSTRUCTIONS_HEADER.
+DIRECTORY_INSTRUCTIONS_HEADER = """ArthurLegal MCP: read-only legal research across twelve jurisdictions, plus legal-entity identity (LEI), open-access legal scholarship and published resource contracts, behind one endpoint.
+
+TOOL PREFIXES. Each tool name starts with the jurisdiction or source it answers for:
+`tr_` Türkiye (case law, legislation, Constitutional Court, Official Gazette, eight regulators, a local semantic archive) · `nl_` Netherlands · `pl_` Poland · `at_` Austria · `ie_` Ireland · `fi_` Finland · `es_` Spain · `uk_` United Kingdom · `eu_` EU law (CELLAR) · `jp_` Japan · `az_` Azerbaijan · `de_` Germany · `gleif_` legal-entity identity (LEI) · `scholar_` open-access legal scholarship · `contracts_` petroleum and mining contracts (ResourceContracts.org).
+The prefix is part of the meaning: `get_act` is a different operation in different jurisdictions.
+
+CITATIONS. Results carry a `citation` field built from the official record, and a `source_url` where the source provides one; both are meant to be quoted as returned. For a Turkish statutory article, `tr_mevzuat_madde_getir` returns the article text, its heading and a ready citation in one call.
+
+UNAVAILABLE SOURCES. When an official source cannot be reached, a tool returns an error or a result marked `unavailable` / `upstream_blocked`, together with the official source page. That means the answer is missing, not that no such law or decision exists. `status` shows which jurisdictions are loaded and how much each has indexed.
+
+INTERACTIVE VIEWS. In clients that render MCP Apps, `tr_mevzuat_madde_getir` shows its result as an article card, `tr_ictihat_ara` as a list of decisions, and `al_masasi` opens the ArthurLegal desk (Turkish interface: legislation, case law and regulator decisions in one panel). Other clients receive the same data as text.
+
+ENTRY POINTS. `tr_hukuk_arastirma_rehberi` maps Turkish research questions to the right tools; `tr_kurum_listesi` lists the regulators and their filters.
+
+Each section below describes one jurisdiction's sources and citation conventions."""
+
+
+def _directory_excluded(name: str) -> bool:
+    return any(name.startswith(p + "_") for p in DIRECTORY_EXCLUDED_PREFIXES)
+
+
+def _directory_section(prefix: str, text: str) -> str:
+    # The Turkish section opens with the citation rule as an order to Claude;
+    # the directory header states the same fact as a description instead.
+    if prefix == "tr":
+        text = re.sub(r"(?s)^(### [^\n]*\n)MADDE ATFI KURALI:.*?\n\n", r"\1", text, count=1)
+    return text
+
+
+def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
+    """Tools, instructions and views for DIRECTORY_PATH. Call after build()."""
+    tools = [t for t in _tools
+             if t.name not in ("status", "al_masasi") and not _directory_excluded(t.name)]
+    main_status = next(t for t in _tools if t.name == "status")
+    status = Tool(
+        "status", main_status.description, main_status.input_schema,
+        lambda args: _status(DIRECTORY_EXCLUDED_PREFIXES, exposed=len(tools)),
+    )
+    annotate(status)
+    tools.append(status)
+    desk = next((t for t in _tools if t.name == "al_masasi"), None)
+    if desk is not None:
+        able = [t.name for t in tools if t.name in MASA_TOOLS]
+        directory_desk = Tool(
+            desk.name, desk.description, desk.input_schema,
+            lambda args: al_arayuz.masa_cevabi("uzak", able, DIRECTORY_MODULES, args.get("bolum")),
+            meta=desk.meta)
+        annotate(directory_desk)
+        tools.append(directory_desk)
+    sections = [_directory_section(prefix, text) for prefix, text in _instruction_parts
+                if prefix not in DIRECTORY_EXCLUDED_PREFIXES]
+    return tools, DIRECTORY_INSTRUCTIONS_HEADER + "\n\n" + "\n\n".join(sections), list(_resources)
+
+
 if __name__ == "__main__":
     build()
     _warm_resident()
     text = INSTRUCTIONS_HEADER + "\n\n" + "\n\n".join(_instructions)
-    sys.stderr.write("arthurlegal-mcp: %d backend, %d araç"
-                     % (len(_loaded), len(_tools)))
+    directory_tools, directory_text, directory_views = build_directory()
+    sys.stderr.write("arthurlegal-mcp: %d backend, %d araç (%s: %d)"
+                     % (len(_loaded), len(_tools), DIRECTORY_PATH, len(directory_tools)))
     if _failed:
         sys.stderr.write(" (%d backend yüklenemedi: %s)"
                          % (len(_failed), ", ".join(f["prefix"] for f in _failed)))
     sys.stderr.write("\n")
+    directory = Dispatcher(directory_tools, name="arthurlegal-mcp", version=__version__,
+                           instructions=directory_text, resources=directory_views)
     run(_tools, name="arthurlegal-mcp", version=__version__, instructions=text,
-        resources=_resources)
+        resources=_resources, routes={DIRECTORY_PATH: directory})
