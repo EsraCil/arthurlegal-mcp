@@ -186,7 +186,17 @@ class LexScholarClient:
         mod = get_source(source)
         if not hasattr(mod, "get"):
             raise LexScholarError("source %r does not support get()" % source)
-        return mod.get(article_id, **kw)
+        # An id from another source (or a stale one) makes some adapters walk a
+        # missing record; say what went wrong instead of surfacing the crash.
+        try:
+            record = mod.get(article_id, **kw)
+        except (AttributeError, KeyError, TypeError, IndexError):
+            record = None
+        if not record:
+            raise LexScholarError(
+                "no record %r in source %r. Pass the source and id of the same search "
+                "result (search_legal_scholarship returns both)." % (article_id, source))
+        return record
 
     def get_fulltext(
         self,
