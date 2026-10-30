@@ -280,6 +280,13 @@ göre süzer (stderr'de sunucunun başka satırları da vardır). Ayrıntı: `de
 sorularla (atıf sınav kümesi): sunucu kimlik doğrulamasız, adrese gerçek dosya bilgisiyle bağlanan
 olursa o bilgi de kayda girer. `AUDIT_LOG` tanımsız ya da `1` dışında bir değerse kayıt kapalıdır.
 
+Canlı uygulamada açılmaz: `FLY_APP_NAME` `fly.toml`'daki ad (`arthurlegal-mcp`) iken `AUDIT_LOG=1`
+yok sayılır, stderr'e tek satır uyarı düşer ve sunucu kayıtsız çalışmayı sürdürür. Açıkken
+`/directory/mcp` sunulmaz, yalnız `/mcp` kalır: test uygulamasında dizin trafiği yoktur ve o yolun
+araçları sarılmadığından çağrıları kayda girmez, ölçümü yanıltırdı. [PRIVACY.md](PRIVACY.md)'deki
+"writes no request logs" beyanıyla çelişmez: o beyan canlı uç noktalar (`arthurlegal-mcp.fly.dev`)
+içindir ve kayıt orada hiç açılmaz.
+
     fly secrets set AUDIT_LOG=1 -a <test-app>
     fly logs -a <test-app> | grep '{"olay":'
 

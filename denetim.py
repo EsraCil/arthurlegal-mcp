@@ -1,8 +1,10 @@
 """Denetim logu: modelin "Madde kontrolü: … okundu" beyanıyla karşılaştırılacak bağımsız kayıt.
 
-Yalnız ayrı test uygulamasında, ``AUDIT_LOG=1`` ile açılır (server.py). Kapalıyken bu modül
-yüklenmez bile: araçlar sarılmaz, oturum kimliği verilmez, bildirim kancası kurulmaz;
-yanıtlar ve başlıklar bugünküyle bayt bayt aynıdır.
+Yalnız ayrı test uygulamasında, ``AUDIT_LOG=1`` ile açılır (server.py). ``AUDIT_LOG`` 1 değilken
+bu modül yüklenmez bile: araçlar sarılmaz, oturum kimliği verilmez, bildirim kancası kurulmaz;
+yanıtlar ve başlıklar bugünküyle bayt bayt aynıdır. Canlı uygulamada (``canli_uygulamada()``)
+``AUDIT_LOG=1`` yok sayılır. Kayıt açıkken ``/directory/mcp`` sunulmaz: oradaki araçlar
+sarılmaz, çağrıları kayda girmezdi.
 
 Neden var
 ---------
@@ -102,6 +104,7 @@ import copy
 import functools
 import hashlib
 import json
+import os
 import re
 import sys
 import threading
@@ -128,6 +131,8 @@ KIMLIK_AZAMI = 100
 KIMLIK_DERINLIK = 4
 # İstemcinin denetlediği metinlerin kayıttaki en büyük uzunluğu.
 ISTEMCI_AZAMI = 200
+# Canlı uygulamanın fly.toml adı: PRIVACY.md orada istek logu yok der, AUDIT_LOG=1 yok sayılır.
+CANLI_UYGULAMA = "arthurlegal-mcp"
 
 _AYAR: Dict[str, Any] = {"surumler": {}, "varsayilan": None}
 _YAZMA_KILIDI = threading.Lock()
@@ -136,12 +141,22 @@ _YAZMA_KILIDI = threading.Lock()
 # --------------------------------------------------------------------------- #
 # Açma                                                                         #
 # --------------------------------------------------------------------------- #
+def canli_uygulamada() -> bool:
+    """Süreç canlı uygulamada mı: Fly her makinede ``FLY_APP_NAME``'i uygulamanın adıyla kurar.
+
+    server.py öyleyse ``AUDIT_LOG=1``'i yok sayar: tek satır uyarı yazar, kayıtsız çalışır.
+    Değişken yoksa (Fly dışı, yerel) ya da başka bir uygulamaysa kayıt açılabilir.
+    """
+    return os.environ.get("FLY_APP_NAME") == CANLI_UYGULAMA
+
+
 def etkinlestir(tools: Iterable[Any], surumler: Optional[Dict[str, str]] = None,
                 varsayilan_surum: Optional[str] = None) -> List[Any]:
     """Denetim logunu açar; araçların handler'ı sarılmış kopyalarını döndürür.
 
-    server.py bunu YALNIZ ``AUDIT_LOG == "1"`` iken, ``build()`` sonrası ``run()`` öncesi bir
-    kez çağırır. Üç şey yapar: ``mcpcore.SESSION_IDS`` açılır (initialize yanıtı
+    server.py bunu YALNIZ ``AUDIT_LOG == "1"`` iken ve canlı uygulamada değilken
+    (``canli_uygulamada()``), ``build()`` sonrası ``run()`` öncesi bir kez çağırır. Üç şey
+    yapar: ``mcpcore.SESSION_IDS`` açılır (initialize yanıtı
     ``Mcp-Session-Id`` taşır; iki istemcinin 1'den başlayan JSON-RPC kimlikleri böylece
     karışmaz), bildirim kancası kurulur (``notifications/cancelled`` ancak böyle görünür) ve
     her aracın ``copy.copy`` ile alınmış kopyasında yalnız ``handler`` değişir: ad, açıklama ve

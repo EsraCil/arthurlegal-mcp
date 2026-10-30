@@ -43,9 +43,12 @@ from mcpcore import Dispatcher, McpError, Tool  # noqa: E402
 SERVER_PY = os.path.join(KOK, "server.py")
 TR_DIZINI = os.path.join(KOK, "arthur-tr-hukuk-mcp")
 FIKSTUR = os.path.join(TR_DIZINI, "tests", "fixtures", "smk_m120.json")
-# Arka uçlardaki mcpcore kopyalarına dokunulmaz; bu değişiklikten önceki kök mcpcore.py ile
-# bayt bayt aynıdırlar. "Kapalıyken yanıtlar bugünküyle aynı" iddiasının tabanı bu kopyadır.
-TABAN_MCPCORE = os.path.join(TR_DIZINI, "mcpcore.py")
+# "Kapalıyken yanıtlar bugünküyle aynı" iddiasının tabanı: master'ın (dc1a16d) kök mcpcore.py'si,
+# değiştirilmeden. Arka uçlardaki kopyalar MCP Apps, routes ve statik dosyalardan önceki sürümdür,
+# taban olamazlar. Kopyanın değişmediğini git blob özeti (satır sonundan bağımsız) denetler.
+TABAN_MCPCORE = os.path.join(KOK, "tests", "fixtures", "mcpcore_taban.py")
+TABAN_BLOB = "198960e197f71a5e6e9d8cbcae02043c558b0a8f"   # git rev-parse dc1a16d:mcpcore.py
+FLY_TOML = os.path.join(KOK, "fly.toml")
 
 TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
 KAYIT_ONEKI = '{"olay":'
@@ -53,6 +56,11 @@ CAGRI_ALANLARI = ["olay", "ts", "session_id", "request_id", "tool", "params", "r
                   "pages", "mulga", "status", "duration_ms", "sure_siniri_asildi",
                   "backend_version", "returned", "kimlikler"]
 IPTAL_ALANLARI = ["olay", "ts", "session_id", "request_id", "reason"]
+# server.py'nin denetim anahtarının stderr satırları.
+ACIK_SATIRLARI = ("arthurlegal-mcp: denetim logu AÇIK (AUDIT_LOG=1)\n"
+                  "arthurlegal-mcp: /directory/mcp sunulmuyor (denetim logu açıkken yalnız /mcp)\n")
+CANLI_UYARISI = ("arthurlegal-mcp: AUDIT_LOG=1 canlı uygulamada yok sayıldı "
+                 "(FLY_APP_NAME=arthurlegal-mcp); denetim logu KAPALI\n")
 
 
 # --------------------------------------------------------------------------- #
@@ -245,7 +253,10 @@ class KapaliykenTest(_Temel):
         self.assertEqual(p.stderr, "")
 
     def _kapi(self):
-        """server.py __main__ bloğundaki AUDIT_LOG anahtarı (gerçek kod, AST'den)."""
+        """server.py __main__ bloğundaki AUDIT_LOG anahtarı (gerçek kod, AST'den).
+
+        Dış koşul AUDIT_LOG == "1" (değilse denetim yüklenmez bile); içeride canlı uygulama sorulur.
+        """
         with open(SERVER_PY, encoding="utf-8") as f:
             agac = ast.parse(f.read(), SERVER_PY)
         ana = [n for n in agac.body if isinstance(n, ast.If) and "__main__" in ast.unparse(n.test)]
@@ -255,6 +266,9 @@ class KapaliykenTest(_Temel):
         self.assertEqual(len(kapilar), 1)
         kapi = kapilar[0]
         self.assertEqual(ast.unparse(kapi.test), "os.environ.get('AUDIT_LOG') == '1'")
+        canli = [n for n in kapi.body if isinstance(n, ast.If)]
+        self.assertEqual(len(canli), 1)
+        self.assertEqual(ast.unparse(canli[0].test), "denetim.canli_uygulamada()")
         icerde = {id(n) for n in ast.walk(kapi)}
         disarida = [n for n in ast.walk(agac) if id(n) not in icerde and (
             (isinstance(n, ast.Name) and n.id == "denetim")
@@ -263,15 +277,19 @@ class KapaliykenTest(_Temel):
         self.assertEqual(disarida, [], "denetim server.py'de anahtarın dışında anılmamalı")
         return compile(ast.Module(body=[kapi], type_ignores=[]), SERVER_PY, "exec")
 
-    def _kapiyi_calistir(self, deger):
+    def _kapiyi_calistir(self, deger, uygulama=None):
+        """Anahtarı AUDIT_LOG=deger ile çalıştırır; FLY_APP_NAME yalnız uygulama verilirse vardır."""
         h1, h2 = (lambda a: {"ok": 1}), (lambda a: "durum")
         tools = [Tool("tr_mevzuat_getir", "d1", {"type": "object"}, h1),
                  Tool("status", "d2", {"type": "object"}, h2)]
         onceki = list(tools)
-        ad_alani = {"os": os, "sys": sys, "_tools": tools, "_loaded": [], "__version__": "1.0.1"}
-        ortam = {k: v for k, v in os.environ.items() if k != "AUDIT_LOG"}
+        ad_alani = {"os": os, "sys": sys, "_tools": tools, "_loaded": [], "__version__": "1.0.1",
+                    "DIRECTORY_PATH": "/directory/mcp"}
+        ortam = {k: v for k, v in os.environ.items() if k not in ("AUDIT_LOG", "FLY_APP_NAME")}
         if deger is not None:
             ortam["AUDIT_LOG"] = deger
+        if uygulama is not None:
+            ortam["FLY_APP_NAME"] = uygulama
         kod = self._kapi()
         with mock.patch.dict(os.environ, ortam, clear=True), self.yakala() as (out, err):
             exec(kod, ad_alani)
@@ -300,7 +318,103 @@ class KapaliykenTest(_Temel):
         self.assertIs(mcpcore.SESSION_IDS, True)
         self.assertIs(mcpcore.BILDIRIM_KANCASI, denetim._bildirim)
         self.assertEqual(out, "")
-        self.assertEqual(err, "arthurlegal-mcp: denetim logu AÇIK (AUDIT_LOG=1)\n")
+        self.assertEqual(err, ACIK_SATIRLARI)
+
+    def _acik(self, onceki, handlerlar, sonra, out, err):
+        for once, simdi, h in zip(onceki, sonra, handlerlar):
+            self.assertIs(simdi.handler.__wrapped__, h)
+            self.assertIs(simdi.name, once.name)
+        self.assertIs(mcpcore.SESSION_IDS, True)
+        self.assertIs(mcpcore.BILDIRIM_KANCASI, denetim._bildirim)
+        self.assertEqual((out, err), ("", ACIK_SATIRLARI))
+
+    def test_canli_uygulamada_acilmaz_tek_satir_uyari(self):
+        """(a) AUDIT_LOG=1 + FLY_APP_NAME=arthurlegal-mcp: kayıt kapalı, uyarı yazılır, süreç sürer."""
+        onceki, handlerlar, sonra, out, err = self._kapiyi_calistir("1", "arthurlegal-mcp")
+        self.assertEqual(len(sonra), 2)
+        for once, simdi, h in zip(onceki, sonra, handlerlar):
+            self.assertIs(simdi, once)
+            self.assertIs(simdi.handler, h)
+        self.assertIs(mcpcore.SESSION_IDS, False)
+        self.assertIsNone(mcpcore.BILDIRIM_KANCASI)
+        self.assertEqual((out, err), ("", CANLI_UYARISI))
+        # AUDIT_LOG yokken canlıda uyarı da yok: blok hiç çalışmaz.
+        self.assertEqual(self._kapiyi_calistir(None, "arthurlegal-mcp")[3:], ("", ""))
+
+    def test_baska_uygulamada_acilir(self):
+        """(b) AUDIT_LOG=1 + FLY_APP_NAME başka bir uygulama: kayıt açık."""
+        self._acik(*self._kapiyi_calistir("1", "baska-uygulama"))
+
+    def test_fly_disinda_acilir(self):
+        """(c) AUDIT_LOG=1, FLY_APP_NAME tanımsız (Fly dışı, yerel): kayıt açık."""
+        self._acik(*self._kapiyi_calistir("1"))
+
+    @unittest.skipUnless(os.path.exists(FLY_TOML), "fly.toml yok")
+    def test_canli_uygulama_adi_fly_tomldaki(self):
+        """CANLI_UYGULAMA fly.toml'daki adla aynı kalmalı; ad değişirse kapı boşa düşer."""
+        with open(FLY_TOML, encoding="utf-8") as f:
+            adlar = re.findall(r'(?m)^app\s*=\s*"([^"]+)"', f.read())
+        self.assertEqual(adlar, [denetim.CANLI_UYGULAMA])
+
+    def _ana_blogu_calistir(self, ortam_ek):
+        """server.py __main__ bloğunun TAMAMI (gerçek kod, AST'den); ağır parçalar sahte.
+
+        build, _warm_resident, build_directory ve run sahtedir: arka uç yüklenmez, ağa çıkılmaz,
+        sunucu açılmaz. Döner: run'a verilen araçlar ve anahtar kelimeler, sahte dizin araçları ve
+        görünümler, stdout, stderr.
+        """
+        with open(SERVER_PY, encoding="utf-8") as f:
+            agac = ast.parse(f.read(), SERVER_PY)
+        (ana,) = [n for n in agac.body
+                  if isinstance(n, ast.If) and "__main__" in ast.unparse(n.test)]
+        kod = compile(ast.Module(body=ana.body, type_ignores=[]), SERVER_PY, "exec")
+        araclar = [Tool("tr_mevzuat_getir", "d1", {"type": "object"}, lambda a: {"ok": 1}),
+                   Tool("status", "d2", {"type": "object"}, lambda a: "durum")]
+        dizin_araclari = [araclar[0], Tool("status", "d3", {"type": "object"}, lambda a: "dizin")]
+        gorunumler = [mcpcore.Resource("ui://arthurlegal/kart.html", "kart", "<p>kart</p>")]
+        cagrilar = []
+        ad_alani = {
+            "os": os, "sys": sys, "__version__": "1.6.0", "Dispatcher": Dispatcher,
+            "DIRECTORY_PATH": "/directory/mcp", "INSTRUCTIONS_HEADER": "talimat",
+            "_instructions": [], "_tools": araclar, "_loaded": [], "_failed": [],
+            "_resources": gorunumler, "build": lambda: None, "_warm_resident": lambda: None,
+            "build_directory": lambda: (dizin_araclari, "dizin talimatı", list(gorunumler)),
+            "run": lambda tools, **kw: cagrilar.append((list(tools), kw)),
+        }
+        ortam = {k: v for k, v in os.environ.items() if k not in ("AUDIT_LOG", "FLY_APP_NAME")}
+        ortam.update(ortam_ek)
+        with mock.patch.dict(os.environ, ortam, clear=True), self.yakala() as (out, err):
+            exec(kod, ad_alani)
+        self.assertEqual(len(cagrilar), 1)
+        return cagrilar[0] + (dizin_araclari, gorunumler, out.getvalue(), err.getvalue())
+
+    def test_acikken_dizin_yolu_sunulmaz_kapaliyken_sunulur(self):
+        """(d) server.py'nin run'a verdiği routes: kayıt açıkken boş (yol 404), kapalıyken dizin."""
+        durumlar = (({}, False), ({"AUDIT_LOG": "1", "FLY_APP_NAME": "arthurlegal-mcp"}, False),
+                    ({"AUDIT_LOG": "1"}, True),
+                    ({"AUDIT_LOG": "1", "FLY_APP_NAME": "baska-uygulama"}, True))
+        for ortam, acik in durumlar:
+            with self.subTest(**ortam):
+                mcpcore.SESSION_IDS, mcpcore.BILDIRIM_KANCASI, denetim._AYAR = self._eski
+                araclar, kw, dizin_araclari, gorunumler, out, err = self._ana_blogu_calistir(ortam)
+                self.assertEqual(out, "")
+                self.assertIs(kw["resources"], gorunumler)         # MCP Apps görünümleri aynen
+                self.assertEqual([hasattr(t.handler, "__wrapped__") for t in araclar], [acik] * 2)
+                if acik:
+                    self.assertEqual(kw["routes"], {})
+                    self.assertTrue(err.endswith(ACIK_SATIRLARI), err)
+                else:                                              # master'daki davranış
+                    self.assertEqual(list(kw["routes"]), ["/directory/mcp"])
+                    dizin = kw["routes"]["/directory/mcp"]
+                    self.assertIs(dizin.tools, dizin_araclari)
+                    self.assertEqual((dizin.instructions, dizin.resources),
+                                     ("dizin talimatı", gorunumler))
+                    self.assertNotIn("sunulmuyor", err)
+                with _sunucu(mcpcore._make_handler(Dispatcher(araclar, "a", "1"),
+                                                   kw["routes"])) as port:
+                    durum, _, _ = _ayir(_ham_istek(port, "POST", "/directory/mcp",
+                                                   _rpc(1, "tools/list")))
+                self.assertEqual(durum, 404 if acik else 200)
 
     def test_kapaliyken_oturum_basligi_yok(self):
         tools = [_arac("tr_mevzuat_getir", {"page": 1, "text": "MADDE 1- a"})]
@@ -317,11 +431,13 @@ class KapaliykenTest(_Temel):
 
     @unittest.skipUnless(os.path.exists(TABAN_MCPCORE), "taban mcpcore kopyası yok")
     def test_kapaliyken_yanitlar_ve_basliklar_bayt_bayt_ayni(self):
+        with open(TABAN_MCPCORE, "rb") as f:
+            veri = f.read().replace(b"\r\n", b"\n")
+        self.assertEqual(hashlib.sha1(b"blob %d\0" % len(veri) + veri).hexdigest(), TABAN_BLOB,
+                         "taban kopyası master'daki (dc1a16d) mcpcore.py değil")
         spec = importlib.util.spec_from_file_location("mcpcore_taban", TABAN_MCPCORE)
         taban = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(taban)
-        if hasattr(taban, "SESSION_IDS"):
-            self.skipTest("arka uç kopyası artık değişiklik öncesi mcpcore değil; taban yok")
 
         cagri = _rpc(4, "tools/call", name="tr_mevzuat_getir", arguments={"mevzuat_id": "1"})
         istekler = [
@@ -338,6 +454,11 @@ class KapaliykenTest(_Temel):
             ("GET", "/health", None, ()),
             ("GET", "/", None, ()),
             ("GET", "/mcp", None, ()),
+            # master'ın MCP Apps görünümleri (resources) ve ek yolu (routes)
+            ("POST", "/mcp", _rpc(8, "resources/list"), ()),
+            ("POST", "/mcp", _rpc(9, "resources/read", uri="ui://arthurlegal/kart.html"), ()),
+            ("POST", "/directory/mcp", _rpc(10, "initialize", protocolVersion="2025-06-18"), ()),
+            ("POST", "/directory/mcp", cagri, ()),
         ]
 
         def calistir(modul):
@@ -345,8 +466,12 @@ class KapaliykenTest(_Temel):
                            tool_sinifi=modul.Tool),
                      _arac("hata", hata=modul.McpError("RATE_LIMITED: HTTP 429"),
                            tool_sinifi=modul.Tool)]
-            disp = modul.Dispatcher(tools, "arthurlegal-mcp", "1.0.1", instructions="talimat")
-            with _sunucu(modul._make_handler(disp)) as port:
+            gorunum = modul.Resource("ui://arthurlegal/kart.html", "kart", "<p>kart</p>",
+                                     mime_type="text/html")
+            disp = modul.Dispatcher(tools, "arthurlegal-mcp", "1.0.1", instructions="talimat",
+                                    resources=[gorunum])
+            dizin = modul.Dispatcher(tools[:1], "arthurlegal-mcp", "1.0.1", instructions="dizin")
+            with _sunucu(modul._make_handler(disp, {"/directory/mcp": dizin})) as port:
                 return [_tarihsiz(_ham_istek(port, y, p, g, b)) for y, p, g, b in istekler]
 
         with self.yakala() as (out, err):

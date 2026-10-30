@@ -852,11 +852,21 @@ if __name__ == "__main__":
     sys.stderr.write("\n")
     directory = Dispatcher(directory_tools, name="arthurlegal-mcp", version=__version__,
                            instructions=directory_text, resources=directory_views)
-    # Denetim logu yalnız test uygulamasında açılır (README: "Denetim logu"). Kapalıyken bu
-    # blok hiç çalışmaz: araçlar sarılmaz, oturum kimliği verilmez, yanıtlar aynı kalır.
+    routes = {DIRECTORY_PATH: directory}
+    # Denetim logu yalnız ayrı test uygulamasında açılır (README: "Denetim logu"). AUDIT_LOG=1
+    # değilken bu blok hiç çalışmaz: araçlar sarılmaz, oturum kimliği verilmez, yanıtlar aynı
+    # kalır. Canlı uygulamada AUDIT_LOG=1 yok sayılır. Açıkken dizin yolu sunulmaz: oradaki
+    # araçlar sarılmaz, çağrıları kayda girmezdi.
     if os.environ.get("AUDIT_LOG") == "1":
         import denetim
-        _tools[:] = denetim.etkinlestir(_tools, denetim.arka_uc_surumleri(_loaded), __version__)
-        sys.stderr.write("arthurlegal-mcp: denetim logu AÇIK (AUDIT_LOG=1)\n")
+        if denetim.canli_uygulamada():
+            sys.stderr.write("arthurlegal-mcp: AUDIT_LOG=1 canlı uygulamada yok sayıldı "
+                             "(FLY_APP_NAME=%s); denetim logu KAPALI\n" % denetim.CANLI_UYGULAMA)
+        else:
+            _tools[:] = denetim.etkinlestir(_tools, denetim.arka_uc_surumleri(_loaded), __version__)
+            routes = {}
+            sys.stderr.write("arthurlegal-mcp: denetim logu AÇIK (AUDIT_LOG=1)\n")
+            sys.stderr.write("arthurlegal-mcp: %s sunulmuyor (denetim logu açıkken yalnız /mcp)\n"
+                             % DIRECTORY_PATH)
     run(_tools, name="arthurlegal-mcp", version=__version__, instructions=text,
-        resources=_resources, routes={DIRECTORY_PATH: directory})
+        resources=_resources, routes=routes)
