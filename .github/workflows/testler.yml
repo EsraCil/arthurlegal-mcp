@@ -1,0 +1,97 @@
+# Testler ve sır taraması.
+#
+# Her push'ta (bütün dallar) ve PR'da GitHub'ın Linux bilgisayarında çalışır. İki iş:
+#   1. Testler: kök tests/ (ağ geçidi) ve her arka ucun kendi tests/ klasörü. Python sürümü ve paketler
+#      Dockerfile'daki ile aynı. Kök testler dosya başına ayrı süreçte koşar: tek süreçte test_profiles,
+#      kendinden önce koşan bir testin değiştirdiği araç başlıklarını görüyor ve de_norm_getir'de kırmızı
+#      yanıyor; tek başına yeşil (2026-10-30). Sıra bağımlılığı giderilince tek komuta indirilebilir.
+#   2. Sır taraması: gitleaks, yalnız bu push'un ya da PR'ın getirdiği commit'lerde. Sürüm ve dosya özeti
+#      sabit; değer çıktıya yazılmaz (--redact).
+# Testler ağa çıkmaz (2026-10-30'da dış ağ kapalıyken yerelde denendi), API anahtarı istemez.
+
+name: Testler
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testler-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testler:
+    name: Testler
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11" # Dockerfile: python:3.11-slim
+
+      - name: Paketler (Dockerfile ile aynı)
+        run: pip install "de-eli-mcp==0.5.4" "pypdf>=4.0" "numpy>=2.0,<3"
+
+      - name: Ağ geçidi testleri (kök tests/, dosya başına ayrı süreç)
+        run: |
+          hata=0
+          for f in tests/test_*.py; do
+            echo "::group::$f"
+            python -m unittest discover -s tests -p "$(basename "$f")" -v || hata=1
+            echo "::endgroup::"
+          done
+          exit $hata
+
+      - name: Arka uç testleri
+        run: |
+          hata=0
+          for d in */tests; do
+            k=${d%/tests}
+            echo "::group::$k"
+            (cd "$k" && python -m unittest discover -s tests -v) || hata=1
+            echo "::endgroup::"
+          done
+          exit $hata
+
+  sir-taramasi:
+    name: Sır taraması
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GITLEAKS_SURUM: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks (sürüm ve özet sabit)
+        run: |
+          set -euo pipefail
+          d="gitleaks_${GITLEAKS_SURUM}_linux_x64.tar.gz"
+          curl -sSfLo "$RUNNER_TEMP/$d" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_SURUM}/$d"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$d" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$d" -C "$RUNNER_TEMP" gitleaks
+
+      # Taban: PR'da hedef dalın ucu, push'ta önceki commit; yeni dalda ya da bulunamazsa master.
+      - name: Bu değişikliğin commit'lerini tara
+        env:
+          TABAN: ${{ github.event.pull_request.base.sha || github.event.before }}
+          UC: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "$TABAN" ] && [ "$TABAN" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "${TABAN}^{commit}" 2>/dev/null; then
+            ARALIK="${TABAN}..${UC}"
+          else
+            ARALIK="origin/master..${UC}"
+          fi
+          echo "Taranan aralık: $ARALIK"
+          "$RUNNER_TEMP/gitleaks" git --log-opts="$ARALIK" --redact --no-banner --exit-code 1 .
