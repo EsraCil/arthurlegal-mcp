@@ -10,13 +10,14 @@ combine, one of which means the opposite of what its name suggests.
 """
 from __future__ import annotations
 
+import threading
 from typing import Any, Dict
 
 from egov import EgovClient, EgovError
 from mcpcore import McpError, Tool, run
 from retrieval import embeddings_status, semantic_rerank
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 _client = EgovClient()
 
@@ -49,6 +50,11 @@ LANGUAGE. The corpus is Japanese. Search in Japanese: 会社法, 電気事業, �
 Romanised or English queries mostly fail; the local reranker cannot compensate
 for terms the upstream keyword index never matched.
 
+TITLE FIRST. `search_laws` puts statutes whose title or abbreviation contains the
+keyword first (`match`: "title"), the exact title or abbreviation on top: 個人情報の保護,
+独禁法, 労基法. Full-text matches follow (`match`: "text"). The full-text index runs in
+law-number order, so on its own a phrase many statutes quote buries the statute itself.
+
 ARTICLE NUMBERS. `get_article` takes the arabic number ("331" for 第三百三十一条).
 Inserted articles carry underscore form ("331_2" for 第三百三十一条の二).
 
@@ -59,8 +65,9 @@ TOOLS = [
     Tool(
         name="search_laws",
         description=(
-            "Full-text keyword search across Japanese statutes. Returns each "
-            "matching statute with the sentences that matched and its in-force "
+            "Keyword search across Japanese statutes. Statutes whose title or "
+            "abbreviation contains the keyword come first (exact title on top), then "
+            "full-text matches with the sentences that matched; each with its in-force "
             "status. Query in Japanese. NOTE: the page size counts matching "
             "SENTENCES, not statutes -- 3 sentences may all sit inside one Act. "
             "Raise max_sentences to widen the statute spread; the response "
@@ -149,23 +156,49 @@ TOOLS = [
 
 def _t_search(args: Dict[str, Any]) -> Any:
     keyword = args.get("keyword", "")
+    offset = int(args.get("offset", 0))
+    side: Dict[str, Any] = {"results": []}
+    waiter = None
+    if offset == 0:                      # title matches lead the first page only
+        def titles_call() -> None:
+            try:
+                side.update(_client.search_titles(keyword))
+            except EgovError as exc:     # the full-text page still answers
+                side["error"] = str(exc)
+        waiter = threading.Thread(target=titles_call, daemon=True)
+        waiter.start()                   # both e-Gov calls in flight at once
     try:
-        raw = _client.search(keyword, int(args.get("max_sentences", 30)),
-                             int(args.get("offset", 0)))
+        raw = _client.search(keyword, int(args.get("max_sentences", 30)), offset)
     except EgovError as exc:
         raise McpError(str(exc)) from exc
+    if waiter is not None:
+        waiter.join()
+    titles, title_error = side, side.get("error", "")
     ranked = semantic_rerank(keyword, raw["results"], fields=("title", "abbrev", "category"))
-    return {
+    by_id = {r["law_id"]: r for r in ranked["results"]}
+    first = []
+    for r in titles["results"]:
+        hit = by_id.pop(r["law_id"], None)
+        first.append(dict(r, match="title", matches=hit["matches"] if hit else []))
+    rest = [dict(r, match="text") for r in ranked["results"] if r["law_id"] in by_id]
+    out = {
         "total_upstream": raw["total"],
         "sentence_count": raw["sentence_count"],
         "statutes_on_this_page": raw["statutes_on_this_page"],
         "next_offset": raw["next_offset"],
-        "returned": len(ranked["results"]),
-        "ranking": {"method": ranked["method"],
-                    "note": ranked.get("note") or ranked.get("warning")},
+        "title_matches": len(first),
+        "returned": len(first) + len(rest),
+        "ranking": {"method": "title first, then %s" % ranked["method"],
+                    "note": ("Statutes whose title or abbreviation contains the keyword come first "
+                             "(exact title or abbreviation, then Acts before orders, unrepealed before "
+                             "repealed, shorter title first); full-text matches follow. "
+                             + (ranked.get("note") or ranked.get("warning") or ""))},
         "scope_note": "Legislation only — e-Gov holds no case law.",
-        "results": ranked["results"],
+        "results": first + rest,
     }
+    if title_error:
+        out["title_search_error"] = title_error
+    return out
 
 
 def _t_list(args: Dict[str, Any]) -> Any:

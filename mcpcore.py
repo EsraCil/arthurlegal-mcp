@@ -40,7 +40,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-__all__ = ["Tool", "McpError", "run", "run_stdio", "run_http", "build_parser", "istek_baglami"]
+__all__ = ["Tool", "Resource", "McpError", "run", "run_stdio", "run_http", "build_parser",
+           "istek_baglami"]
 
 # Cap the JSON-RPC request body: without this a single Content-Length header can
 # drive the process out of memory.
@@ -49,6 +50,11 @@ _MAX_BODY = 4_000_000
 # Protocol revisions we can speak; we echo the client's if we recognise it.
 _SUPPORTED_PROTOCOLS = ("2025-06-18", "2025-03-26", "2024-11-05")
 _DEFAULT_PROTOCOL = "2025-06-18"
+
+# Small fixed files answered on GET and HEAD beside the JSON-RPC endpoint, such as
+# the favicon a connector directory shows next to a server's name. Path ->
+# (content type, body). Empty unless the embedding server fills it.
+STATIC_FILES: Dict[str, tuple] = {}
 
 # --------------------------------------------------------------------------- #
 # Opt-in request context and hooks — all inert unless an application sets them #
@@ -91,9 +97,19 @@ class McpError(Exception):
 
 
 class Tool:
-    """One tool: JSON Schema in, handler out. Single source of truth for both transports."""
+    """One tool: JSON Schema in, handler out. Single source of truth for both transports.
 
-    __slots__ = ("name", "description", "input_schema", "handler")
+    ``meta`` is the tool's ``_meta`` object. An MCP Apps host reads
+    ``_meta.ui.resourceUri`` from it and renders that ``ui://`` resource next to
+    the call; hosts without MCP Apps ignore it and keep reading the text result.
+
+    ``title`` and ``annotations`` are optional (MCP 2025-06-18). Claude reads
+    ``readOnlyHint`` to decide whether a call needs per-call confirmation, and the
+    Claude connector directory requires a title plus a read-only or destructive
+    hint on every tool.
+    """
+
+    __slots__ = ("name", "description", "input_schema", "handler", "meta", "title", "annotations")
 
     def __init__(
         self,
@@ -101,18 +117,72 @@ class Tool:
         description: str,
         input_schema: Dict[str, Any],
         handler: Callable[[Dict[str, Any]], Any],
+        meta: Optional[Dict[str, Any]] = None,
+        title: Optional[str] = None,
+        annotations: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.name = name
         self.description = description
         self.input_schema = input_schema
         self.handler = handler
+        self.meta = meta
+        self.title = title
+        self.annotations = annotations
 
     def public(self) -> Dict[str, Any]:
-        return {
+        out = {
             "name": self.name,
             "description": self.description,
             "inputSchema": self.input_schema,
         }
+        if self.title:
+            out["title"] = self.title
+        if self.annotations:
+            out["annotations"] = dict(self.annotations)
+        if self.meta:
+            out["_meta"] = self.meta
+        return out
+
+
+class Resource:
+    """One readable resource with fixed text, e.g. an MCP Apps view (``ui://...``).
+
+    ``meta`` rides on both the listing and the read result: the host takes the
+    view's sandbox settings (``_meta.ui.csp``, ``prefersBorder``) from the content
+    it reads, and some hosts only look at the listing.
+    """
+
+    __slots__ = ("uri", "name", "text", "mime_type", "description", "meta")
+
+    def __init__(
+        self,
+        uri: str,
+        name: str,
+        text: str,
+        mime_type: str = "text/plain",
+        description: str = "",
+        meta: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.uri = uri
+        self.name = name
+        self.text = text
+        self.mime_type = mime_type
+        self.description = description
+        self.meta = meta
+
+    def listing(self) -> Dict[str, Any]:
+        out = {"uri": self.uri, "name": self.name, "mimeType": self.mime_type}
+        if self.description:
+            out["description"] = self.description
+        if self.meta:
+            out["_meta"] = self.meta
+        return out
+
+    def contents(self) -> Dict[str, Any]:
+        out = {"uri": self.uri, "mimeType": self.mime_type, "text": self.text}
+        if self.meta:
+            out["_meta"] = self.meta
+        return out
 
 
 # --------------------------------------------------------------------------- #
@@ -141,12 +211,15 @@ class Dispatcher:
         name: str,
         version: str,
         instructions: str = "",
+        resources: Optional[List[Resource]] = None,
     ) -> None:
         self.tools = tools
         self.by_name = {t.name: t for t in tools}
         self.name = name
         self.version = version
         self.instructions = instructions
+        self.resources = list(resources or [])
+        self.resource_by_uri = {r.uri: r for r in self.resources}
 
     def handle(self, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Return a response dict, or None for notifications (no reply)."""
@@ -169,9 +242,12 @@ class Dispatcher:
         if method == "initialize":
             asked = (params.get("protocolVersion") or "").strip()
             protocol = asked if asked in _SUPPORTED_PROTOCOLS else _DEFAULT_PROTOCOL
+            capabilities: Dict[str, Any] = {"tools": {"listChanged": False}}
+            if self.resources:
+                capabilities["resources"] = {"listChanged": False}
             result = {
                 "protocolVersion": protocol,
-                "capabilities": {"tools": {"listChanged": False}},
+                "capabilities": capabilities,
                 "serverInfo": {"name": self.name, "version": self.version},
             }
             if self.instructions:
@@ -187,6 +263,19 @@ class Dispatcher:
         if method == "tools/call":
             return self._call(msg_id, params)
 
+        if method == "resources/list":
+            return _ok(msg_id, {"resources": [r.listing() for r in self.resources]})
+
+        if method == "resources/templates/list":
+            return _ok(msg_id, {"resourceTemplates": []})
+
+        if method == "resources/read":
+            resource = self.resource_by_uri.get(params.get("uri"))
+            if resource is None:
+                # -32002 is the code the MCP spec reserves for an unknown resource.
+                return _err(msg_id, -32002, "Resource not found: %s" % params.get("uri"))
+            return _ok(msg_id, {"contents": [resource.contents()]})
+
         return _err(msg_id, -32601, "Method not found: %s" % method)
 
     def _call(self, msg_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -197,8 +286,12 @@ class Dispatcher:
             return _err(msg_id, -32602, "Unknown tool: %s" % name)
         try:
             value = tool.handler(args)
-            payload = _as_text(value)
-            return _ok(msg_id, {"content": [{"type": "text", "text": payload}]})
+            result: Dict[str, Any] = {"content": [{"type": "text", "text": _as_text(value)}]}
+            # A tool with a view hands the view the same object as data: the view
+            # reads structuredContent, the model keeps reading the identical text.
+            if tool.meta and isinstance(value, dict):
+                result["structuredContent"] = value
+            return _ok(msg_id, result)
         except McpError as exc:
             # A handled, explainable failure — hand it to the model as text so it
             # can recover (try another query, another tool) instead of stalling.
@@ -251,7 +344,18 @@ def run_stdio(dispatcher: Dispatcher) -> None:
 # --------------------------------------------------------------------------- #
 # Streamable HTTP transport                                                    #
 # --------------------------------------------------------------------------- #
-def _make_handler(dispatcher: Dispatcher):
+def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]] = None):
+    # Extra endpoints beside /mcp, each with its own tool set and instructions
+    # (e.g. a narrower profile for a public directory listing). Keys are paths
+    # without a trailing slash.
+    extra = {path.rstrip("/"): d for path, d in (routes or {}).items()}
+
+    def pick(path: str) -> Optional[Dispatcher]:
+        path = path.split("?", 1)[0].rstrip("/")
+        if path in ("/mcp", ""):
+            return dispatcher
+        return extra.get(path)
+
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
         server_version = "%s/%s" % (dispatcher.name, dispatcher.version)
@@ -291,7 +395,31 @@ def _make_handler(dispatcher: Dispatcher):
             _baglam.session_id = yeni
             return [("Mcp-Session-Id", yeni)]
 
+        def _send_static(self, head: bool) -> bool:
+            # The query string is ignored: /favicon.ico?v=2 is the same file.
+            hit = STATIC_FILES.get(self.path.split("?", 1)[0])
+            if hit is None:
+                return False
+            ctype, body = hit
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            if not head:
+                self.wfile.write(body)
+            return True
+
+        def do_HEAD(self):  # noqa: N802
+            # Favicon fetchers may probe with HEAD. Every other path keeps the 501
+            # BaseHTTPRequestHandler gives a method it has no do_ for.
+            if not self._send_static(head=True):
+                self.send_error(501, "Unsupported method (%r)" % self.command)
+
         def do_GET(self):  # noqa: N802
+            if self._send_static(head=False):
+                return
             if self.path.rstrip("/") in ("/health", "/healthz"):
                 self._send(200, b'{"status":"ok"}')
                 return
@@ -304,6 +432,9 @@ def _make_handler(dispatcher: Dispatcher):
                     "auth": "none",
                     "tools": [t.name for t in dispatcher.tools],
                 }
+                if extra:
+                    info["other_endpoints"] = {
+                        path: len(d.tools) for path, d in sorted(extra.items())}
                 self._send(200, json.dumps(info, ensure_ascii=False).encode("utf-8"))
                 return
             # Streamable HTTP allows a plain JSON response and no server-initiated
@@ -311,7 +442,8 @@ def _make_handler(dispatcher: Dispatcher):
             self._send(405, b'{"error":"GET not supported; POST JSON-RPC to /mcp"}')
 
         def do_POST(self):  # noqa: N802
-            if self.path.rstrip("/") not in ("/mcp", ""):
+            target = pick(self.path)
+            if target is None:
                 self._send(404, b'{"error":"not found"}')
                 return
             try:
@@ -333,12 +465,12 @@ def _make_handler(dispatcher: Dispatcher):
 
             # A batch is a list; answer each and drop notification nulls.
             if isinstance(msg, list):
-                out = [r for r in (dispatcher.handle(m) for m in msg) if r is not None]
+                out = [r for r in (target.handle(m) for m in msg) if r is not None]
                 body = json.dumps(out, ensure_ascii=False, default=str).encode("utf-8")
                 self._send(200, body, extra_headers=oturum_basligi)
                 return
 
-            response = dispatcher.handle(msg)
+            response = target.handle(msg)
             if response is None:
                 # Notification: 202 with an empty body is the correct answer.
                 self.send_response(202)
@@ -351,12 +483,19 @@ def _make_handler(dispatcher: Dispatcher):
     return Handler
 
 
-def run_http(dispatcher: Dispatcher, host: str, port: int) -> None:
-    httpd = ThreadingHTTPServer((host, port), _make_handler(dispatcher))
+def run_http(
+    dispatcher: Dispatcher,
+    host: str,
+    port: int,
+    routes: Optional[Dict[str, Dispatcher]] = None,
+) -> None:
+    httpd = ThreadingHTTPServer((host, port), _make_handler(dispatcher, routes))
     sys.stderr.write(
         "%s %s listening on http://%s:%d/mcp (no auth)\n"
         % (dispatcher.name, dispatcher.version, host, port)
     )
+    for path, other in sorted((routes or {}).items()):
+        sys.stderr.write("  also %s (%d tools)\n" % (path, len(other.tools)))
     sys.stderr.flush()
     try:
         httpd.serve_forever()
@@ -398,10 +537,18 @@ def run(
     version: str,
     instructions: str = "",
     argv: Optional[List[str]] = None,
+    resources: Optional[List[Resource]] = None,
+    routes: Optional[Dict[str, Dispatcher]] = None,
 ) -> None:
+    """Serve ``tools`` at /mcp (or over stdio).
+
+    ``routes`` adds HTTP-only endpoints, each a ready Dispatcher with its own tool
+    set; stdio has a single endpoint and ignores them.
+    """
     args = build_parser(name).parse_args(argv)
-    dispatcher = Dispatcher(tools, name=name, version=version, instructions=instructions)
+    dispatcher = Dispatcher(tools, name=name, version=version, instructions=instructions,
+                            resources=resources)
     if args.transport == "http":
-        run_http(dispatcher, args.host, args.port)
+        run_http(dispatcher, args.host, args.port, routes)
     else:
         run_stdio(dispatcher)

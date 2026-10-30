@@ -6,9 +6,13 @@ Türkiye - Netherlands - Poland - Austria - Ireland - Finland - Spain - United
 Kingdom - European Union - Japan - Azerbaijan - Germany - legal scholarship -
 signed resource contracts - GLEIF entity identity.
 
-123 tools, one hosted endpoint, no authentication:
+124 tools, one hosted endpoint, no authentication:
 
     https://arthurlegal-mcp.fly.dev/mcp
+
+The same server also answers at `/directory/mcp` with the 107 read-only tools listed in the
+Claude connector directory: everything except the land-registry `tkgm_` tools. See
+[Claude connector directory](#claude-connector-directory).
 
 Anyone with the URL can call every tool. Self-hosting? Deploy your own copy (see
 [Indexes](#indexes)) and use `https://<your-app>.fly.dev/mcp` instead.
@@ -53,6 +57,13 @@ Rekabet, SPK, BDDK, KVKK, BTK, GİB, Sigorta Tahkim) behind one
 `tr_kurum_karari_ara` interface, plus a locally indexed
 archive for `tr_semantik_ara`. Source: the `arthur-tr-hukuk-mcp/` folder (formerly `ArthurLegalTR/`).
 
+The archive holds the decisions' text, not just their titles: 19,498 documents, every one vectorised.
+EPDK's decisions before 2016 were old Word files or scans; their text was read on the crawl
+workstation (Word files directly, scans with OCR), and when a live document yields no text
+`tr_kurum_karari_getir` answers from the archive, with a warning where the text came from OCR.
+Dates are checked against each decision's own date line, so a date filter sees every Rekabet
+decision (10,445; before 2026-10-12 most of them carried no date and fell outside any range).
+
 `tr_resmi_gazete_tara`, `tr_resmi_gazete_fihrist` and `tr_mevzuat_ara` also take a `konu` filter
 (`enerji`, `rekabet`, `vergi`, `icra`): a local, network-free topic triage over titles that finds
 items whose titles never mention the topic (in the labelled gazette corpus the topic word appears
@@ -64,9 +75,42 @@ out-of-fold sensitivity 92-100% per topic; on 60 unseen legislation titles vergi
 enerji 0/3. Every response says how many items it dropped, `esik=0` disables it, and `status`
 reports the model and both measurements. Do not use it for publication verification.
 
+## Claude connector directory
+
+The directory listing points at a narrower profile of the same server:
+
+    https://arthurlegal-mcp.fly.dev/directory/mcp
+
+- **107 tools, all read-only.** Every tool carries a `title` and `readOnlyHint: true`
+  (`tool_titles.py`), so Claude can run them without asking each time. Nothing on this
+  endpoint writes, deletes or sends anything on your behalf.
+- **No land-registry tools.** The `tkgm_` tools stay on `/mcp` only; the desk shows
+  ArthurTapu as available in the ArthurLegal install.
+- **The same interactive views** as `/mcp`: the article card, the decision list and the desk
+  (see [Interactive views](#interactive-views-mcp-apps)).
+- **Instructions describe the tools** (in English) instead of directing Claude; the facts
+  are the same as on `/mcp`.
+- **No account and no authentication.** Add it from the directory, or as a custom connector
+  with the URL above.
+
+Example prompts:
+
+1. "Quote Article 21 of the Turkish Labour Law (Law 4857) with its citation."
+2. "Search Turkish Court of Cassation decisions on reinstatement (işe iade) and open the most
+   recent one."
+3. "Compare the definition of personal data in the Turkish Personal Data Protection Law (6698,
+   Article 3) with section 3 of the UK Data Protection Act 2018."
+4. "Which Act governs arbitration in Ireland? Quote the section on the arbitrator's
+   jurisdiction."
+5. "Which EU regulation lays down harmonised rules on artificial intelligence, and is it in
+   force? Give its CELEX number."
+
+Privacy: [PRIVACY.md](PRIVACY.md). Support: ertug@datsproject.io or
+[open an issue](https://github.com/beerbottle90/arthurlegal-mcp/issues).
+
 ## Turkish land-registry parcel tools (`tkgm_`)
 
-`tkgm_` tools fetch single parcels live from TKGM's Parsel Sorgu -- by province, district and
+On `/mcp` only (not on `/directory/mcp`), `tkgm_` tools fetch single parcels live from TKGM's Parsel Sorgu -- by province, district and
 neighbourhood with block and parcel, by coordinates, or by place name -- and work with them:
 plane-projected area and edge lengths, a to-scale A4 SVG sketch, an OSM map, format conversion
 (DXF/KML/CSV), route-corridor intersection, 2026 title-deed fee and revolving-fund tariff lookups
@@ -83,10 +127,14 @@ and the tools that write files, fetch elevation data or read title records are d
 
 ## Tool naming
 
-Every tool carries its jurisdiction as a prefix -- `nl_` `pl_` `at_` `ie_` `fi_`
-`es_` `uk_` `eu_` `jp_` `gleif_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
-`get_act` means five different things and `search_legislation` three, so the
+Every tool carries its jurisdiction as a prefix -- `tr_` `nl_` `pl_` `at_` `ie_` `fi_`
+`es_` `uk_` `eu_` `jp_` `gleif_` `tkgm_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
+`get_act` means six different things and `search_legislation` four, so the
 prefix is what keeps a Spanish question from being answered with Finnish law.
+
+Every tool also carries a readable `title` and a safety hint (`tool_titles.py`): research tools
+are `readOnlyHint: true`; the few land-registry tools that write a file when run locally are
+marked as not read-only and not destructive.
 
 `status` reports every jurisdiction at once: which backends loaded, how many
 documents each has indexed, how many are vectorised, and whether semantic
@@ -96,6 +144,26 @@ answers. The German backend runs as a separate process, so `status` also probes
 it live (`de_live`); Azerbaijan's probe reports whether e-qanun.az answers now.
 On the hosted endpoint it also names the image that answered (`build`) and the
 memory in use (`memory`).
+
+## Interactive views (MCP Apps)
+
+In Claude (web, desktop and the iOS/Android apps) results come with ArthurLegal views. The tools'
+JSON is unchanged, so clients without MCP Apps read exactly what they read before.
+
+- `tr_mevzuat_madde_getir`: an article card with the law and Official Gazette details, each
+  article's heading (with its parent headings for codes such as TBK and TMK), the text, the
+  citation to quote with a copy button, a link to the official text and a verified / partly
+  verified / not verified badge. An article that could not be fetched carries the `UYARI` line.
+- `tr_ictihat_ara`: a decision list with chamber, docket numbers and date; each decision's text
+  opens inside the card and can be handed to Claude for a summary.
+- `al_masasi`: ArthurLegal Masası, a full-screen desk with legislation and citation check,
+  case law, source status and the other ArthurLegal modules in one panel. On this endpoint the
+  modules that run on the lawyer's computer (memory, masking, UYAP) are shown as desktop-only;
+  on `/directory/mcp` land registry is shown that way too.
+
+The views are in `arayuz/` (served as `ui://arthurlegal/...`). Light theme by default, dark and
+automatic on request; the device's system font; the only origin the sandbox allows is unpkg, for
+the pinned MCP Apps client (`@modelcontextprotocol/ext-apps`).
 
 ## Germany (`de_`)
 
@@ -115,7 +183,7 @@ Two sources stand behind the `de_` prefix:
 
 ## Indexes
 
-Five jurisdictions are searched from a local SQLite index (FTS5 + vectors); the
+Six jurisdictions are searched from a local SQLite index (FTS5 + vectors); the
 rest are queried upstream and reranked in memory. The indexes are built on a
 workstation and baked into the image at `baked/<jurisdiction>.db`:
 
@@ -127,7 +195,26 @@ Crawling is a maintenance task, not something a booting container does. Baking
 the databases in means a machine is never healthy-but-empty, and the corpus can
 never drift away from the code that was tested against it. `start.sh` still
 falls back to crawling when no baked index is present, and says which it used:
-`indexes present: N/5`.
+`indexes present: N/6`.
+
+### Code-only deploys
+
+A full image carries the indexes, so every full deploy uploads about 2.3 GB of build
+context. Most releases change only code. [`Dockerfile.code`](Dockerfile.code) starts
+from the last full image in the app's registry and copies the code over it, so the
+upload is a few megabytes and a deploy takes minutes:
+
+    git worktree add --detach ../deploy origin/master   # clean checkout: no baked/
+    cd ../deploy
+    flyctl deploy . --dockerfile Dockerfile.code --depot=false --image-label <label>
+
+Run it from a clean checkout: `*.db` files are ignored by git, so a fresh worktree has
+no `baked/` and nothing large is sent. `--depot=false` uses Fly's own builder, which
+pulls the base image from the app's registry. Build a full image (`Dockerfile`) when
+the indexes, the Python packages or the base Python image change, then use its tag
+from then on: `--build-arg BASE=registry.fly.io/arthurlegal-mcp:<full-image-tag>`.
+Files deleted from the code since the base image stay in the image until the next
+full build.
 
 `hybrid`, the default search mode, ranks keyword and meaning matches together,
 but not blindly. When the keyword channel found every word of the query, both
@@ -198,4 +285,4 @@ olursa o bilgi de kayda girer. `AUDIT_LOG` tanımsız ya da `1` dışında bir d
 
 ---
 
-Source: [github.com/beerbottle90/arthurlegal-mcp](https://github.com/beerbottle90/arthurlegal-mcp)
+Source: [github.com/beerbottle90/arthurlegal-mcp](https://github.com/beerbottle90/arthurlegal-mcp) · License: [MIT](LICENSE); each backend folder carries its own copy.

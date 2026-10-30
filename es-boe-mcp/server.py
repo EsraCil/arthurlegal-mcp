@@ -146,8 +146,12 @@ TOOLS = [
         "issuing department or subject. Hybrid retrieval (BM25 + fuzzy, plus "
         "dense vectors when an embeddings backend is configured). IMPORTANT: the "
         "index covers act METADATA, not article text — use this to identify the "
-        "act, then get_act_text to read it. Set only_in_force=true to exclude "
-        "acts BOE marks as spent (vigencia agotada). Each result carries a "
+        "act, then get_act_text to read it. Set only_in_force=true to keep only "
+        "status 'vigente': it excludes acts BOE marks as spent (vigencia agotada) "
+        "and acts whose consolidated text opens with an unqualified repeal or "
+        "annulment already in effect (status 'derogada' / 'anulada'). A partial "
+        "repeal ('Norma derogada, salvo …') stays 'vigente' — check the text "
+        "before relying on a provision. Each result carries a "
         "verbatim `citation` — copy it, never build a BOE id yourself.",
         {
             "type": "object",

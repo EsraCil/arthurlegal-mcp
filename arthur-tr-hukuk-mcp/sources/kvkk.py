@@ -25,7 +25,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from net import Http, HttpError, TokenBucket
-from textx import html_to_text, paginate, strip_tags, count_hits, excerpt
+from textx import html_to_text, iso_tarih, paginate, strip_tags, count_hits, excerpt
 from sources import Source
 
 BASE = "https://www.kvkk.gov.tr"
@@ -192,8 +192,7 @@ def crawl(index, max_pages: int = 40, fetch_text: bool = True, log=print) -> Dic
 
 
 def _iso(d: str) -> str:
-    m = re.match(r"(\d{2})[./](\d{2})[./](\d{4})", d or "")
-    return "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else ""
+    return iso_tarih(d)
 
 
 SEARCH_SCHEMA = {"type": "object", "properties": {

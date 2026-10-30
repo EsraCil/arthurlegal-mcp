@@ -2,6 +2,63 @@
 
 ## Yayımlanmamış
 
+- `mevzuat_madde_getir`: kademeli kenar başlıkları (TBK, TMK, TTK). TBK m.344 tek başına istenince başlıksız,
+  listeyle istenince "II. BELİRLENMESİ2" dönüyordu. Üç kusur: (1) başlık, maddenin nasıl istendiğine bağlıydı
+  (Bedesten ağacında TBK'nın hiçbir maddesinin başlığı yok; tam metne yalnız liste yolu bakıyordu); (2) dipnot işareti
+  Bedesten metninde kelimeye yapışık rakam ("…MESİ2") ve silinmiyordu; (3) kat kat başlıklardan ("E. KİRA BEDELİ" /
+  "II. BELİRLENMESİ") yalnız son satır alınıyor, üst satırlar önceki maddenin metnine kalıyordu: TMK m.23'ün metni
+  m.24'ün "II. Saldırıya karşı / 1. İlke" başlıklarıyla bitiyordu. Şimdi maddenin üstündeki etiketli başlık satırları
+  (A., I., 1., a.) tek blok olarak o maddeye verilir; `heading_path` üst kademeleri taşır (m.344:
+  ["E. KİRA BEDELİ", "II. BELİRLENMESİ"]); yapı başlığı (KISIM, BÖLÜM, AYIRIM) yolu sıfırlar. Ağaçta başlığı olmayan
+  madde tek başına istense de tam metinden okunur (önbellekte değilse bir istek). Yapışık ve köşeli dipnotlar
+  `heading_footnote_refs`'e ayrılır. Numaralı liste başlık sayılmaz: üstte aynı kademeden kardeş ya da iki noktayla
+  biten giriş varsa satır metinde kalır. Tamamı büyük harfli tek harf etiketi ("A. HAZIR OLANLAR ARASINDA", resmî
+  metinde "a.") kademesini alfabe sırasından ve rakamlı üst başlıktan alır. Düğüm sonundaki "&NBSP;" artığı atılır.
+  12 kanunun tam metninde (5.392 madde): 1.241 başlık eklendi (TBK 213, TMK 518, TTK 510), 1.540 maddenin metninden
+  bir sonraki maddenin başlığı çıktı, 5 başlıktan dipnot rakamı silindi; kaybolan ya da değişen başlık ve uzayan metin
+  yok. Etiketsiz başlık kullanan 9 kanunda (İİK, HMK, TCK, CMK, İş K., SMK, KVKK, İYUK, KMK) değişiklik yok.
+  `tests/test_madde_baslik.py`.
+- `mevzuat_ara` tarih süzgeci: Eylül–Ekim 2026 aralığı boş dönüyordu. İki ayrı neden (canlı, 2026-10-27):
+  (1) Bedesten yeni mevzuatı haftalarca geç işliyor; en yeni RG tarihli kayıt 17.09.2026 (RG 33373), 24.09.2026'daki
+  Türkiye Yeşil Taksonomisi Yönetmeliği yok. Tarih aralığı son 120 günü kapsıyorsa yanıt Bedesten'in kapsam sınırını
+  (`kapsam_siniri`) verir; aralık sınırı 7 günden fazla aşarsa `coverage_warning` boş dönemi ve
+  `tr_resmi_gazete_tara` çağrısını yazar. Sınır bir istekle bulunur ve 6 saat saklanır; kayıtlarda yanlış tarih
+  olduğu için (RG 32913 "2027-05-28") aralık bugünle biter ve ilk beş kayıttan RG sayısı en büyük olan alınır.
+  (2) RG tarihi boş kayıtlar (7578, 7552 İklim, 7545 Siber Güvenlik) Bedesten'in tarih süzgecine hiç girmiyordu. Aynı
+  süzgeçlerle mevzuat numarasına göre ilk iki sayfa taranır; RG sayısı, aralığın RG fihristinden bulunan sayı
+  aralığına düşen tarihsiz kayıt sonuca `rg_date_bos: true` ile eklenir (`rg_tarihsiz_notu`). 2026 kanun listesinde
+  7578, 2025'te 7552 ve 7545 artık geliyor. Ek istek yalnız ilk sayfada; RG fihristi ya da Bedesten cevap vermezse
+  ana sonuç döner, neden `tamamlama_hatasi`'nda. Fihristin eski sayfalarında sayı yanlış okunuyor (10.06.2003: 25134
+  yerine 4736); okunan sayı RG'nin yayım hızına göre beklenenden uzaksa tamamlama yapılmaz ve bu söylenir.
+- `mevzuat_madde_getir` (F-196): TBK m.428 getirilemiyordu; Bedesten metninde başlık "MADDE 428 İşyerinin…" diye
+  tiresiz. Tiresiz başlık artık yalnız güvenli durumda kabul edilir: satır başında büyük harfli MADDE, ardından
+  büyük harf ya da "(", numara iki komşu başlığın arasında (komşu yoksa metnin ilk satırı). "Madde 12 uyarınca…"
+  başlık sayılmaz. TBK m.464'te tireden önce yumuşak tire (U+00AD) vardı; o da tanınır. Tam metin modunda m.427
+  artık 428'in metnini almaz; tam metinde başlığı bulunamayan madde maddenin kendi düğümünden denenir. Fıkra
+  araması "(8)" yanında "8." biçimini de tanır (İYUK m.45/8): yalnız maddede "(1)" biçimi yoksa ve gövde doğrudan
+  "1." ile başlıyorsa; "Mücbir sebepler: 1. …" gibi bent listeleri fıkra sayılmaz. 12 kanunun tam metninde
+  (5.985 başlık) eklenen başlık yalnız TBK 428 ve 464, kaybolan yok.
+- EPDK: 3.745 kararın 2.019'unun gövdesi yalnız liste kaydıydı (konu + kategori). 2016 öncesinin ~%97'si böyleydi;
+  belgeler eski Word (.doc) ya da taranmış PDF olduğu için metin çıkmıyordu. 2.007'sine metin eklendi: 1.722 Word
+  dosyası (`textx.doc_to_text`, olefile), 281 taranmış belge OCR'la (`ocr.py`: pypdfium2 + Tesseract 5, Türkçe
+  tessdata_best, 300 dpi; 11'i Word'e resim olarak konmuş sayfa), 4 arşiv. Kalan 12: elektronik tablo, portal sayfası,
+  bir RTF, bir indirilemeyen belge. Okuma biçimi `meta.metin`'de. `crawl.py --backfill-text --source epdk --ocr`
+  aynı işi yapar. Canlı belgeden metin çıkmazsa `kurum_karari_getir` metni indeksten verir (sunucuda olefile ve
+  OCR yok); taranmış belgede OCR uyarısıyla. Portalın kendi sayfası (menü) artık karar metni sayılmaz. Ölçüm:
+  bağımsız 16 soruluk set (Sonnet yazdı, soruları sonuçları görmeden, metindeki içerikten): hybrid ilk 10 %12 -> %81,
+  ilk sıra %0 -> %38, MRR 0,02 -> 0,56. Bedel: ilk ölçüm setinin 12 anlam sorusundan 3'ünde hedef geriledi (ilk 10
+  %92 -> %83): aynı konudaki eski kararlar artık metinleriyle bulunuyor; ikisinde öne geçenler aynı kuralın önceki
+  sürümleri. İkinci set değişmedi. Veri değişikliği: dağıtıma giden dizinde.
+- Tarihler: kurum çözümleyicileri yalnız iki haneli gün ve ayı tanıyordu; "28.6.2005" boş kalıyordu. 11.10.2026'da
+  tarihi boş olan: Rekabet'te 10.445 kararın 8.529'u, Sigorta Tahkim'de 77, BDDK'da 17 karar. Tarih süzgeci onları
+  görmüyordu: `date_from` verilince düşüyor, yalnız `date_to` verilince yılına bakılmadan giriyordu. Ortak
+  `textx.iso_tarih` tek haneyi ve eğik çizgiyi tanır; BDDK başlığında numaradan sonra boşluk ve eğik çizgili tarih
+  de çözülür. Rekabet'in liste sayfası 41 kararda kararın kendi "Karar Tarihi" satırından farklı tarih yazıyor
+  (biri 17.8.2029; karar 17.08.2023). `rekabet.karar_tarihi` karar sayısının yılıyla (23-39/… → 2023) denetler.
+  37 atıf karar metnindeki tarihle yeniden yazıldı, liste tarihi `meta.liste_tarihi`'nde. `crawl.py --tarih-onar`
+  mevcut indeksi vektörlere dokunmadan onarır. Ölçüm (107 kararlık örnek, başlıkla arama, yıl aralığı süzgeci):
+  süzgeçle bulunan %0 → %100, üst sınırın dışındayken yanlışlıkla gelen %100 → %0; iki ölçüm setinin 120 sonuç
+  listesi birebir aynı. Tarihsiz kalan: EPDK 8, KVKK 1 (kaynakta tarih yok). Veri değişikliği: dağıtıma giden dizinde.
 - `retrieval.py`: `SEMANTIC_RESIDENT_MB` ile vektörler bellekte float16 tutulur (bütün indeksler için ortak bütçe;
   yoksa eskisi gibi SQLite'tan okunur). Sorgu başına 4 KB'lık vektör okumak taramanın çoğuydu. v21 indekslerinde,
   iki ölçüm setinin 480 sonuç listesinin 474'ü birebir aynı (kalan 6'sında ilk 3 aynı, fark puanı eşit alt sıralarda).

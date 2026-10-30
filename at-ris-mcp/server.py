@@ -31,7 +31,7 @@ Two things to know before you read results:
 
 RANKING. RIS itself does not rank — it returns hits alphabetically. This server
 reranks by relevance before answering, so the ordering you see is this server's,
-not RIS's. `total` is RIS's true hit count; you are seeing the reranked top of
+not RIS's. `total_upstream` is RIS's true hit count; you are seeing the reranked top of
 one page of it.
 
 RECHTSSATZ ≠ JUDGMENT. Much of the OGH corpus consists of *Rechtssätze* — legal

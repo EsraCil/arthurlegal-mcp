@@ -1,10 +1,12 @@
 """Text utilities for arthur-tr-hukuk-mcp: HTML → text, PDF → text, Turkish folding.
 
-The only optional dependency in the whole server lives here. ``pypdf`` is pure
-Python and extracts text from the PDFs that Rekabet Kurumu, EPDK, SPK, BTK and
-the Sigorta Tahkim Komisyonu publish. Without it the server still runs; PDF
-tools then return the URL and say plainly that text extraction is off, rather
-than an empty string that looks like an empty decision.
+The server's optional dependencies live here. ``pypdf`` is pure Python and
+extracts text from the PDFs that Rekabet Kurumu, EPDK, SPK, BTK and the Sigorta
+Tahkim Komisyonu publish. Without it the server still runs; PDF tools then
+return the URL and say plainly that text extraction is off, rather than an empty
+string that looks like an empty decision. ``olefile`` (pure Python, BSD) opens
+old Word files (.doc), in which EPDK published most decisions before 2016; the
+crawl workstation needs it, the server answers those from the index.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ import html as _html
 import io
 import math
 import re
+import struct
 from typing import Any, Dict, List, Optional, Tuple
 
 try:  # optional, pure Python
@@ -22,8 +25,16 @@ except Exception:  # noqa: BLE001
     PdfReader = None  # type: ignore
     HAS_PYPDF = False
 
-__all__ = ["html_to_text", "pdf_to_text", "tr_lower", "tr_upper", "tr_fold", "fold_same_len",
-           "paginate", "clean_ws", "strip_tags", "HAS_PYPDF", "excerpt", "count_hits"]
+try:  # optional, pure Python
+    import olefile  # type: ignore
+    HAS_OLEFILE = True
+except Exception:  # noqa: BLE001
+    olefile = None  # type: ignore
+    HAS_OLEFILE = False
+
+__all__ = ["html_to_text", "pdf_to_text", "doc_to_text", "tr_lower", "tr_upper", "tr_fold", "fold_same_len",
+           "paginate", "clean_ws", "strip_tags", "HAS_PYPDF", "HAS_OLEFILE", "excerpt", "count_hits",
+           "iso_tarih"]
 
 _TR_LOWER = str.maketrans("İIÇĞÖŞÜÂÎÛ", "iıçğöşüâîû")
 _TR_UPPER = str.maketrans("iıçğöşüâîû", "İIÇĞÖŞÜÂÎÛ")
@@ -123,6 +134,96 @@ def html_to_text(html: str, keep_headings: bool = True) -> str:
     lines = [re.sub(r"[ \t\xa0]+", " ", ln).strip(" |") for ln in text.split("\n")]
     text = "\n".join(lines)
     return clean_ws(text)
+
+
+_TARIH = re.compile(r"(\d{1,2})\s*[./]\s*(\d{1,2})\s*[./]\s*(\d{4})")
+
+
+def iso_tarih(text: str) -> str:
+    """Metindeki ilk 'G.A.YYYY' ya da 'GG/AA/YYYY' tarihini ISO'ya çevirir; yoksa ''.
+
+    Gün ve ay tek haneli olabilir: Rekabet'in listesi "4.8.1999" yazar. Kurum
+    çözümleyicileri yalnız iki haneyi tanıyordu ve tarih alanı boş kalıyordu
+    (11.10.2026: Rekabet'te 10.445 kararın 8.529'u); tarih süzgeci o kararları görmüyordu.
+    """
+    m = _TARIH.search(text or "")
+    if not m:
+        return ""
+    gun, ay = int(m.group(1)), int(m.group(2))
+    if not (1 <= gun <= 31 and 1 <= ay <= 12):
+        return ""
+    return "%s-%02d-%02d" % (m.group(3), ay, gun)
+
+
+OLE_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+# Word's control characters: cell/row end, line/page break, non-breaking and optional hyphen, picture,
+# footnote and comment anchors. Field codes (0x13 instruction 0x14 result 0x15) keep only the result.
+_DOC_CTRL = str.maketrans({"\r": "\n", "\x07": "\t", "\x0b": "\n", "\x0c": "\n", "\x1e": "-", "\x1f": "",
+                           "\x01": "", "\x02": "", "\x05": "", "\x08": ""})
+
+
+def _doc_fields(text: str) -> str:
+    out: List[str] = []
+    stack: List[bool] = []          # per open field: still inside its instruction?
+    for ch in text:
+        if ch == "\x13":
+            stack.append(True)
+        elif ch == "\x14" and stack:
+            stack[-1] = False
+        elif ch == "\x15" and stack:
+            stack.pop()
+        elif not any(stack):        # a field nested in an instruction belongs to that instruction
+            out.append(ch)
+    return "".join(out)
+
+
+def doc_to_text(data: bytes) -> str:
+    """Word 97–2003 (.doc) bytes → main document text; '' if olefile is missing or the file is not one.
+
+    The text lies in the WordDocument stream in pieces. The piece table (the Clx in the
+    0Table/1Table stream) gives each piece's position and whether it is 8-bit (cp1252)
+    or UTF-16; the first ``ccpText`` characters are the body, headers and notes follow.
+    Encrypted files and the pre-97 format give ''.
+    """
+    if not HAS_OLEFILE or not data.startswith(OLE_MAGIC):
+        return ""
+    try:
+        ole = olefile.OleFileIO(io.BytesIO(data))
+        wd = ole.openstream("WordDocument").read()
+        ident, nfib = struct.unpack_from("<HH", wd, 0)
+        flags = struct.unpack_from("<H", wd, 0x0A)[0]
+        if ident != 0xA5EC or nfib < 0xC1 or flags & 0x0100:
+            return ""
+        table = ole.openstream("1Table" if flags & 0x0200 else "0Table").read()
+        csw = struct.unpack_from("<H", wd, 0x20)[0]
+        lw = 0x22 + csw * 2 + 2                       # FibRgLw97, after its count
+        cslw = struct.unpack_from("<H", wd, lw - 2)[0]
+        ccp_text = struct.unpack_from("<i", wd, lw + 12)[0]
+        fclcb = lw + cslw * 4 + 2                     # FibRgFcLcb97, after cbRgFcLcb
+        fc_clx, lcb_clx = struct.unpack_from("<II", wd, fclcb + 33 * 8)
+        clx = table[fc_clx:fc_clx + lcb_clx]
+        i = 0
+        while i < len(clx) and clx[i] == 0x01:       # Prc entries come first; skip them
+            i += 3 + struct.unpack_from("<h", clx, i + 1)[0]
+        if i >= len(clx) or clx[i] != 0x02:
+            return ""
+        lcb = struct.unpack_from("<I", clx, i + 1)[0]
+        plc = clx[i + 5:i + 5 + lcb]
+        n = (lcb - 4) // 12
+        cps = struct.unpack_from("<%dI" % (n + 1), plc, 0)
+        parts = []
+        for k in range(n):
+            fc = struct.unpack_from("<I", plc, 4 * (n + 1) + 8 * k + 2)[0]
+            count = cps[k + 1] - cps[k]
+            if fc & 0x40000000:
+                start = (fc & 0x3FFFFFFF) // 2
+                parts.append(wd[start:start + count].decode("cp1252", "replace"))
+            else:
+                parts.append(wd[fc:fc + 2 * count].decode("utf-16-le", "replace"))
+        text = "".join(parts)[:max(0, ccp_text)]
+    except Exception:  # noqa: BLE001 - damaged or unusual file: no text, not a crash
+        return ""
+    return clean_ws(_doc_fields(text).translate(_DOC_CTRL))
 
 
 def pdf_to_text(data: bytes, max_pages: int = 0) -> Tuple[str, int]:

@@ -112,7 +112,44 @@ def t_kurum_getir(args: Dict[str, Any]) -> Any:
         raise McpError("%s için belge getirme yok (kaynak canlı değil)." % src.key)
     if src.key == "kvkk":
         args = _kvkk_adresi(args)
-    return src.get(args)
+    out = src.get(args)
+    if src.key == "epdk" and isinstance(out, dict) and len((out.get("text") or "").strip()) < 200:
+        out = _epdk_arsivden(args, out)
+    return out
+
+
+def _epdk_arsivden(args: Dict[str, Any], canli: Dict[str, Any]) -> Dict[str, Any]:
+    """Canlı belgeden metin çıkmadıysa (taranmış PDF, eski Word) metni yerel indeksten verir.
+
+    Taranmış altı kararda canlı PDF yalnız kaşeyi ya da Resmî Gazete başlığını verir (200 karakterden
+    kısa); indeksteki okunmuş metin daha uzunsa o gelir.
+
+    Bu kararların metni tarama makinesinde okundu: .doc'lar Word dosyasından, taranmış PDF'ler
+    OCR ile. OCR metni rakam ve özel isimde okuma hatası taşıyabilir; cevap bunu söyler.
+    """
+    from sources import epdk
+    kimlik = str(args.get("id") or "").strip()
+    cid = kimlik.split("id=", 1)[1] if "id=" in kimlik else kimlik.rsplit(":", 1)[-1]
+    if not cid:
+        return canli
+    try:
+        doc = index().db.execute(
+            "SELECT ref, body, citation, meta FROM docs WHERE subject = 'epdk' "
+            "AND (url = ? OR substr(ref, -?) = ?) LIMIT 1",
+            ("%s/Detay/DownloadDocument?id=%s" % (epdk.BASE, cid), len(cid) + 1, ":" + cid)).fetchone()
+    except Exception:  # noqa: BLE001 - indeks yoksa canlı hata kalır
+        doc = None
+    meta = json.loads(doc["meta"] or "{}") if doc else {}
+    if not doc or not meta.get("metin") or len(doc["body"] or "") <= len(canli.get("text") or ""):
+        return canli
+    from textx import paginate
+    out = paginate(doc["body"], args.get("page") or 1, int(args.get("page_chars") or 8000))
+    out.update({"source_url": canli.get("source_url"), "citation": doc["citation"], "ref": doc["ref"],
+                "metin_kaynagi": "yerel indeks (%s)" % meta["metin"]})
+    if meta["metin"] == "ocr":
+        out["uyari"] = ("Kaynak belge taranmış; metin OCR ile okundu, rakam ve özel isimlerde okuma hatası "
+                        "olabilir. Alıntıdan önce belgeyle karşılaştırın: %s" % canli.get("source_url"))
+    return out
 
 
 def _kvkk_adresi(args: Dict[str, Any]) -> Dict[str, Any]:

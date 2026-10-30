@@ -451,11 +451,12 @@ _KATLA = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZÇçĞğİıÖöŞşÜüÂâÎ
                        "abcdefghijklmnopqrstuvwxyzccggiioossuuaaiiuu")
 _TIRE = "\\-\u2013\u2014\u2212\u2010\u2011"
 # = bedesten_mevzuat._BASLIK_SATIRI / _BASLIK_SATIRI_GEVSEK: satır başında
-# [Ek|Geçici|Mükerrer] Madde N[/harf][ ila M] + tire (gevşekte "." ya da ":" da).
+# [Ek|Geçici|Mükerrer] Madde N[/harf][ ila M] + tire (gevşekte "." ya da ":" da); tireden
+# önce yumuşak tire (U+00AD) de olabilir.
 _BASLIK_DESENI = (r"^[ \t]*(?:(ek|gecici|mukerrer)\s+)?madde\s+(\d{1,4})"
                   r"(?:[ \t]*/[ \t]*([a-z])(?![a-z0-9]))?"
                   r"(?:\s+ila\s+(?:madde\s+)?(\d{1,4}))?"
-                  r"[ \t]*[%s]")
+                  r"[ \t\u00ad]*[%s]")
 _BASLIK = re.compile(_BASLIK_DESENI % _TIRE, re.M)
 _BASLIK_GEVSEK = re.compile(_BASLIK_DESENI % (_TIRE + ".:"), re.M)
 _TUR_ETIKETI = {"ek": "ek ", "gecici": "geçici ", "mukerrer": "mükerrer "}   # = _KIND_TR
