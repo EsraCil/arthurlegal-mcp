@@ -46,7 +46,8 @@ stderr'de sunucunun başka satırları da vardır: kayıt satırı ``{"olay":`` 
 * ``pages``: yalnız ``tr_mevzuat_getir``: ``{"sayfa": page, "toplam": total_pages,
   "maddeler": "ilk-son"}``. Aralık, dönen sayfa metnindeki ilk ve son madde başlık SATIRIDIR
   ("MADDE 12-", "Madde 12 –", "EK MADDE 3 –", "GEÇİCİ MADDE 1 –" → "12", "ek 3", "geçici 1").
-  Desen ve katlama arka ucunkilerin kopyasıdır (``_BASLIK_SATIRI``, ``_BASLIK_SATIRI_GEVSEK``,
+  Tiresiz "MADDE 428 İşyerinin…" başlıkları arka ucun kurallarıyla sayılır. Desen ve katlama
+  arka ucunkilerin kopyasıdır (``_BASLIK_SATIRI``, ``_BASLIK_SATIRI_GEVSEK``, ``_BASLIK_TIRESIZ``,
   ``textx._FOLD_1``); kopyanın kaymadığını bir test denetler. Başlık yoksa null; sonuç sayfa
   değil hata ise ``pages`` null. Sınır: kanun gövdesinin sonundaki "İŞLENEMEYEN HÜKÜMLER"
   bölümü BAŞKA kanunların "MADDE 1 –" başlıklarını taşır; o bölüme düşen sayfa onları da sayar.
@@ -110,7 +111,7 @@ import sys
 import threading
 import time
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 import mcpcore
 
@@ -474,6 +475,9 @@ _BASLIK_DESENI = (r"^[ \t]*(?:(ek|gecici|mukerrer)\s+)?madde\s+(\d{1,4})"
                   r"[ \t\u00ad]*[%s]")
 _BASLIK = re.compile(_BASLIK_DESENI % _TIRE, re.M)
 _BASLIK_GEVSEK = re.compile(_BASLIK_DESENI % (_TIRE + ".:"), re.M)
+# = bedesten_mevzuat._BASLIK_TIRESIZ: tiresiz "MADDE 428 İşyerinin…" (TBK m.428). Özgün metinde
+# aranır; kabul koşulları _tiresizler'de, arka ucun _tiresizleri_ekle'siyle aynı.
+_BASLIK_TIRESIZ = re.compile(r"^[ \t]*MADDE[ \t]+(\d{1,4})(?=[ \t]+[A-ZÇĞİÖŞÜÂÎÛ(])", re.M)
 _TUR_ETIKETI = {"ek": "ek ", "gecici": "geçici ", "mukerrer": "mükerrer "}   # = _KIND_TR
 
 
@@ -488,13 +492,42 @@ def _tasarim(metin: str, m: "re.Match[str]") -> str:
     return s
 
 
+def _tiresizler(metin: str, eslesmeler: List["re.Match[str]"]) -> List[Tuple[int, str]]:
+    """= bedesten_mevzuat._tiresizleri_ekle: tiresiz başlıklar, yalnız güvenli durumda.
+
+    Aynı numara düz başlık değil; numara önceki ve sonraki madde başlığının numaraları arasında;
+    komşu başlık yoksa aday metnin ilk satırı. Satır başına düşmüş "Madde 12 uyarınca…" atfı
+    küçük harfli ya da sırasız olduğundan sayılmaz.
+    """
+    maddeler = [m for m in eslesmeler if not m.group(1)]
+    duz = {int(m.group(2)) for m in maddeler if not m.group(3)}
+    ekler: List[Tuple[int, str]] = []
+    for t in _BASLIK_TIRESIZ.finditer(metin):
+        no = int(t.group(1))
+        if no in duz:
+            continue
+        once = [m for m in maddeler if m.start() < t.start()]
+        sonra = [m for m in maddeler if m.start() > t.start()]
+        if not once and not sonra and metin[:t.start()].strip():
+            continue
+        if once and int(once[-1].group(4) or once[-1].group(2)) >= no:
+            continue
+        if sonra and int(sonra[0].group(2)) <= no:
+            continue
+        duz.add(no)
+        ekler.append((t.start(), str(no)))
+    return ekler
+
+
 def _basliklar(metin: Any) -> List[str]:
-    """Metindeki madde başlık satırları, sırayla (katı desen; hiç yoksa gevşek)."""
+    """Metindeki madde başlık satırları, sırayla (katı desen; hiç yoksa gevşek; tiresizler)."""
     if not isinstance(metin, str) or not metin:
         return []
     katli = metin.translate(_KATLA)
     eslesmeler = list(_BASLIK.finditer(katli)) or list(_BASLIK_GEVSEK.finditer(katli))
-    return [_tasarim(metin, m) for m in eslesmeler]
+    basliklar = [(m.start(), _tasarim(metin, m)) for m in eslesmeler]
+    basliklar += _tiresizler(metin, eslesmeler)
+    return [s for _, s in sorted(basliklar)]
 
 
 def _madde_araligi(metin: Any) -> Optional[str]:

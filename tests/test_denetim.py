@@ -1065,6 +1065,24 @@ class CozumlemeTest(_Temel):
         self.assertIsNone(denetim._madde_araligi("başlıksız metin"))
         self.assertIsNone(denetim._madde_araligi(None))
 
+    def test_tiresiz_basliklar(self):
+        # TBK m.428 Bedesten'de "MADDE 428 İşyerinin…" diye tiresiz gelir: sayfanın başında ya da
+        # sonunda olunca aralık onu da kapsamalı.
+        self.assertEqual(denetim._madde_araligi("MADDE 427 – a\nMADDE 428 İşyerinin b"), "427-428")
+        self.assertEqual(denetim._madde_araligi("MADDE 428 İşyerinin a\nMADDE 429 – b"), "428-429")
+        self.assertEqual(denetim._basliklar("MADDE 428 (Değişik) tek madde"), ["428"])
+        # Sırasız numara, küçük harf, metnin ilk satırı olmayan tek aday ve düz başlığın tekrarı
+        # başlık sayılmaz.
+        self.assertEqual(denetim._basliklar("MADDE 427 – a\nMADDE 5 Bu\nMADDE 428 – b"),
+                         ["427", "428"])
+        self.assertEqual(denetim._basliklar("MADDE 1 – a\nMadde 2 Bu\nMADDE 3 – b"), ["1", "3"])
+        self.assertEqual(denetim._basliklar("önsöz\nMADDE 428 İşyerinin"), [])
+        self.assertEqual(denetim._basliklar("MADDE 7 – a\nMADDE 7 Ayrıca\nMADDE 9 – b"),
+                         ["7", "9"])
+        # Önceki başlık aralıksa ("166 ila 184") aday aralığın sonundan büyük olmalı.
+        self.assertEqual(denetim._basliklar("MADDE 166 ila 184- a\nMADDE 170 Bu\nMADDE 185 Ç"),
+                         ["166 ila 184", "185"])
+
 
 @unittest.skipUnless(os.path.exists(FIKSTUR), "arthur-tr-hukuk-mcp fikstürü yok")
 class GercekArkaUcTest(_Temel):
@@ -1130,6 +1148,28 @@ class GercekArkaUcTest(_Temel):
         self.assertEqual(denetim._BASLIK_GEVSEK.flags, mv._BASLIK_SATIRI_GEVSEK.flags)
         self.assertEqual(denetim._KATLA, self.textx._FOLD_1)
         self.assertEqual(dict(denetim._TUR_ETIKETI, madde=""), mv._KIND_TR)
+        self.assertEqual(denetim._BASLIK_TIRESIZ.pattern, mv._BASLIK_TIRESIZ.pattern)
+        self.assertEqual(denetim._BASLIK_TIRESIZ.flags, mv._BASLIK_TIRESIZ.flags)
+
+    def test_basliklar_arka_ucun_cozumuyle_ayni(self):
+        """Kayma testi: başlık listesi arka ucun _kaynak_coz sonucuyla aynı (tiresizler dahil)."""
+        mv = self.mv
+        metinler = [
+            "MADDE 427 – a\nMADDE 428 İşyerinin b\nMADDE 429 – c",
+            "MADDE 428 İşyerinin a\nMADDE 429 – b",
+            "MADDE 428 (Değişik) tek madde",
+            "MADDE 427 – a\nMADDE 5 Bu\nMADDE 428 – b",
+            "MADDE 1 – a\nMadde 2 Bu\nMADDE 3 – b",
+            "MADDE 7 – a\nMADDE 7 Ayrıca\nMADDE 9 – b",
+            "MADDE 166 ila 184- a\nMADDE 170 Bu\nMADDE 185 Çalışma",
+            "MADDE 12 – a\nGEÇİCİ MADDE 1 – b\nMADDE 13 Ücret c",
+            "Madde 1. a\nMADDE 2 Bu\nMadde 3: c",
+        ]
+        for metin in metinler:
+            with self.subTest(metin=metin):
+                arka = [mv._tasarim(b["kind"], b["no"], b["harf"], b["aralik_son"])
+                        for b in mv._kaynak_coz(metin)["basliklar"]]
+                self.assertEqual(denetim._basliklar(metin), arka)
 
     def test_madde_getir_number_ve_madde_no(self):
         k, yanit = self.calistir("tr_mevzuat_madde_getir",
