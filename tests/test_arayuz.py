@@ -18,7 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 import server  # noqa: E402
-from mcpcore import Dispatcher, Resource, Tool  # noqa: E402
+from mcpcore import Dispatcher, McpError, Resource, Tool  # noqa: E402
 
 URI = "ui://arthurlegal/madde-karti.html"
 SAMPLE = {
@@ -102,7 +102,16 @@ class ServerViewsTest(unittest.TestCase):
         # Memory, masking and UYAP run on the lawyer's computer; this endpoint serves web and phone.
         self.assertEqual(masa["moduller"]["beyin"], {"durum": "masaustu"})
         self.assertEqual(masa["moduller"]["tapu"], {"durum": "claude"})
-        self.assertEqual(masa["yetenekler"], ["status", "tr_ictihat_ara", "tr_mevzuat_madde_getir"])
+        self.assertEqual(masa["yetenekler"], ["al_masaya_yaz", "status", "tr_ictihat_ara", "tr_mevzuat_madde_getir"])
+        # The answer comes to the desk: same view, the server echoes only a summary and the desk state.
+        self.assertEqual(tools["al_masaya_yaz"].meta["ui"]["resourceUri"], "ui://arthurlegal/masa.html")
+        teslim = tools["al_masaya_yaz"].handler({"soru": "s", "cevap": "TBK m. 344 uyarınca"})
+        self.assertEqual((teslim["ortam"], teslim["bolum"]), ("uzak", "cevap"))
+        self.assertNotIn("TBK m. 344", json.dumps(teslim, ensure_ascii=False))
+        with self.assertRaises(McpError):
+            tools["al_masaya_yaz"].handler({"soru": "s", "cevap": ""})
+        self.assertEqual(tools["al_masasi"].handler({"baglayicilar": [{"ad": "Slack", "durum": "hata"}]})["baglayicilar"],
+                         [{"ad": "Slack", "durum": "hata"}])
 
     def test_views_are_whole_pages(self) -> None:
         server._attach_views()
@@ -124,6 +133,7 @@ class ServerViewsTest(unittest.TestCase):
             server.al_arayuz = saved
         self.assertEqual(server._resources, [])
         self.assertNotIn("al_masasi", [t.name for t in server._tools])
+        self.assertNotIn("al_masaya_yaz", [t.name for t in server._tools])
         self.assertTrue(all(t.meta is None for t in server._tools))
 
 

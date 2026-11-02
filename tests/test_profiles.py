@@ -59,7 +59,8 @@ class DirectoryProfile(unittest.TestCase):
         self.assertIn("status", names)
         self.assertIn("tr_mevzuat_madde_getir", names)
         main = {t.name for t in server._tools}
-        self.assertEqual(names, {n for n in main if not n.startswith("tkgm_")})
+        # al_masaya_yaz tells Claude where to write the answer; the directory takes no instructions.
+        self.assertEqual(names, {n for n in main if not n.startswith("tkgm_") and n != "al_masaya_yaz"})
 
     def test_directory_status_leaves_land_registry_out(self):
         status = next(t for t in DIRECTORY_TOOLS if t.name == "status")
@@ -85,6 +86,11 @@ class DirectoryProfile(unittest.TestCase):
         self.assertEqual(directory.handler({})["moduller"]["tapu"]["durum"], "masaustu")
         self.assertEqual(directory.meta, main.meta)
         self.assertFalse([n for n in directory.handler({})["yetenekler"] if n.startswith("tkgm_")])
+        # The directory desk keeps the answer in the chat: no hand-over rule, no hand-over tool.
+        self.assertIn("al_masaya_yaz", main.handler({})["not"])
+        self.assertNotIn("al_masaya_yaz", directory.handler({})["not"])
+        self.assertNotIn("al_masaya_yaz", directory.handler({})["yetenekler"])
+        self.assertEqual(directory.handler({"baglayicilar": ["Gmail"]})["baglayicilar"], [{"ad": "Gmail", "durum": "bagli"}])
 
     def test_directory_serves_the_same_views(self):
         if server.al_arayuz is None:

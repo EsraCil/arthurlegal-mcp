@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry tools stay on /mcp only, and the
@@ -742,10 +742,24 @@ def _attach_views() -> None:
             tool.meta = meta
     tanim = al_arayuz.masa_araci()
     able = [t.name for t in _tools if t.name in MASA_TOOLS]
+    # The chat transcript sits behind the full-screen desk and the desk cannot read it: Claude hands
+    # the answer over with al_masaya_yaz and the host reopens the desk with it. Main endpoint only.
+    teslim = getattr(al_arayuz, "teslim_araci", None)
+    if teslim:
+        able.append("al_masaya_yaz")
     _tools.append(Tool(
         tanim["name"], tanim["description"], tanim["inputSchema"],
-        lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum")),
+        lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum"), args.get("baglayicilar")),
         meta=al_arayuz.arac_meta("al_masasi")))
+    if teslim:
+        def hand_over(args: Dict[str, Any]) -> Dict[str, Any]:
+            try:
+                return al_arayuz.teslim_cevabi(args, al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES))
+            except al_arayuz.TeslimHatasi as exc:
+                raise McpError(str(exc)) from None
+        tanim = teslim()
+        _tools.append(Tool(tanim["name"], tanim["description"], tanim["inputSchema"], hand_over,
+                           meta=al_arayuz.arac_meta("al_masaya_yaz")))
     for k in al_arayuz.kaynaklar():
         _resources.append(Resource(k["uri"], k["name"], k["text"], mime_type=k["mimeType"],
                                    description=k["description"], meta=k["_meta"]))
@@ -816,8 +830,10 @@ def _directory_section(prefix: str, text: str) -> str:
 
 def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
     """Tools, instructions and views for DIRECTORY_PATH. Call after build()."""
+    # al_masaya_yaz stays off the directory: its description tells Claude where to write the answer,
+    # and the directory takes no instructions. There the desk keeps the answer in the chat.
     tools = [t for t in _tools
-             if t.name not in ("status", "al_masasi") and not _directory_excluded(t.name)]
+             if t.name not in ("status", "al_masasi", "al_masaya_yaz") and not _directory_excluded(t.name)]
     main_status = next(t for t in _tools if t.name == "status")
     status = Tool(
         "status", main_status.description, main_status.input_schema,
@@ -830,7 +846,8 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
         able = [t.name for t in tools if t.name in MASA_TOOLS]
         directory_desk = Tool(
             desk.name, desk.description, desk.input_schema,
-            lambda args: al_arayuz.masa_cevabi("uzak", able, DIRECTORY_MODULES, args.get("bolum")),
+            lambda args: al_arayuz.masa_cevabi("uzak", able, DIRECTORY_MODULES, args.get("bolum"),
+                                               args.get("baglayicilar")),
             meta=desk.meta)
         annotate(directory_desk)
         tools.append(directory_desk)

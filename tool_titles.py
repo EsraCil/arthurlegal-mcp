@@ -177,6 +177,7 @@ TITLES: Dict[str, str] = {
     # Whole endpoint
     "status": "Status of every jurisdiction",
     "al_masasi": "ArthurLegal desk (interactive view)",
+    "al_masaya_yaz": "Show the answer on the ArthurLegal desk",
 }
 
 # Tools that can change something (locally: write a file or the UI answer).
