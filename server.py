@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.8.0"
+__version__ = "1.8.1"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry tools stay on /mcp only, and the

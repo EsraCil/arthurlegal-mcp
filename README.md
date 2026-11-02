@@ -165,7 +165,8 @@ tools below and a one-line step for the rest. `/directory/mcp` keeps the two car
 - `al_masasi`: ArthurLegal Masası, a full-screen desk with legislation and citation check,
   case law, source status and the other ArthurLegal modules in one panel. On this endpoint the
   modules that run on the lawyer's computer (memory, masking, UYAP) are shown as desktop-only;
-  on `/directory/mcp` land registry is shown that way too.
+  on `/directory/mcp` land registry is shown that way too. The desk keeps its history (searches, fetched articles, answers) for 90
+  days in its own storage on the device, across chats and updates; nothing is written to the server.
 - `al_masada_basla` (`/mcp` only): puts the question on the desk as soon as Claude starts, before the
   research; the steps and the answer then join it.
 - `al_masaya_yaz` (`/mcp` only): while the desk is full screen the chat transcript sits behind it and
