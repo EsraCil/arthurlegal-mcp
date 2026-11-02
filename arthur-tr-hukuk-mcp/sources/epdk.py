@@ -156,7 +156,7 @@ def get(args: Dict[str, Any]) -> Dict[str, Any]:
     if not url.startswith("http") and ":" in url:
         cid = url.rsplit(":", 1)[-1]
         url = "%s/Detay/DownloadDocument?id=%s" % (BASE, cid)
-    if not url.startswith(BASE):
+    if not url.startswith(BASE + "/"):
         return {"error": "id olarak EPDK belge URL'si (documents[0].url) verin."}
     try:
         body, hdrs, final = _http.get(url, timeout=120)
@@ -174,7 +174,16 @@ def get(args: Dict[str, Any]) -> Dict[str, Any]:
 _KASE = 200     # bundan kısa PDF metni belge değil, sayfadaki kaşe ya da başlıktır
 
 
-def metin_cikar(body: bytes, ctype: str = "", ocr: bool = False) -> Tuple[str, int, str]:
+_ZIP_UYE_SINIRI = 64 * 1024 * 1024    # açılmış tek dosya; sıkıştırma bombası 1 GB'lık makineyi düşürmesin
+
+
+def _zip_oku(z, ad: str) -> bytes:
+    if z.getinfo(ad).file_size > _ZIP_UYE_SINIRI:
+        raise ValueError("zip üyesi çok büyük: %s" % ad)
+    return z.read(ad)
+
+
+def metin_cikar(body: bytes, ctype: str = "", ocr: bool = False, _derinlik: int = 0) -> Tuple[str, int, str]:
     """Belge baytları → (metin, sayfa, biçim). Biçim: pdf, ocr, docx, doc, html ya da ''.
 
     EPDK aynı adresten PDF, DOCX ve eski Word (.doc) verir; 2016 öncesi kararların çoğu .doc'tur,
@@ -199,19 +208,22 @@ def metin_cikar(body: bytes, ctype: str = "", ocr: bool = False) -> Tuple[str, i
         try:
             with zipfile.ZipFile(io.BytesIO(body)) as z:
                 if "word/document.xml" in z.namelist():
-                    xml = z.read("word/document.xml").decode("utf-8", "replace")
+                    xml = _zip_oku(z, "word/document.xml").decode("utf-8", "replace")
                     text = html_to_text(re.sub(r"</w:p>", "\n", xml))
                     if text or not ocr:
                         return text, 0, "docx" if text else ""
                     # Taranmış sayfa Word'e resim olarak konmuş (11 karar, 2016-2018).
-                    resimler = [z.read(ad) for ad in sorted(z.namelist())
+                    resimler = [_zip_oku(z, ad) for ad in sorted(z.namelist())
                                 if ad.startswith("word/media/") and ad.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))]
                     import ocr as _ocr
                     if resimler and _ocr.hazir():
                         text = _ocr.goruntu_ocr(resimler)
                     return text, 0, "ocr" if text else ""
                 # Karar ve ekleri tek arşivde (3 karar, 2003-2017): içindeki Word dosyaları sırayla.
-                parcalar = [metin_cikar(z.read(ad))[0] for ad in sorted(z.namelist())
+                # Yalnız bir kat: arşivin içindeki arşiv açılmaz.
+                if _derinlik:
+                    return "", 0, ""
+                parcalar = [metin_cikar(_zip_oku(z, ad), _derinlik=1)[0] for ad in sorted(z.namelist())
                             if ad.lower().endswith((".doc", ".docx"))]
         except Exception:  # noqa: BLE001
             return "", 0, ""

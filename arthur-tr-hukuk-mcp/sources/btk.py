@@ -21,7 +21,7 @@ from textx import paginate, pdf_to_text
 from sources import Source
 
 BASE = "https://www.btk.tr"
-_http = Http(BASE, {"Accept": "application/json"})
+_http = Http(BASE, {"Accept": "application/json"}, allowed_domains=["btk.gov.tr"])  # PDF'ler btk.gov.tr'de
 
 
 def _item(it: Dict[str, Any]) -> Dict[str, Any]:

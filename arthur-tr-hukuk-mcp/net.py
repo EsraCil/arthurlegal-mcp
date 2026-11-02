@@ -20,7 +20,6 @@ Copilot Studio connector without a build step.
 
 from __future__ import annotations
 
-import gzip
 import http.cookiejar
 import json
 import os
@@ -40,6 +39,10 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36")
 
 DEFAULT_TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", "60"))
+
+# Largest body read or inflated from one response. The largest real document seen is a Rekabet decision PDF of
+# a few tens of MB; anything bigger is refused instead of exhausting the 1 GB machine.
+MAX_BYTES = int(os.environ.get("HTTP_MAX_BYTES", str(64 * 1024 * 1024)))
 
 
 class HttpError(Exception):
@@ -145,8 +148,16 @@ class Http:
     def __init__(self, base_url: str = "", headers: Optional[Dict[str, str]] = None,
                  bucket: Optional[TokenBucket] = None, verify: bool = True,
                  timeout: float = DEFAULT_TIMEOUT, follow_redirects: bool = True,
-                 ciphers: str = ""):
+                 ciphers: str = "", allowed_domains: Iterable[str] = ()):
         self.base_url = base_url.rstrip("/")
+        # Tool arguments reach request paths (a decision URL, a document id), so every request, and every
+        # redirect, must stay on the upstream's own domain: without this the server fetches any URL a caller
+        # names, including Fly's private network. Default: the base host without "www." and its subdomains.
+        domains = {d.lower().lstrip(".") for d in allowed_domains}
+        base_host = (urllib.parse.urlsplit(self.base_url).hostname or "").lower()
+        if base_host:
+            domains.add(base_host[4:] if base_host.startswith("www.") else base_host)
+        self.allowed_domains = frozenset(domains)
         self.headers = {"User-Agent": UA, "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.7",
                         "Accept-Encoding": "gzip, deflate"}
         if headers:
@@ -167,15 +178,31 @@ class Http:
                 # default security level refuses its handshake outright.
                 ctx.set_ciphers(ciphers)
             handlers.append(urllib.request.HTTPSHandler(context=ctx))
-        if not follow_redirects:
-            class _NoRedirect(urllib.request.HTTPRedirectHandler):
-                def redirect_request(self, *a, **k):  # noqa: D401
-                    return None
-            handlers.append(_NoRedirect())
+        handlers.append(self._redirect_handler(follow_redirects))
         self.opener = urllib.request.build_opener(*handlers)
         self.verify = verify
         self._ciphers = ciphers
         self._follow = follow_redirects
+
+    def allowed(self, url: str) -> bool:
+        """True when ``url`` is https (or http on an http base) on one of the allowed domains."""
+        parts = urllib.parse.urlsplit(url)
+        host = (parts.hostname or "").lower()
+        schemes = ("https", "http") if self.base_url.startswith("http://") else ("https",)
+        return (parts.scheme in schemes and bool(host)
+                and any(host == d or host.endswith("." + d) for d in self.allowed_domains))
+
+    def _redirect_handler(self, follow: bool) -> urllib.request.HTTPRedirectHandler:
+        client = self
+
+        class _Redirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D401
+                if not follow:
+                    return None
+                if not client.allowed(newurl):
+                    raise HttpError(code, newurl, b"redirect to a host outside this upstream refused")
+                return super().redirect_request(req, fp, code, msg, headers, newurl)
+        return _Redirect()
 
     def _degrade_tls(self, url: str) -> None:
         import sys
@@ -190,12 +217,8 @@ class Http:
         if self._ciphers:
             ctx.set_ciphers(self._ciphers)
         handlers: List[Any] = [urllib.request.HTTPCookieProcessor(self.jar),
-                               urllib.request.HTTPSHandler(context=ctx)]
-        if not self._follow:
-            class _NoRedirect(urllib.request.HTTPRedirectHandler):
-                def redirect_request(self, *a, **k):  # noqa: D401
-                    return None
-            handlers.append(_NoRedirect())
+                               urllib.request.HTTPSHandler(context=ctx),
+                               self._redirect_handler(self._follow)]
         self.opener = urllib.request.build_opener(*handlers)
 
     # -- core ------------------------------------------------------------- #
@@ -214,6 +237,8 @@ class Http:
                 headers: Optional[Dict[str, str]] = None, timeout: Optional[float] = None,
                 retries: int = 1) -> Tuple[int, Dict[str, str], bytes, str]:
         url = self._url(path)
+        if not self.allowed(url):
+            raise HttpError(0, url, b"host outside this upstream refused")
         if params:
             url += ("&" if "?" in url else "?") + qs(params)
         hdrs = dict(self.headers)
@@ -227,13 +252,17 @@ class Http:
             req = urllib.request.Request(url, data=data, method=method, headers=hdrs)
             try:
                 with self.opener.open(req, timeout=timeout or self.timeout) as resp:
-                    raw = resp.read()
+                    raw = resp.read(MAX_BYTES + 1)
+                    if len(raw) > MAX_BYTES:
+                        raise HttpError(0, url, b"response larger than HTTP_MAX_BYTES refused")
                     rh = {k: v for k, v in resp.headers.items()}
-                    return resp.status, rh, _inflate(raw, rh), resp.geturl()
+                    return resp.status, rh, _inflate(raw, rh, url), resp.geturl()
+            except HttpError:
+                raise
             except urllib.error.HTTPError as exc:
-                raw = exc.read() if hasattr(exc, "read") else b""
+                raw = exc.read(64 * 1024) if hasattr(exc, "read") else b""
                 rh = {k: v for k, v in (exc.headers.items() if exc.headers else [])}
-                body = _inflate(raw, rh)
+                body = _inflate(raw, rh, url)
                 if exc.code == 429 and self.bucket:
                     try:
                         ra = float(rh.get("Retry-After", "30"))
@@ -300,16 +329,22 @@ class Http:
         return {c.name: c.value for c in self.jar}
 
 
-def _inflate(raw: bytes, headers: Dict[str, str]) -> bytes:
+def _inflate(raw: bytes, headers: Dict[str, str], url: str = "") -> bytes:
+    """Undo Content-Encoding, never past MAX_BYTES (a few MB of gzip can expand to GBs)."""
     enc = (headers.get("Content-Encoding") or headers.get("content-encoding") or "").lower()
-    try:
-        if "gzip" in enc:
-            return gzip.decompress(raw)
-        if "deflate" in enc:
-            try:
-                return zlib.decompress(raw)
-            except zlib.error:
-                return zlib.decompress(raw, -zlib.MAX_WBITS)
-    except (OSError, zlib.error):
-        pass
+    if "gzip" in enc:
+        wbits_list = [16 + zlib.MAX_WBITS]
+    elif "deflate" in enc:
+        wbits_list = [zlib.MAX_WBITS, -zlib.MAX_WBITS]
+    else:
+        return raw
+    for wbits in wbits_list:
+        try:
+            d = zlib.decompressobj(wbits)
+            out = d.decompress(raw, MAX_BYTES + 1)
+        except zlib.error:
+            continue
+        if len(out) > MAX_BYTES or d.unconsumed_tail:
+            raise HttpError(0, url, b"decompressed response larger than HTTP_MAX_BYTES refused")
+        return out
     return raw

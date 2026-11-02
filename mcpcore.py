@@ -47,6 +47,15 @@ __all__ = ["Tool", "Resource", "McpError", "run", "run_stdio", "run_http", "buil
 # drive the process out of memory.
 _MAX_BODY = 4_000_000
 
+# A JSON-RPC batch runs its calls one after another in one thread; an unbounded
+# list lets one request fan out to thousands of upstream fetches. MCP 2025-06-18
+# dropped batching, and no client we serve sends more than a handful.
+_MAX_BATCH = 10
+
+# Seconds a connection may sit idle while sending its request: a client that
+# trickles bytes would otherwise hold a thread forever.
+_SOCKET_TIMEOUT = 120
+
 # Protocol revisions we can speak; we echo the client's if we recognise it.
 _SUPPORTED_PROTOCOLS = ("2025-06-18", "2025-03-26", "2024-11-05")
 _DEFAULT_PROTOCOL = "2025-06-18"
@@ -359,6 +368,7 @@ def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
         server_version = "%s/%s" % (dispatcher.name, dispatcher.version)
+        timeout = _SOCKET_TIMEOUT
 
         def log_message(self, fmt, *args):  # noqa: A003 - quieter default logging
             if os.environ.get("MCP_DEBUG"):
@@ -465,6 +475,10 @@ def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]
 
             # A batch is a list; answer each and drop notification nulls.
             if isinstance(msg, list):
+                if len(msg) > _MAX_BATCH:
+                    body = json.dumps(_err(None, -32600, "batch larger than %d requests" % _MAX_BATCH)).encode("utf-8")
+                    self._send(400, body)
+                    return
                 out = [r for r in (target.handle(m) for m in msg) if r is not None]
                 body = json.dumps(out, ensure_ascii=False, default=str).encode("utf-8")
                 self._send(200, body, extra_headers=oturum_basligi)

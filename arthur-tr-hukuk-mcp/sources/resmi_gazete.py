@@ -126,7 +126,7 @@ def fihrist(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def get(args: Dict[str, Any]) -> Dict[str, Any]:
     url = str(args.get("url") or "").strip()
-    if not url.startswith(BASE):
+    if not url.startswith(BASE + "/"):
         return {"error": "url resmigazete.gov.tr adresinde olmalı (fihrist sonucundaki url)."}
     try:
         body, hdrs, _ = _http.get(url, timeout=120)

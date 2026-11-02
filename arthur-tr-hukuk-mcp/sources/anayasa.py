@@ -33,7 +33,7 @@ BB_HOST = "https://kararlarbilgibankasi.anayasa.gov.tr"
 PATH = "/api/core/public/search"
 TIPI = {"norm": "NormDenetimi", "bireysel": "BireyselBasvuru"}
 
-_http = Http("", {"Accept": "application/json"})
+_http = Http("", {"Accept": "application/json"}, allowed_domains=["anayasa.gov.tr"])
 
 
 def _host(tipi: str) -> str:

@@ -1,0 +1,40 @@
+# OSS Scanner imajının denemesi.
+#
+# .oss-scanner/Dockerfile'ı derler ve testleri imajın içinde AĞ KAPALIYKEN koşturur: Anthropic'in tarayıcısı da
+# imajı internetsiz çalıştırır. Yerelde Docker yok (2026-11-02); bu iş o yüzden var. Yalnız tarama dosyaları
+# değiştiğinde ya da elle tetiklenince çalışır.
+
+name: OSS Scanner imajı
+
+on:
+  push:
+    paths: [".oss-scanner/**", ".github/workflows/oss-scanner-imaj.yml"]
+  pull_request:
+    paths: [".oss-scanner/**", ".github/workflows/oss-scanner-imaj.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oss-scanner-imaj-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  imaj:
+    name: Derle ve ağsız dene
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: İmajı derle (ağ açık, tarayıcıdaki gibi)
+        run: docker build -f .oss-scanner/Dockerfile -t oss-tarama .
+
+      - name: Testler imajda, ağ kapalı
+        run: |
+          docker run --rm --network none oss-tarama sh -c '
+            hata=0
+            for f in tests/test_*.py; do python -m unittest discover -s tests -p "$(basename "$f")" || hata=1; done
+            for d in */tests; do (cd "${d%/tests}" && python -m unittest discover -s tests) || hata=1; done
+            exit $hata'
