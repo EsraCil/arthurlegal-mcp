@@ -106,7 +106,7 @@ class ServerViewsTest(unittest.TestCase):
         # The answer comes to the desk: same view, the server echoes only a summary and the desk state.
         self.assertEqual(tools["al_masaya_yaz"].meta["ui"]["resourceUri"], "ui://arthurlegal/masa.html")
         teslim = tools["al_masaya_yaz"].handler({"soru": "s", "cevap": "TBK m. 344 uyarınca"})
-        self.assertEqual((teslim["ortam"], teslim["bolum"]), ("uzak", "cevap"))
+        self.assertEqual((teslim["ortam"], teslim["bolum"]), ("uzak", "sohbet"))
         self.assertNotIn("TBK m. 344", json.dumps(teslim, ensure_ascii=False))
         with self.assertRaises(McpError):
             tools["al_masaya_yaz"].handler({"soru": "s", "cevap": ""})
