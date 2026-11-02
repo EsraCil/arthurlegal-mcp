@@ -59,8 +59,31 @@ class DirectoryProfile(unittest.TestCase):
         self.assertIn("status", names)
         self.assertIn("tr_mevzuat_madde_getir", names)
         main = {t.name for t in server._tools}
-        # al_masaya_yaz tells Claude where to write the answer; the directory takes no instructions.
-        self.assertEqual(names, {n for n in main if not n.startswith("tkgm_") and n != "al_masaya_yaz"})
+        # al_masaya_yaz and al_masada_basla tell Claude where to write; the directory takes no instructions.
+        self.assertEqual(names, {n for n in main if not n.startswith("tkgm_")
+                                 and n not in ("al_masaya_yaz", "al_masada_basla")})
+
+    def test_directory_tools_keep_their_cards(self):
+        if server.al_arayuz is None:
+            self.skipTest("arayuz/ missing")
+        main = {t.name: t for t in server._tools}
+        directory = {t.name: t for t in DIRECTORY_TOOLS}
+        # Main endpoint: every tool opens the desk. Directory: the article card, the decision list, no view.
+        self.assertEqual(main["tr_mevzuat_ara"].meta["ui"]["resourceUri"], "ui://arthurlegal/masa.html")
+        self.assertEqual(directory["tr_mevzuat_madde_getir"].meta["ui"]["resourceUri"],
+                         "ui://arthurlegal/madde-karti.html")
+        self.assertEqual(directory["tr_ictihat_ara"].meta["ui"]["resourceUri"], "ui://arthurlegal/ictihat-karti.html")
+        self.assertIsNone(directory["tr_mevzuat_ara"].meta)
+        self.assertEqual(directory["tr_mevzuat_ara"].annotations, main["tr_mevzuat_ara"].annotations)
+        self.assertEqual(directory["tr_mevzuat_ara"].title, main["tr_mevzuat_ara"].title)
+
+    def test_hand_over_rule_near_the_top_of_main_only(self):
+        if server.al_arayuz is None:
+            self.skipTest("arayuz/ missing")
+        kural = server.al_arayuz.TESLIM_KURALI
+        # A host may show only the beginning of long instructions.
+        self.assertLess(MAIN_TEXT.index(kural) + len(kural), 2048)
+        self.assertNotIn("al_masada_basla", DIRECTORY_TEXT)
 
     def test_directory_status_leaves_land_registry_out(self):
         status = next(t for t in DIRECTORY_TOOLS if t.name == "status")

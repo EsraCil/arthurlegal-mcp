@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry tools stay on /mcp only, and the
@@ -729,10 +729,12 @@ _resources: List[Resource] = []
 
 
 def _attach_views() -> None:
-    """Give carded tools their _meta, add al_masasi and register the views.
+    """Point every tool at the desk, add the desk tools and register the views.
 
-    A tool whose backend failed to load is simply absent, so it gets no card; the
-    desk then reports that source as unavailable instead of pointing at nothing.
+    Claude's full-screen pane shows the newest view, so a tool with a card of its own
+    would replace the desk: every tool opens masa.html, which draws the call as a live
+    step (or as the old card when no desk is open). A tool whose backend failed to load
+    is simply absent; the desk then reports that source as unavailable.
     """
     if al_arayuz is None:
         return
@@ -745,8 +747,11 @@ def _attach_views() -> None:
     # The chat transcript sits behind the full-screen desk and the desk cannot read it: Claude hands
     # the answer over with al_masaya_yaz and the host reopens the desk with it. Main endpoint only.
     teslim = getattr(al_arayuz, "teslim_araci", None)
+    basla = getattr(al_arayuz, "baslangic_araci", None) if teslim else None
     if teslim:
         able.append("al_masaya_yaz")
+    if basla:
+        able.append("al_masada_basla")
     _tools.append(Tool(
         tanim["name"], tanim["description"], tanim["inputSchema"],
         lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum"), args.get("baglayicilar")),
@@ -760,6 +765,16 @@ def _attach_views() -> None:
         tanim = teslim()
         _tools.append(Tool(tanim["name"], tanim["description"], tanim["inputSchema"], hand_over,
                            meta=al_arayuz.arac_meta("al_masaya_yaz")))
+    if basla:
+        # The question goes on the desk before the research starts; each tool's step then joins it.
+        def start(args: Dict[str, Any]) -> Dict[str, Any]:
+            try:
+                return al_arayuz.baslangic_cevabi(args, al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES))
+            except al_arayuz.TeslimHatasi as exc:
+                raise McpError(str(exc)) from None
+        tanim = basla()
+        _tools.append(Tool(tanim["name"], tanim["description"], tanim["inputSchema"], start,
+                           meta=al_arayuz.arac_meta("al_masada_basla")))
     for k in al_arayuz.kaynaklar():
         _resources.append(Resource(k["uri"], k["name"], k["text"], mime_type=k["mimeType"],
                                    description=k["description"], meta=k["_meta"]))
@@ -796,6 +811,13 @@ hukukun doğru alıntılanması için gereken disiplinlerdir.
 """
 
 
+# The desk cannot read the chat, so the hand-over rule is an instruction of this endpoint. It goes
+# right after the two data rules: a host may show only the beginning of long instructions.
+if al_arayuz is not None and getattr(al_arayuz, "TESLIM_KURALI", None):
+    _head, _sep, _rest = INSTRUCTIONS_HEADER.partition("\n\nArthurLegal — ")
+    INSTRUCTIONS_HEADER = _head + "\n\n" + al_arayuz.TESLIM_KURALI + _sep + _rest
+
+
 # Directory profile: describes what the tools return, in English, and gives no
 # orders to Claude (the directory rejects instructions that tell Claude how to
 # behave). The facts are the same as in INSTRUCTIONS_HEADER.
@@ -830,10 +852,15 @@ def _directory_section(prefix: str, text: str) -> str:
 
 def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
     """Tools, instructions and views for DIRECTORY_PATH. Call after build()."""
-    # al_masaya_yaz stays off the directory: its description tells Claude where to write the answer,
-    # and the directory takes no instructions. There the desk keeps the answer in the chat.
-    tools = [t for t in _tools
-             if t.name not in ("status", "al_masasi", "al_masaya_yaz") and not _directory_excluded(t.name)]
+    # al_masaya_yaz and al_masada_basla stay off the directory: they tell Claude where to write, and
+    # the directory takes no instructions. There the desk keeps the answer in the chat and the tools
+    # keep their own cards (article, decision list); copies, because Tool has __slots__.
+    kart = getattr(al_arayuz, "kart_meta", None) if al_arayuz is not None else None
+    tools = [Tool(t.name, t.description, t.input_schema, t.handler, meta=kart(t.name) if kart else t.meta,
+                  title=t.title, annotations=t.annotations)
+             for t in _tools
+             if t.name not in ("status", "al_masasi", "al_masaya_yaz", "al_masada_basla")
+             and not _directory_excluded(t.name)]
     main_status = next(t for t in _tools if t.name == "status")
     status = Tool(
         "status", main_status.description, main_status.input_schema,

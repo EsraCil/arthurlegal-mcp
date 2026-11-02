@@ -91,9 +91,10 @@ class ServerViewsTest(unittest.TestCase):
     def test_carded_tools_desk_and_views(self) -> None:
         server._attach_views()
         tools = {t.name: t for t in server._tools}
-        self.assertEqual(tools["tr_mevzuat_madde_getir"].meta["ui"]["resourceUri"], URI)
-        self.assertEqual(tools["tr_ictihat_ara"].meta["ui/resourceUri"], "ui://arthurlegal/ictihat-karti.html")
-        self.assertIsNone(tools["nl_search"].meta)
+        # Every tool opens the desk: the full-screen pane shows the newest view, so a card would replace it.
+        for ad in ("tr_mevzuat_madde_getir", "tr_ictihat_ara", "nl_search", "al_masada_basla"):
+            self.assertEqual(tools[ad].meta["ui"]["resourceUri"], "ui://arthurlegal/masa.html", ad)
+        self.assertEqual(tools["tr_ictihat_ara"].meta["ui/resourceUri"], "ui://arthurlegal/masa.html")
         self.assertEqual(tools["al_masasi"].meta["ui"]["resourceUri"], "ui://arthurlegal/masa.html")
         self.assertEqual({r.uri for r in server._resources},
                          {URI, "ui://arthurlegal/ictihat-karti.html", "ui://arthurlegal/masa.html"})
@@ -102,7 +103,13 @@ class ServerViewsTest(unittest.TestCase):
         # Memory, masking and UYAP run on the lawyer's computer; this endpoint serves web and phone.
         self.assertEqual(masa["moduller"]["beyin"], {"durum": "masaustu"})
         self.assertEqual(masa["moduller"]["tapu"], {"durum": "claude"})
-        self.assertEqual(masa["yetenekler"], ["al_masaya_yaz", "status", "tr_ictihat_ara", "tr_mevzuat_madde_getir"])
+        self.assertEqual(masa["yetenekler"], ["al_masada_basla", "al_masaya_yaz", "status", "tr_ictihat_ara",
+                                              "tr_mevzuat_madde_getir"])
+        # The question goes on the desk first; an empty question is an error, not an empty desk.
+        basla = tools["al_masada_basla"].handler({"soru": "Kira artışı nasıl belirlenir?"})
+        self.assertEqual((basla["bolum"], basla["basla"]["soru"]), ("sohbet", "Kira artışı nasıl belirlenir?"))
+        with self.assertRaises(McpError):
+            tools["al_masada_basla"].handler({"soru": " "})
         # The answer comes to the desk: same view, the server echoes only a summary and the desk state.
         self.assertEqual(tools["al_masaya_yaz"].meta["ui"]["resourceUri"], "ui://arthurlegal/masa.html")
         teslim = tools["al_masaya_yaz"].handler({"soru": "s", "cevap": "TBK m. 344 uyarınca"})
@@ -134,6 +141,7 @@ class ServerViewsTest(unittest.TestCase):
         self.assertEqual(server._resources, [])
         self.assertNotIn("al_masasi", [t.name for t in server._tools])
         self.assertNotIn("al_masaya_yaz", [t.name for t in server._tools])
+        self.assertNotIn("al_masada_basla", [t.name for t in server._tools])
         self.assertTrue(all(t.meta is None for t in server._tools))
 
 

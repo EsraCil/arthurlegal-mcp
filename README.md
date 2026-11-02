@@ -6,7 +6,7 @@ Türkiye - Netherlands - Poland - Austria - Ireland - Finland - Spain - United
 Kingdom - European Union - Japan - Azerbaijan - Germany - legal scholarship -
 signed resource contracts - GLEIF entity identity.
 
-125 tools, one hosted endpoint, no authentication:
+126 tools, one hosted endpoint, no authentication:
 
     https://arthurlegal-mcp.fly.dev/mcp
 
@@ -150,6 +150,12 @@ memory in use (`memory`).
 In Claude (web, desktop and the iOS/Android apps) results come with ArthurLegal views. The tools'
 JSON is unchanged, so clients without MCP Apps read exactly what they read before.
 
+On `/mcp` every tool opens the same view, the desk (`ui://arthurlegal/masa.html`): Claude's full-screen
+pane shows the newest view, so a tool with a card of its own would replace the desk. Once the desk is
+open, each call becomes a live step on it (what was searched, how many results; the article or decision
+list opens under the step). In a chat without the desk the same view draws the old card for the two
+tools below and a one-line step for the rest. `/directory/mcp` keeps the two cards as before.
+
 - `tr_mevzuat_madde_getir`: an article card with the law and Official Gazette details, each
   article's heading (with its parent headings for codes such as TBK and TMK), the text, the
   citation to quote with a copy button, a link to the official text and a verified / partly
@@ -160,12 +166,15 @@ JSON is unchanged, so clients without MCP Apps read exactly what they read befor
   case law, source status and the other ArthurLegal modules in one panel. On this endpoint the
   modules that run on the lawyer's computer (memory, masking, UYAP) are shown as desktop-only;
   on `/directory/mcp` land registry is shown that way too.
+- `al_masada_basla` (`/mcp` only): puts the question on the desk as soon as Claude starts, before the
+  research; the steps and the answer then join it.
 - `al_masaya_yaz` (`/mcp` only): while the desk is full screen the chat transcript sits behind it and
   the desk cannot read it, so Claude hands its answer over with this tool (question, steps, Markdown
   answer, sources). The host reopens the desk with the tool's input and the answer streams in as it is
   written; the desk then checks the answer's statutory citations against the official text. The server
-  stores nothing and echoes nothing back. Not on `/directory/mcp`, whose descriptions give no
-  instructions; there the answer stays in the chat. The MCP screen lists connected servers and their
+  stores nothing and echoes nothing back. The order (start, research, hand over; "Cevap masada." in
+  the chat) is part of this endpoint's instructions, near the top. Neither tool is on `/directory/mcp`,
+  whose descriptions give no instructions; there the answer stays in the chat. The MCP screen lists connected servers and their
   status (Claude reports them when it opens the desk), not their tools.
 
 The views are in `arayuz/` (served as `ui://arthurlegal/...`). Light theme by default, dark and

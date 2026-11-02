@@ -178,6 +178,7 @@ TITLES: Dict[str, str] = {
     "status": "Status of every jurisdiction",
     "al_masasi": "ArthurLegal desk (interactive view)",
     "al_masaya_yaz": "Show the answer on the ArthurLegal desk",
+    "al_masada_basla": "Put the question on the ArthurLegal desk",
 }
 
 # Tools that can change something (locally: write a file or the UI answer).
