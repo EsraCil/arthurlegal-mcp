@@ -1,6 +1,6 @@
 # ArthurLegal MCP: privacy policy
 
-Effective: 29 October 2026
+Effective: 3 November 2026
 
 This policy covers the hosted ArthurLegal MCP endpoints:
 
@@ -17,10 +17,10 @@ The service is operated by DATS Web3 Solutions, Inc. Contact details are at the 
   the tool's name and its arguments, such as search words, a statute number or a document
   identifier. It does not receive your conversation, your files or your Claude account details.
 - It uses those arguments to query official legal sources and returns the result. Except for the
-  German tools described below, it writes no request logs and does not store your search text
-  after answering. To avoid repeating requests to official sources, it keeps recently fetched
-  public documents in memory under their official identifiers (such as a law and article number)
-  until they expire or the server restarts.
+  German and Azerbaijani tools described below, it writes no request logs and does not store your
+  search text after answering. To avoid repeating requests to official sources, it keeps recently
+  fetched public documents in memory under their official identifiers (such as a law and article
+  number) until they expire or the server restarts.
 - Do not put client names or other confidential facts into a request. Mask documents on your
   own computer first (for example with [Arthur Mask](https://github.com/beerbottle90/arthur-mask)).
 
@@ -52,20 +52,27 @@ the ArthurLegal desk). The views are part of the service's response and run insi
 a sandbox. To start, each view loads one pinned open-source library (the MCP Apps client) from
 the public CDN unpkg.com, so that CDN sees your device's connection data (such as its IP address)
 under its own terms. A view sends nothing to the service on its own: it calls the same tools
-Claude does, through Claude, and only when you act in it. A view keeps no data after it is
-closed. Links in a view to official sources (such as mevzuat.gov.tr) open only when you click
-them.
+Claude does, through Claude, and only when you act in it. Links in a view to official sources
+(such as mevzuat.gov.tr) open only when you click them.
+
+The cards keep no data after they are closed. The ArthurLegal desk keeps a history on your device,
+in its own browser storage: for each question, the question, the steps taken and Claude's answer,
+for 90 days, after which it deletes them; the desk's History screen clears it at any time. While a
+research is running, the desk also keeps that work on the device for 30 minutes, so another
+conversation that opens the desk on the same device in that time shows it. Neither is sent to the
+service.
 
 ## What is stored, and for how long
 
 | Data | Stored? |
 | --- | --- |
-| Free-text search words | Not stored by the service, except by the German tools (next row). |
+| Free-text search words | Not stored by the service, except by the German tools (next row) and the Azerbaijani tools (`az_`): their answers are kept in memory for up to 6 hours, keyed by the request address, which includes the search words, so that repeated requests stay within e-qanun.az's limits (at most 32 MB; erased on restart; never written to disk or to logs). |
 | German tools (`de_`) | The German backend caches official responses on the server's disk, keyed by the request address and its parameters (which include the search words): up to 1 hour for searches, 24 hours for single documents, 7 days for reference lists. It also keeps an audit line per call: time, tool name, a SHA-256 hash of the input (not the text), result size and status. Both sit on the server's temporary disk; the service uses no persistent storage, so they are erased when the server is redeployed. |
 | Official identifiers of fetched public documents (law and article numbers, decision ids) | Kept in memory as cache keys, with the public document, until the entry expires or the server restarts; not written to disk or to logs (German tools: previous row). |
 | Parcel identifiers and parcel data (land-registry tools, `/mcp` only) | Kept in memory for up to 24 hours, to avoid repeat requests to TKGM and to enforce its rate limits; never written to disk or to logs. |
 | Request logs | The service writes none, apart from the German tools' audit line (see that row). Its host, Fly.io (primary region: Amsterdam, the Netherlands), processes connection data such as IP addresses and timestamps to run its network, under the [Fly.io Privacy Statement](https://fly.io/legal/privacy-policy). |
 | Index of public legal documents | Kept and refreshed; contains official publications only. |
+| ArthurLegal desk history | On your device only, in the desk's own storage: questions, steps and answers for 90 days, the running research for 30 minutes (see Interactive views). Not sent to the service. |
 
 ## Who else receives data
 
