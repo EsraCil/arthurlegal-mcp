@@ -131,6 +131,11 @@ class DirectoryProfile(unittest.TestCase):
         self.assertNotIn("al_masaya_yaz", directory.handler({})["not"])
         self.assertNotIn("al_masaya_yaz", directory.handler({})["yetenekler"])
         self.assertEqual(directory.handler({"baglayicilar": ["Gmail"]})["baglayicilar"], [{"ad": "Gmail", "durum": "bagli"}])
+        # Only the main endpoint points Claude at the lawyer's local install; the directory names no other server
+        # and no hand-over tool it does not have.
+        self.assertIn("arthurlegal-yerel", main.description)
+        self.assertNotIn("arthurlegal-yerel", directory.description)
+        self.assertNotIn("al_masada_basla", directory.description)
 
     def test_directory_serves_the_same_views(self):
         if server.al_arayuz is None:

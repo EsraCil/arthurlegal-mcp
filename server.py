@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.8.1"
+__version__ = "1.8.2"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry tools stay on /mcp only, and the
@@ -774,7 +774,9 @@ def _attach_views() -> None:
         meta = al_arayuz.arac_meta(tool.name)
         if meta:
             tool.meta = meta
-    tanim = al_arayuz.masa_araci()
+    # "uzak": in Claude Desktop the same chat may also have the lawyer's local install (arthurlegal-yerel), whose
+    # desk runs memory, masking and UYAP; the description points Claude there.
+    tanim = al_arayuz.masa_araci("uzak")
     able = [t.name for t in _tools if t.name in MASA_TOOLS]
     # The chat transcript sits behind the full-screen desk and the desk cannot read it: Claude hands
     # the answer over with al_masaya_yaz and the host reopens the desk with it. Main endpoint only.
@@ -903,8 +905,9 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
     desk = next((t for t in _tools if t.name == "al_masasi"), None)
     if desk is not None:
         able = [t.name for t in tools if t.name in MASA_TOOLS]
+        # Own description: no pointer to another server and no hand-over sentence (those tools are not here).
         directory_desk = Tool(
-            desk.name, desk.description, desk.input_schema,
+            desk.name, al_arayuz.masa_araci("dizin")["description"], desk.input_schema,
             lambda args: al_arayuz.masa_cevabi("uzak", able, DIRECTORY_MODULES, args.get("bolum"),
                                                args.get("baglayicilar")),
             meta=desk.meta)
