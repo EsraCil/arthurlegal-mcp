@@ -226,9 +226,17 @@ def _supports_input_type() -> bool:
     return "voyageai.com" in embeddings_url()
 
 
+# A query is a few words; anything longer is cut before it is sent. The provider bills by
+# input size and a tool argument has no length limit of its own, so one call could
+# otherwise send megabytes to be embedded. Documents are clipped where they are built.
+QUERY_EMBED_CHARS = 2000
+
+
 def _embed(texts: Sequence[str], timeout: int = 60,
            input_type: Optional[str] = None) -> List[List[float]]:
     """Call an OpenAI-compatible /v1/embeddings endpoint. Raises on failure."""
+    if input_type == "query":
+        texts = [str(t)[:QUERY_EMBED_CHARS] for t in texts]
     url = os.environ.get("EMBEDDINGS_URL") or _DEFAULT_URL
     payload: Dict[str, Any] = {"input": list(texts), "model": embeddings_model()}
     if input_type and _supports_input_type():

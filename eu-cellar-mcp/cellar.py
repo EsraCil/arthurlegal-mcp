@@ -115,6 +115,11 @@ def _lang_uri(lang: str) -> str:
     return "http://publications.europa.eu/resource/authority/language/%s" % code
 
 
+# Largest SPARQL answer read. `sparql` is a free-form SELECT and `limit` only cuts the rows after
+# parsing, so a query without its own LIMIT could pull an unbounded result into memory.
+SPARQL_MAX_BYTES = 16 * 1024 * 1024
+
+
 def _sparql(query: str, timeout: int = 120) -> Dict[str, Any]:
     url = "%s?query=%s&format=%s" % (
         SPARQL, urllib.parse.quote(query),
@@ -122,7 +127,11 @@ def _sparql(query: str, timeout: int = 120) -> Dict[str, Any]:
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            raw = resp.read(SPARQL_MAX_BYTES + 1)
+            if len(raw) > SPARQL_MAX_BYTES:
+                raise CellarError("CELLAR answer larger than %d MB; add a LIMIT to the query"
+                                  % (SPARQL_MAX_BYTES // (1024 * 1024)))
+            return json.loads(raw.decode("utf-8"))
     except urllib.error.HTTPError as exc:
         raise CellarError("CELLAR SPARQL HTTP %d" % exc.code) from exc
     except urllib.error.URLError as exc:

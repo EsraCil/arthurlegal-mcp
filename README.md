@@ -180,7 +180,8 @@ tools below and a one-line step for the rest. `/directory/mcp` keeps the two car
 
 The views are in `arayuz/` (served as `ui://arthurlegal/...`). Light theme by default, dark and
 automatic on request; the device's system font; the only origin the sandbox allows is unpkg, for
-the pinned MCP Apps client (`@modelcontextprotocol/ext-apps`).
+the pinned MCP Apps client (`@modelcontextprotocol/ext-apps`), which the browser loads only if its
+sha384 fingerprint matches the one in the view's import map.
 
 ## Germany (`de_`)
 

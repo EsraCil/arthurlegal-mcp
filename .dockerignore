@@ -1,0 +1,12 @@
+# What stays out of the image. baked/ is NOT listed: the full image (Dockerfile) takes the six
+# indexes from it. A local index left in a backend's data/ folder would ship instead of the baked
+# one, and start.sh would treat it as already seeded; so would a stray .crawled marker.
+.git
+.github
+.oss-scanner
+**/__pycache__
+**/*.pyc
+**/data/*.db
+**/data/*.db-wal
+**/data/*.db-shm
+.crawled

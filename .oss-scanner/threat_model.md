@@ -59,7 +59,8 @@ locations, `EMBEDDINGS_API_KEY` (Voyage), and the Fly organisation's private net
 
 - No authentication and no CORS headers on `/mcp` and `/directory/mcp`: intended, the data is public law.
 - `eu_sparql` is a deliberate passthrough to the EU Publications Office endpoint; report only escapes from it.
-- `arthur-tr-hukuk-mcp/sources/uyusmazlik.py` disables TLS verification for that one host (its chain fails on a
-  stock store); `net.Http` may fall back to unverified TLS for a source's own domain for the same reason.
+- TLS is verified for every upstream. `HTTP_TLS_FALLBACK=1` (unset in deployment) lets an operator fall back to
+  unverified TLS for a source's own domain while its certificate is broken; report only paths that disable it
+  without that setting.
 - SQL in `retrieval.py` and `_where` inserts fixed column names, not input; XML from government sites parsed with
   ElementTree is expected.

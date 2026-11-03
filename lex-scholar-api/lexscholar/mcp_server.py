@@ -221,9 +221,9 @@ TOOLS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "query": _STR,
-                "jurisdictions": {"type": "array", "items": {"type": "string"},
-                                  "description": "ISO alpha-2 codes, e.g. ['FR','BR','ID','TR']"},
-                "limit_per": {"type": "integer", "default": 5},
+                "jurisdictions": {"type": "array", "items": {"type": "string"}, "maxItems": 12,
+                                  "description": "ISO alpha-2 codes, e.g. ['FR','BR','ID','TR']; at most 12"},
+                "limit_per": {"type": "integer", "default": 5, "minimum": 1, "maximum": 20},
                 "peer_reviewed_only": {"type": "boolean", "default": False},
                 "year_from": _INT,
                 "year_to": _INT,

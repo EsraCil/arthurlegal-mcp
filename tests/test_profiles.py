@@ -91,6 +91,23 @@ class DirectoryProfile(unittest.TestCase):
         self.assertNotIn("tkgm", text)
         self.assertEqual(status.handler({})["tools_exposed"], len(DIRECTORY_TOOLS))
 
+    def test_hosted_status_leaves_machine_details_out(self):
+        from unittest import mock
+        hosted = {"FLY_APP_NAME": "arthurlegal-mcp", "FLY_MACHINE_ID": "makine-kimligi-123",
+                  "FLY_IMAGE_REF": "registry.fly.io/arthurlegal-mcp:deneme-20261103", "FLY_REGION": "ams"}
+        with mock.patch.dict(os.environ, hosted):
+            os.environ.pop("STATUS_DETAIL", None)
+            out = server._t_status({})
+            text = json.dumps(out, ensure_ascii=False)
+            self.assertEqual(out["build"], {"image": "deneme-20261103", "region": "ams"})
+            for hidden in ("makine-kimligi-123", "registry.fly.io", '"memory"', '"module"', '"path"',
+                           '"used_today_here"', '"entries"'):
+                self.assertNotIn(hidden, text)
+            self.assertTrue(out["backends_loaded"])
+            with mock.patch.dict(os.environ, {"STATUS_DETAIL": "1"}):
+                self.assertIn("makine-kimligi-123", json.dumps(server._t_status({})))
+        self.assertNotIn("build", server._t_status({}))   # local: nothing hosted to describe
+
     def test_directory_instructions_describe_rather_than_direct(self):
         self.assertTrue(DIRECTORY_TEXT.startswith("ArthurLegal MCP: read-only"))
         self.assertNotIn("MADDE ATFI KURALI", DIRECTORY_TEXT)

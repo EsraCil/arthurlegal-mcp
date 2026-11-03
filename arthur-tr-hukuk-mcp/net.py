@@ -44,6 +44,12 @@ DEFAULT_TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", "60"))
 # a few tens of MB; anything bigger is refused instead of exhausting the 1 GB machine.
 MAX_BYTES = int(os.environ.get("HTTP_MAX_BYTES", str(64 * 1024 * 1024)))
 
+# A chain that does not verify is an error, not a cue to stop verifying. Every upstream here verified with the
+# stock Debian store on the hosted machines on 2026-11-03 (BDDK and Uyuşmazlık included, which once needed the
+# fallback). HTTP_TLS_FALLBACK=1 restores the old behaviour, unverified for that upstream after a failure, for
+# an operator who needs a source back before its certificate is fixed.
+TLS_FALLBACK = os.environ.get("HTTP_TLS_FALLBACK", "").strip().lower() in ("1", "true", "yes")
+
 
 class HttpError(Exception):
     """An upstream answered with an error status. Carries status + body head."""
@@ -140,9 +146,8 @@ class Http:
     """A small cookie-aware HTTP client bound to one upstream.
 
     ``headers`` are sent on every request; ``bucket`` throttles; ``verify=False``
-    disables TLS verification for the two upstreams (KİK, Uyuşmazlık) whose
-    chains fail validation on a stock Python — the same concession the
-    reference implementations make, and documented per source.
+    disables TLS verification. No source uses it today: the upstreams that once
+    needed it (KİK, Uyuşmazlık) are removed or verify with a stock store.
     """
 
     def __init__(self, base_url: str = "", headers: Optional[Dict[str, str]] = None,
@@ -274,15 +279,13 @@ class Http:
                     continue
                 raise HttpError(exc.code, url, body, rh) from None
             except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
-                # Several Turkish public-sector hosts (BDDK among them) serve a
-                # chain that a stock Debian/certifi store cannot complete while a
-                # Windows store can. Everything fetched here is public, read-only
-                # material, so on a verification failure the client drops to an
-                # unverified context for this upstream and says so on stderr
-                # once, rather than answering "no results".
-                if "CERTIFICATE_VERIFY_FAILED" in str(exc) and self.verify:
-                    self._degrade_tls(url)
-                    continue
+                # A verification failure is reported, not retried unverified: the caller sees an upstream
+                # error (unavailable, never "no results"). TLS_FALLBACK is the operator's escape hatch.
+                if "CERTIFICATE_VERIFY_FAILED" in str(exc):
+                    if TLS_FALLBACK and self.verify:
+                        self._degrade_tls(url)
+                        continue
+                    raise HttpError(0, url, b"TLS certificate of this upstream could not be verified") from None
                 if attempt <= retries:
                     time.sleep(1.5 * attempt)
                     continue

@@ -4,9 +4,9 @@ The site is a classic postback form: GET the landing page for ``__VIEWSTATE`` &
 friends, POST them back with ``txtSearch``; later pages are ``__EVENTTARGET=
 GridView1`` / ``__EVENTARGUMENT=Page$N``. Results are PDF links.
 
-TLS: the host's certificate chain fails validation on a stock Python trust store
-(as the reference implementation also found), so verification is off for this
-one upstream. Nothing sensitive is sent.
+TLS: verified like every other upstream. The chain once failed on a stock Python
+trust store and verification was off here; it verifies since (checked on the
+hosted machines 2026-11-03).
 
 Citation contract: ``Uyuşmazlık Mahkemesi, E. 2023/12, K. 2023/45, 06.03.2023``.
 """
@@ -22,7 +22,7 @@ from textx import html_to_text, paginate, pdf_to_text, strip_tags
 from sources import Source
 
 BASE = "https://kararlar.uyusmazlik.gov.tr"
-_http = Http(BASE, {"Accept": "text/html,*/*", "Origin": BASE, "Referer": BASE + "/"}, verify=False)
+_http = Http(BASE, {"Accept": "text/html,*/*", "Origin": BASE, "Referer": BASE + "/"})
 _HIDDEN = ("__VIEWSTATE", "__VIEWSTATEGENERATOR", "__EVENTVALIDATION", "__EVENTTARGET",
            "__EVENTARGUMENT", "__LASTFOCUS")
 

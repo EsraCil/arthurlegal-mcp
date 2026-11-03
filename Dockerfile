@@ -7,7 +7,10 @@ COPY . /app
 # EPDK, SPK, BTK and Sigorta Tahkim publish decisions as PDF.
 # numpy is optional too: with it the semantic scan in retrieval.py is ~6x faster
 # (16,545 vectors: 1.3 s -> 0.2 s); without it the same ranking comes slower.
-RUN pip install --no-cache-dir "de-eli-mcp==0.5.4" "pypdf>=4.0" "numpy>=2.0,<3"  && chmod +x start.sh  && python -c "import sqlite3, json, zipfile, urllib.request, numpy; print('stdlib ok, numpy', numpy.__version__)"
+# Exact versions, the same three lines in .github/workflows/testler.yml and .oss-scanner/Dockerfile:
+# the image installs what the tests ran against. The process runs as root inside its own VM; moving
+# it to a separate user changes where start.sh seeds the indexes and needs a tested full build.
+RUN pip install --no-cache-dir "de-eli-mcp==0.5.4" "pypdf==6.21.4" "numpy==2.4.6"  && chmod +x start.sh  && python -c "import sqlite3, json, zipfile, urllib.request, numpy; print('stdlib ok, numpy', numpy.__version__)"
 
 # One BLAS thread: the machines have one shared vCPU, and a matrix-vector product
 # per chunk gains nothing from more.

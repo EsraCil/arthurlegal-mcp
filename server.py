@@ -618,6 +618,38 @@ def _runtime() -> Dict[str, Any]:
     return out
 
 
+# On the hosted endpoint `status` is answered to anyone. It keeps what a caller needs to judge a
+# result (which jurisdictions loaded, how much each indexed, whether semantic search is on, which
+# build) and leaves out what only describes the machine or other people's use of it: machine id,
+# memory, internal addresses and file paths, today's request counters, cache occupancy, exception
+# text. STATUS_DETAIL=1 brings the full answer back for an operator; local installs always get it.
+_PUBLIC_STATUS_DROP = frozenset(("machine", "memory", "module", "path", "route", "used_today_here",
+                                 "entries", "megabytes", "cikti_klasoru"))
+
+
+def _public_status() -> bool:
+    return bool(os.environ.get("FLY_APP_NAME")) and os.environ.get("STATUS_DETAIL") != "1"
+
+
+def _scrub_status(value: Any) -> Any:
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            if key in _PUBLIC_STATUS_DROP:
+                continue
+            if key == "error" and isinstance(item, str):
+                item = item.split(":", 1)[0]          # the exception's type, not its message
+            elif key == "image" and isinstance(item, str):
+                item = item.rsplit(":", 1)[-1]        # the build tag, not the registry path
+            elif key == "mode" and isinstance(item, str) and item.startswith("proxy"):
+                item = "proxy"
+            out[key] = _scrub_status(item)
+        return out
+    if isinstance(value, list):
+        return [_scrub_status(item) for item in value]
+    return value
+
+
 def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any:
     """One health answer for the whole package, or for a profile that leaves
     the ``exclude`` prefixes out."""
@@ -666,7 +698,7 @@ def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any
             out["de_live"] = {"reachable": False, "error": "%s: %s" % (type(exc).__name__, exc)}
             out["warning"] = (out.get("warning", "") + " The German backend is loaded but "
                               "not answering: every de_ tool will fail until it is back.").strip()
-    return out
+    return _scrub_status(out) if _public_status() else out
 
 
 def _t_status(args: Dict[str, Any]) -> Any:

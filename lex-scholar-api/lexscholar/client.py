@@ -32,6 +32,12 @@ from .sources import RESOLVERS, capabilities, get_source
 # Sources are I/O-bound, so threads are the right primitive and keep us stdlib-only.
 _MAX_WORKERS = 8
 
+# compare_jurisdictions runs one federated search per country. Each costs up to two upstream
+# queries and a rerank, so the list is deduplicated and capped: a comparative question rarely
+# spans more than a handful of systems, and an unbounded list is one call that fans out without end.
+_MAX_JURISDICTIONS = 12
+_MAX_LIMIT_PER = 20
+
 
 class LexScholarClient:
     """Federated client over the open-access legal scholarship sources."""
@@ -138,7 +144,12 @@ class LexScholarClient:
         returned side by side rather than merged into one ranked list, because
         the point is the contrast, not a single winner.
         """
-        codes = [str(j).strip().upper()[:2] for j in jurisdictions if str(j).strip()]
+        codes = list(dict.fromkeys(str(j).strip().upper()[:2] for j in jurisdictions if str(j).strip()))
+        if len(codes) > _MAX_JURISDICTIONS:
+            raise LexScholarError(
+                "at most %d jurisdictions per call (got %d); split the comparison into groups."
+                % (_MAX_JURISDICTIONS, len(codes)))
+        limit_per = max(1, min(int(limit_per), _MAX_LIMIT_PER))
         started = time.time()
 
         def one(code: str):

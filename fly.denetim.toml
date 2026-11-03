@@ -34,6 +34,14 @@ primary_region = "ams"
   auto_start_machines = true
   min_machines_running = 0
 
+# Requests in flight per machine. Past the soft limit Fly's proxy sends new requests to the other
+# machine; past the hard limit it queues them instead of piling threads onto one shared vCPU. Counted
+# per request, not per connection: Claude keeps connections open between calls.
+[http_service.concurrency]
+  type = "requests"
+  soft_limit = 15
+  hard_limit = 30
+
 [[http_service.checks]]
   interval = "30s"
   timeout = "5s"

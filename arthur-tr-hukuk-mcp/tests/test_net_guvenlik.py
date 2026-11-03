@@ -123,6 +123,57 @@ class HttpYonlendirmeVeBoy(unittest.TestCase):
         self.assertEqual(govde, b"merhaba")
 
 
+class _DogrulanamayanAcici:
+    """Her açılışta sertifika doğrulama hatası veren sahte açıcı (ağa çıkmaz)."""
+
+    def __init__(self):
+        self.acilis = 0
+
+    def open(self, req, timeout=None):
+        import ssl
+        import urllib.error
+        self.acilis += 1
+        raise urllib.error.URLError(ssl.SSLCertVerificationError(
+            1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed"))
+
+
+class TlsDogrulama(unittest.TestCase):
+    def setUp(self):
+        self._eski = net.TLS_FALLBACK
+
+    def tearDown(self):
+        net.TLS_FALLBACK = self._eski
+
+    def test_dogrulanamayan_zincir_hata_olur_dogrulama_kapanmaz(self):
+        net.TLS_FALLBACK = False
+        h = Http("https://www.bddk.org.tr")
+        acici = _DogrulanamayanAcici()
+        h.opener = acici
+        with self.assertRaises(HttpError):
+            h.get("/x")
+        self.assertTrue(h.verify)
+        self.assertIs(h.opener, acici)
+        self.assertEqual(acici.acilis, 1)
+
+    def test_isletmeci_acarsa_eski_davranis(self):
+        net.TLS_FALLBACK = True
+        h = Http("https://www.bddk.org.tr")
+        h.opener = _DogrulanamayanAcici()
+        h._degrade_tls = lambda url: (setattr(h, "verify", False), setattr(h, "opener", _DogrulanamayanAcici()))
+        with self.assertRaises(HttpError):
+            h.get("/x")
+        self.assertFalse(h.verify)
+
+    def test_hicbir_kaynak_dogrulamayi_kapatmaz(self):
+        import importlib
+        import sources
+        for ad in sources.MODULES:
+            mod = importlib.import_module("sources." + ad)
+            istemci = getattr(mod, "_http", None)
+            if isinstance(istemci, Http):
+                self.assertTrue(istemci.verify, ad)
+
+
 class EpdkZipSiniri(unittest.TestCase):
     def test_buyuk_zip_uyesi_okunmaz(self):
         import io

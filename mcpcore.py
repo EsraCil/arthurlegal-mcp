@@ -14,7 +14,9 @@ Transports
 
 There is **no authentication**. Binding to a public interface exposes every
 tool to anyone who can reach the port; that is an explicit opt-in via
-``--host 0.0.0.0``.
+``--host 0.0.0.0``. Bound to loopback (the default), a request whose Host or
+Origin header names another site is refused, so a web page cannot reach the
+local port through DNS rebinding.
 
 Opt-in observation hooks (``SESSION_IDS``, ``BILDIRIM_KANCASI``, ``istek_baglami``)
 are inert by default: unless an embedding application turns them on, responses
@@ -59,6 +61,12 @@ _SOCKET_TIMEOUT = 120
 # Protocol revisions we can speak; we echo the client's if we recognise it.
 _SUPPORTED_PROTOCOLS = ("2025-06-18", "2025-03-26", "2024-11-05")
 _DEFAULT_PROTOCOL = "2025-06-18"
+
+# Names a request may carry in its Host and Origin headers when the server is bound
+# to the loopback interface. A web page the user opens can point its own domain at
+# 127.0.0.1 and then talk to this port as a same-origin site; its requests still
+# carry that domain in Host and its own origin in Origin, so both are checked.
+_LOOPBACK_NAMES = frozenset(("localhost", "127.0.0.1", "::1"))
 
 # Small fixed files answered on GET and HEAD beside the JSON-RPC endpoint, such as
 # the favicon a connector directory shows next to a server's name. Path ->
@@ -353,7 +361,25 @@ def run_stdio(dispatcher: Dispatcher) -> None:
 # --------------------------------------------------------------------------- #
 # Streamable HTTP transport                                                    #
 # --------------------------------------------------------------------------- #
-def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]] = None):
+def _loopback_name(value: str) -> bool:
+    """True for a Host header value (``name[:port]``) or an origin that names this machine."""
+    value = (value or "").strip().lower()
+    if "://" in value:
+        value = value.split("://", 1)[1]
+    value = value.split("/", 1)[0]
+    if value.startswith("["):                      # [::1]:8900
+        name = value[1:].split("]", 1)[0]
+    else:
+        name = value.rsplit(":", 1)[0] if value.count(":") == 1 else value
+    return name in _LOOPBACK_NAMES
+
+
+def _is_loopback_bind(host: str) -> bool:
+    return (host or "").strip().lower().strip("[]") in _LOOPBACK_NAMES
+
+
+def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]] = None,
+                  loopback_only: bool = False):
     # Extra endpoints beside /mcp, each with its own tool set and instructions
     # (e.g. a narrower profile for a public directory listing). Keys are paths
     # without a trailing slash.
@@ -405,6 +431,17 @@ def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]
             _baglam.session_id = yeni
             return [("Mcp-Session-Id", yeni)]
 
+        def _foreign(self) -> bool:
+            """Refuse (403) a request a web page sent to the local port. Only when bound to loopback:
+            behind a public address the Host is the service's own name and every client is remote."""
+            if not loopback_only:
+                return False
+            origin = self.headers.get("Origin")
+            if _loopback_name(self.headers.get("Host", "")) and (origin is None or _loopback_name(origin)):
+                return False
+            self._send(403, b'{"error":"request from outside this computer refused"}')
+            return True
+
         def _send_static(self, head: bool) -> bool:
             # The query string is ignored: /favicon.ico?v=2 is the same file.
             hit = STATIC_FILES.get(self.path.split("?", 1)[0])
@@ -428,7 +465,7 @@ def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]
                 self.send_error(501, "Unsupported method (%r)" % self.command)
 
         def do_GET(self):  # noqa: N802
-            if self._send_static(head=False):
+            if self._foreign() or self._send_static(head=False):
                 return
             if self.path.rstrip("/") in ("/health", "/healthz"):
                 self._send(200, b'{"status":"ok"}')
@@ -452,6 +489,8 @@ def _make_handler(dispatcher: Dispatcher, routes: Optional[Dict[str, Dispatcher]
             self._send(405, b'{"error":"GET not supported; POST JSON-RPC to /mcp"}')
 
         def do_POST(self):  # noqa: N802
+            if self._foreign():
+                return
             target = pick(self.path)
             if target is None:
                 self._send(404, b'{"error":"not found"}')
@@ -503,7 +542,8 @@ def run_http(
     port: int,
     routes: Optional[Dict[str, Dispatcher]] = None,
 ) -> None:
-    httpd = ThreadingHTTPServer((host, port), _make_handler(dispatcher, routes))
+    httpd = ThreadingHTTPServer((host, port),
+                                _make_handler(dispatcher, routes, loopback_only=_is_loopback_bind(host)))
     sys.stderr.write(
         "%s %s listening on http://%s:%d/mcp (no auth)\n"
         % (dispatcher.name, dispatcher.version, host, port)
