@@ -2,6 +2,10 @@
 
 ## Yayımlanmamış
 
+- `duman_testi.py`: çalışan bir MCP ucuna karşı her kaynakta bir arama ve bir getir (13 kaynak). Sonuç sınıfları
+  TAMAM, ADRES (istemci alan dışı adresi reddetti: kurum başka alana taşınmış olabilir), ERISIM (kurum o an
+  erişilemez), BOS, HATA; çıkış kodu 0/2/1. Ağ geçidinde `--onek tr_`. Yalnız standart kütüphane.
+  `.github/workflows/duman-testi.yml` bunu her gün GitHub'ın makinesinde, arka ucu yerelde başlatarak koşar.
 - `mevzuat_madde_getir`: kademeli kenar başlıkları (TBK, TMK, TTK). TBK m.344 tek başına istenince başlıksız,
   listeyle istenince "II. BELİRLENMESİ2" dönüyordu. Üç kusur: (1) başlık, maddenin nasıl istendiğine bağlıydı
   (Bedesten ağacında TBK'nın hiçbir maddesinin başlığı yok; tam metne yalnız liste yolu bakıyordu); (2) dipnot işareti
