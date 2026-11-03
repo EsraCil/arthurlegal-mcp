@@ -1,0 +1,75 @@
+# TR kaynakları duman testi.
+#
+# Her gün bir kez (ve elle) GitHub'ın Linux bilgisayarında koşar. TR arka ucunu (arthur-tr-hukuk-mcp)
+# bu makinede 127.0.0.1'de başlatır ve duman_testi.py ile her kaynakta bir arama + bir getir dener.
+# Amaç: bir kurum adresini ya da belge sunucusunu değiştirdiğinde bunu kullanıcıdan önce görmek
+# (ADRES sınıfı → ilgili kaynağın allowed_domains listesine tek satır).
+# Çıkış kodu: 0 hepsi TAMAM; 2 yalnız ERISIM (kurum o an erişilemez, iş sarı değil yeşil sayılır,
+#   özet yine yazılır); 1 ADRES, BOS ya da HATA (iş kırmızı).
+# Fly'a ya da canlı uygulamaya dokunmaz; sır, API anahtarı ya da yazma yetkisi istemez.
+# Not: GitHub'ın makineleri yurt dışında; bazı kurumlar yurt dışı IP'yi geri çevirebilir (ERISIM).
+
+name: Duman testi
+
+on:
+  schedule:
+    - cron: "17 4 * * *" # her gün 07:17 (Türkiye)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: duman-testi
+  cancel-in-progress: false
+
+jobs:
+  duman:
+    name: TR kaynakları
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: arthur-tr-hukuk-mcp
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11" # Dockerfile: python:3.11-slim
+
+      - name: Paketler
+        run: pip install "pypdf==6.21.4" # testler.yml ile aynı sürüm
+
+      - name: Arka ucu başlat (127.0.0.1:8000)
+        run: |
+          python server.py --transport http --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/sunucu.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if python -c "import socket; socket.create_connection(('127.0.0.1', 8000), 1)" 2>/dev/null; then
+              echo "sunucu hazır"; exit 0
+            fi
+            sleep 1
+          done
+          echo "sunucu 30 sn içinde açılmadı"; cat "$RUNNER_TEMP/sunucu.log"; exit 1
+
+      - name: Duman testi
+        run: |
+          set +e
+          python duman_testi.py --url http://127.0.0.1:8000/mcp --json "$RUNNER_TEMP/sonuc.json"
+          kod=$?
+          {
+            echo "## Duman testi"
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/sonuc.json" 2>/dev/null || echo "sonuç dosyası yok"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$kod" -eq 2 ]; then
+            echo "::warning::Yalnız ERISIM: bazı kurumlar o an erişilemedi (tekrar denenecek)."
+            exit 0
+          fi
+          exit $kod
+
+      - name: Sunucu günlüğü (hata olursa)
+        if: failure()
+        run: tail -200 "$RUNNER_TEMP/sunucu.log"
