@@ -49,7 +49,7 @@ The hosted endpoint is provided as is, without an uptime guarantee. Your search
 queries reach this server and the official upstream sources it queries, and are
 sent to the embeddings provider when semantic search runs. Do not put client names
 or other confidential facts into queries; mask documents locally first (for
-example with [Arthur Mask](https://github.com/beerbottle90/arthur-mask)).
+example with [ArthurMask](https://github.com/beerbottle90/arthur-mask)).
 
 Türkiye (`tr_`) is the largest backend: Yargıtay/Danıştay/BAM case law, AYM,
 Uyuşmazlık, all legislation types, Resmî Gazete, and eight regulators (EPDK,

@@ -194,10 +194,10 @@ yalnız soyadıyla anma da maskelenir. Malik satırı tanınmazsa metin **işlen
 `ad_maskele=false` bilinçli rıza yoludur. Tüzel kişi ve kamu malikleri (Hazine, belediye, şirket)
 kişisel veri olmadığı ve hukuken anlamlı olduğu için maskelenmez.
 
-[Arthur Mask](https://github.com/beerbottle90/arthur-mask) kuruluysa şerh/rehin satırlarındaki üçüncü
+[ArthurMask](https://github.com/beerbottle90/arthur-mask) kuruluysa şerh/rehin satırlarındaki üçüncü
 kişi ve kurum adları da maskelenir (`{{KİŞİ-nn}}`, `{{KURUM-nn}}`). Kanca isteğe bağlıdır: sunucu onsuz
 standart kütüphaneyle çalışır, kasa kullanılmaz, diske eşleştirme yazılmaz. `TKGM_ARTHUR_MASK=0` kapatır.
-Yanıt maskelenMEYENİ de adıyla sayar: adres, doğum tarihi ve Arthur Mask yoksa üçüncü kişi adları.
+Yanıt maskelenMEYENİ de adıyla sayar: adres, doğum tarihi ve ArthurMask yoksa üçüncü kişi adları.
 
 ## Dış ağ çağrıları
 

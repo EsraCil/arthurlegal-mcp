@@ -1183,7 +1183,7 @@ TUM_ARACLAR = [
          "Kullanıcının KENDİ e-Devlet/Web Tapu oturumundan aldığı tapu kaydı METNİNİ yapılandırır: taşınmaz, "
          "malik-hisse, şerh/beyan/irtifak/rehin, hukuki işaretler; `ref` verilirse geometriyle çapraz kontrol. "
          "VARSAYILAN OLARAK MASKELER: TCKN (sağlama doğrulanır, ayraçlı yazım dâhil), IBAN, etiketli VKN, "
-         "telefon, e-posta ve MALİK ADLARI ({{MALİK-nn}}, kayıdın her yerinde tutarlı); Arthur Mask kuruluysa "
+         "telefon, e-posta ve MALİK ADLARI ({{MALİK-nn}}, kayıdın her yerinde tutarlı); ArthurMask kuruluysa "
          "şerh/rehin satırlarındaki üçüncü kişi ve kurum adlarını da ({{KİŞİ-nn}}, {{KURUM-nn}}). Malik satırı "
          "tanınmazsa metin işlenmez. Yanıttaki `kvkk` alanı neyin maskelenMEDİĞİNİ de sayar. Eşleştirme "
          "döndürülmez, hiçbir şey saklanmaz. Yalnız yerel kipte; sunucu hiçbir oturuma girmez, PDF'i siz okuyup "
@@ -1195,7 +1195,7 @@ TUM_ARACLAR = [
              "ad_maskele": {"type": "boolean", "default": True,
                             "description": "false: malik adları AÇIK döner — bilinçli bir karardır"},
              "ucuncu_kisi_maskele": {"type": "boolean", "default": True,
-                                     "description": "Arthur Mask kuruluysa şerh/rehin satırlarındaki üçüncü "
+                                     "description": "ArthurMask kuruluysa şerh/rehin satırlarındaki üçüncü "
                                                     "kişi ve kurum adlarını da maskeler"}},
           "required": ["metin"]},
          _t_tapu),
