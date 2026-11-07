@@ -1,7 +1,7 @@
 # hesap-mcp: hesap kartları
 
 Türk avukatları için üç hesap: avukatlık asgari ücreti, yargı harcı ve gider avansı. Hesabı model
-değil kod yapar. Her kalem dayanağını ve Resmî Gazete kaynağını taşır.
+değil kod yapar. Her kalem dayanağını ve Resmî Gazete kaynağını taşır; her sonuç verinin tazeliğini de söyler.
 
 | Araç (birleştiricide) | Ne yapar |
 |---|---|
@@ -25,10 +25,36 @@ olarak görünürler; listesi verideki `dogrulanamayanlar` alanında.
 
 Yeni yıl tarifesi gelince yalnız veri ve `tests/test_hesap.py`'deki sabit tutarlar güncellenir.
 
+## Tazelik: Resmî Gazete nöbetçisi
+
+Kayıtlı tarife sessizce eskiyebilir. Her hesap sonucu bu yüzden `tazelik` taşır (`tazelik.py`):
+
+| Durum | Ne zaman | Sonuç |
+|---|---|---|
+| `guncel` | Fihrist tarandı, kartı etkileyebilecek bilinmeyen yayım yok | Toplam verilir |
+| `yeni_duzenleme` | Desene uyan ve `izlenen.bilinen`de olmayan yayım var | Başta UYARI satırı; `toplam_tl` null, tutarlar `teyit_bekleyen_tutarlar`da |
+| `kontrol_edilemedi` | Resmî Gazete'ye ulaşılamadı ya da tarama tamamlanmadı | Başta UYARI satırı; toplam "teyit edilmedi" diye işaretli |
+
+- **Ne zaman taranır:** bir hesap aracı çağrılınca, son başarılı tarama 24 saatten eskiyse ya da bugünkü sayı henüz
+  taranmadıysa. Aralık: verinin derlendiği gün ile 7 gün öncesinin geç olanından bugüne; o günlerin mükerrer
+  sayıları dahil. Bitmiş ve taranmış günler yeniden istenmez.
+- **Nezaket:** yalnız `https://www.resmigazete.gov.tr`; istekler arası en az 1 sn; süreç başına günde en çok 20
+  istek; aynı anda tek tarama; başarısız denemeden sonra 30 dk beklenir. Hesap girdileri hiçbir yere gönderilmez.
+- **Desenler ve bilinen yayımlar:** `veri/tarife_2026.json` → `izlenen`. Hangi kartın hangi yayımdan etkilendiği
+  (`kartlar`) orada: yeni bir AAÜT yalnız vekâlet kartını, harç tebliği yalnız harç kartını kilitler.
+- **Günlük GitHub nöbetçisi:** `.github/workflows/tarife-nobetcisi.yml` her gün 06.00 UTC'de son 3 günü aynı kodla
+  tarar ve bilinmeyen her yayım için bir kez issue açar (`nobetci.py`). Üç farklı günde üst üste erişemezse ayrıca
+  issue açar; kırmızıya düşmez, master'a commit atmaz.
+- **Yeni yayım veriye işlenince:** tutarlar resmî ekten ikinci okumayla güncellenir, yayım `izlenen.bilinen`e eklenir.
+- **Sınırlar:** torba kanunlar başlıktan yakalanamaz (öneri: mevzuat.gov.tr'de 492 ve 1136 kayıtlarının değişiklik
+  listesine haftalık bakan ek denetim); süreç yeniden başlarsa yalnız son 7 gün yeniden taranır.
+- `HESAP_RG_NOBETCI=kapali` ağı kapatır; kartlar `kontrol_edilemedi` döner.
+
 ## Çalıştırma
 
     python server.py                                 # stdio
     python server.py --transport http --port 8070    # HTTP
     python -m unittest discover -s tests             # testler (ağsız)
+    python tazelik.py --gun 3                        # son 3 günün fihristini tara (canlı)
 
 Faiz, işçilik alacağı ve süre hesabı bu sunucuda yok.

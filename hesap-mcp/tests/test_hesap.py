@@ -17,10 +17,21 @@ sys.path.insert(0, KOK)
 
 import hesap  # noqa: E402
 import server  # noqa: E402
+import tazelik  # noqa: E402
 from mcpcore import McpError  # noqa: E402
 
 with open(os.path.join(KOK, "veri", "tarife_2026.json"), encoding="utf-8") as fh:
     VERI = json.load(fh)
+
+
+def setUpModule():
+    # Bu testler hesabı sınar ve ağa çıkmaz: Resmî Gazete denetimi kapalı (sonuç `kontrol_edilemedi`, toplam
+    # yine verilir). Tazelik kilidinin kendisi test_tazelik.py'de.
+    tazelik.kur(tazelik.Nobetci(VERI, getir=None))
+
+
+def tearDownModule():
+    tazelik.kur(None)
 
 
 def tl(metin):

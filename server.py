@@ -96,8 +96,10 @@ STDLIB_BACKENDS = [
     # file paths.
     ("tkgm", os.path.join(ROOT, "tkgm-mcp"), "srv_tkgm",
      "🇹🇷 Tapu-kadastro — canlı parsel (TKGM Parsel Sorgu, dakikada en çok 30 istek), rapor, kroki"),
-    # Fee calculator cards: no network, no files. The code does the arithmetic; amounts come from
-    # hesap-mcp/veri, each row quoting the Official Gazette text it was taken from.
+    # Fee calculator cards: no files. The code does the arithmetic; amounts come from hesap-mcp/veri, each
+    # row quoting the Official Gazette text it was taken from. Its only network access is the freshness check
+    # (hesap-mcp/tazelik.py): about once a day it reads the Official Gazette's daily index pages; a new
+    # tariff publication, or an index it could not read, is reported on the result instead of a firm total.
     ("hesap", os.path.join(ROOT, "hesap-mcp"), "srv_hesap",
      "🇹🇷 Hesap kartları — avukatlık asgari ücreti, yargı harcı, gider avansı (hesabı kod yapar)"),
     # German statute text from gesetze-im-internet.de. NeuRIS, behind the proxied
@@ -837,7 +839,7 @@ Resmî Gazete, semantik arşiv; KİK/Sayıştay/TÜRKPATENT/İSTAÇ YOK — resm
 `tkgm_` tapu-kadastro: parseli TKGM Parsel Sorgu'dan canlı getirir (il/ilçe/mahalle + ada/parsel,
 koordinat ya da yer adı; dosya İSTEMEYİN), rapor, ölçü, kroki; ilk canlı çağrıda onay kartı döner,
 önce `tkgm_baslangic`. `hesap_` hesap kartları: avukatlık asgari ücreti, yargı harcı, gider avansı;
-hesabı kod yapar, tutarı kendiniz hesaplamayın.
+hesabı kod yapar, tutarı kendiniz hesaplamayın; cevapta aracın tazelik satırını aynen yazın.
 
 TÜRKİYE İÇİN GİRİŞ NOKTASI: karmaşık Türk hukuku sorusunda önce `tr_hukuk_arastirma_rehberi`
 (hangi soru için hangi araç), sonra `tr_kurum_listesi` (8 kurumun filtreleri).

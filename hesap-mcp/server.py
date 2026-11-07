@@ -5,7 +5,11 @@
     python server.py --transport http --port 8070    # HTTP
 
 Hesabı model değil KOD yapar (hesap.py); tutarlar veri/tarife_2026.json'daki resmî metinden gelir ve
-her kalem dayanağını ve kaynağını taşır. Ağ yok, dosya yazma yok, yalnız standart kütüphane.
+her kalem dayanağını ve kaynağını taşır. Dosya yazma yok, yalnız standart kütüphane.
+
+Tek ağ erişimi tazelik denetimidir (tazelik.py): günde yaklaşık bir kez Resmî Gazete'nin günlük fihristine bakılır;
+kartları etkileyebilecek yeni bir yayım varsa ya da bakılamadıysa sonuç bunu söyler (tazelik kilidi).
+Kullanıcının girdileri hiçbir yere gönderilmez.
 """
 from __future__ import annotations
 
@@ -15,9 +19,13 @@ import re
 from typing import Any, Dict, Optional
 
 import hesap
+import tazelik
 from mcpcore import McpError, Tool, run
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
+
+TAZELIK_KURALI = ("Cevapta tazelik satırını (kaynak RG tarih/sayı, son kontrol) aynen yazın. Durum `guncel` "
+                  "değilse toplamı kesin sonuç gibi sunmayın; UYARI satırını ve bağlantıyı verin.")
 
 INSTRUCTIONS = """Hesap kartları: avukatlık asgari ücreti (AAÜT), yargı harcı ve gider avansı. Hesabı KOD yapar.
 - Tutarı kendiniz hesaplamayın, toplamayın, yuvarlamayın: aracın döndürdüğü kalemleri, dayanaklarını ve kaynak
@@ -25,7 +33,11 @@ INSTRUCTIONS = """Hesap kartları: avukatlık asgari ücreti (AAÜT), yargı har
 - Vekâlet ücreti çıktısı tarifenin ASGARİ tutarıdır; "önerilen" ya da "uygun" ücret diye sunmayın.
 - `teyit_edin` ve `ayrica` kalemlerini kullanıcıya iletin; bunlar toplama katılmaz.
 - Tebligat ücreti tarifede yazmaz: kullanıcıdan isteyin, tahmin etmeyin.
-- Faiz, işçilik alacağı ve süre hesabı bu araçlarda yok."""
+- Faiz, işçilik alacağı ve süre hesabı bu araçlarda yok.
+- TAZELİK: her sonuç `tazelik` taşır (Resmî Gazete'nin günlük denetimi). Cevapta tazelik satırını (`tazelik.satir`:
+  kaynak RG tarih/sayı, son kontrol) aynen yazın. Durum `guncel` değilse toplamı kesin sonuç gibi sunmayın; UYARI
+  satırını ve bağlantıyı verin. `yeni_duzenleme`de toplam null'dır, `teyit_bekleyen_tutarlar` kesin değildir;
+  `kontrol_edilemedi`de tutarlar verinin RG tarihine göredir ve teyit edilmemiştir."""
 
 
 def _kisa(v: Any) -> str:
@@ -64,7 +76,7 @@ def _t_kalemler(args: Dict[str, Any]) -> Any:
     elif kart:
         raise McpError("`kart`: 'vekalet' ya da 'harc'.")
     m["veri"] = hesap.durum()
-    return _kisa(m)
+    return _kisa(tazelik.kilitle(m, kart or None, kilit=False))
 
 
 def _t_vekalet(args: Dict[str, Any]) -> Any:
@@ -78,7 +90,7 @@ def _t_vekalet(args: Dict[str, Any]) -> Any:
     except hesap.HesapHatasi as exc:
         raise McpError(str(exc)) from None
     out["veri"] = hesap.durum()
-    return _kisa(out)
+    return _kisa(tazelik.kilitle(out, "vekalet"))
 
 
 def _t_harc(args: Dict[str, Any]) -> Any:
@@ -94,7 +106,7 @@ def _t_harc(args: Dict[str, Any]) -> Any:
     except hesap.HesapHatasi as exc:
         raise McpError(str(exc)) from None
     out["veri"] = hesap.durum()
-    return _kisa(out)
+    return _kisa(tazelik.kilitle(out, "harc"))
 
 
 _TUTAR = {"type": ["number", "string"], "description": "TL; 1250000 ya da \"1.250.000,00\""}
@@ -102,7 +114,8 @@ _TUTAR = {"type": ["number", "string"], "description": "TL; 1250000 ya da \"1.25
 TOOLS = [
     Tool("kalemleri",
          "Hesap kartlarının işlem menüsü: avukatlık asgari ücreti (AAÜT 2026) ve yargı harcı/gider avansı işlemleri, "
-         "her işlemin istediği girdiler ve seçenekleri (mahkemeler, maktu kalemler), kaynak Resmî Gazete künyeleri.",
+         "her işlemin istediği girdiler ve seçenekleri (mahkemeler, maktu kalemler), kaynak Resmî Gazete künyeleri ve "
+         "verinin tazeliği (Resmî Gazete'nin günlük denetimi). " + TAZELIK_KURALI,
          {"type": "object", "properties": {
              "kart": {"type": "string", "enum": ["vekalet", "harc"], "description": "Yalnız bir kartın menüsü."}}},
          _t_kalemler),
@@ -110,7 +123,7 @@ TOOLS = [
          "Avukatlık Asgari Ücret Tarifesi'ne (RG 03.11.2026, 33419) göre ASGARİ avukatlık ücreti; hesap kodla yapılır, "
          "her adım ve dayanak çıktıda. islem: nispi_dava (tutar + mahkeme), maktu (kalem [+ saat]), icra "
          "(takip_turu para|tahliye [+ tutar] [+ odeme_suresinde]), arabuluculuk (sonuc + konu [+ tutar | mahkeme]), "
-         "hakem_heyeti (tutar). Kodlar için hesap_kalemleri.",
+         "hakem_heyeti (tutar). Kodlar için hesap_kalemleri. " + TAZELIK_KURALI,
          {"type": "object", "required": ["islem"], "properties": {
              "islem": {"type": "string", "enum": ["nispi_dava", "maktu", "icra", "arabuluculuk", "hakem_heyeti"]},
              "tutar": _TUTAR,
@@ -126,7 +139,8 @@ TOOLS = [
          "492 sayılı Harçlar Kanunu (1) sayılı tarife (2026 tutarları: 98 Seri No'lu Tebliğ, RG 31.12.2025) ve HMK "
          "gider avansı tarifesine göre harç ön hesabı; hesap kodla yapılır, kalemler dayanaklarıyla. islem: "
          "dava_acilis (mahkeme [+ deger] [+ taraf_sayisi + tebligat_ucreti] [+ olum_cismani]), karar_harci "
-         "(deger [+ karar_turu] [+ pesin_odenen]), istinaf|temyiz (yargi adli|idari), ihtiyati (mahkeme), kesif, aym.",
+         "(deger [+ karar_turu] [+ pesin_odenen]), istinaf|temyiz (yargi adli|idari), ihtiyati (mahkeme), kesif, aym. "
+         + TAZELIK_KURALI,
          {"type": "object", "required": ["islem"], "properties": {
              "islem": {"type": "string", "enum": ["dava_acilis", "karar_harci", "istinaf", "temyiz", "ihtiyati", "kesif", "aym"]},
              "mahkeme": {"type": "string", "enum": ["sulh", "asliye", "bolge_yuksek"]},

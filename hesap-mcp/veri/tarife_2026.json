@@ -227,5 +227,126 @@
     "Vekâlet ücreti çıktısı Avukatlık Asgari Ücret Tarifesi'nin öngördüğü ASGARİ tutardır; önerilen ya da uygun ücret değildir.",
     "Harç ön hesaptır; tahakkuk mahkeme veznesince yapılır. Harç muafiyetleri ve indirimleri hesaba girmez.",
     "Maktu harçlar her yıl Ocak'ta Harçlar Kanunu Genel Tebliği ile, avukatlık asgari ücretleri her yıl Türkiye Barolar Birliği tarifesiyle değişir; veri sürümünü kontrol edin."
-  ]
+  ],
+  "izlenen": {
+    "aciklama": "Resmî Gazete nöbetçisi (tazelik.py) günlük fihristi ve o günün mükerrer sayılarını tarar. Başlığı aşağıdaki desenlerden birine uyan ve 'bilinen' listesinde olmayan yayım ilgili kartı kilitler: toplam kesin sonuç olarak verilmez. Desenler Türkçe katlanmış başlıkta (küçük harf, şapkasız, ç→c, ğ→g, ı/İ→i, ö→o, ş→s, ü→u) düzenli ifadedir; 'karar' bölüm başlığında ya da başlıkta, 'ayrica' başlıkta ayrıca aranır, 'haric' varsa eşleşmez.",
+    "fihrist": "https://www.resmigazete.gov.tr/eskiler/YYYY/MM/YYYYMMDD.htm; mükerrer sayılar YYYYMMDDM<n>.htm",
+    "kartlar": {
+      "vekalet": [
+        "AAUT2026"
+      ],
+      "harc": [
+        "HKGT98",
+        "HMKGAT"
+      ]
+    },
+    "kisa_adlar": {
+      "AAUT2026": "Avukatlık Asgari Ücret Tarifesi",
+      "HKGT98": "Harçlar Kanunu Genel Tebliği (Seri No: 98)",
+      "HMKGAT": "HMK Gider Avansı Tarifesi"
+    },
+    "desenler": [
+      {
+        "kod": "aaut",
+        "ad": "Avukatlık Asgari Ücret Tarifesi",
+        "kartlar": [
+          "vekalet"
+        ],
+        "baslik": "avukatlik asgari ucret tarife"
+      },
+      {
+        "kod": "harc_teblig",
+        "ad": "Harçlar Kanunu Genel Tebliği",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "harclar kanunu genel tebli"
+      },
+      {
+        "kod": "harc_cbk",
+        "ad": "Harç tutarlarını ya da tarifelerini değiştiren Cumhurbaşkanı Kararı",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "harclar kanunu|\\bharc(?:i|in|a|lar[a-z]*)?\\b",
+        "karar": "cumhurbaskani karar|karar sayisi",
+        "haric": "yurt disina cikis harc"
+      },
+      {
+        "kod": "gider_avansi",
+        "ad": "Hukuk Muhakemeleri Kanunu Gider Avansı Tarifesi",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "hukuk muhakemeleri kanunu gider avansi tarife"
+      },
+      {
+        "kod": "k492",
+        "ad": "492 sayılı Harçlar Kanunu değişikliği",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "harclar kanun",
+        "ayrica": "degisiklik"
+      },
+      {
+        "kod": "k1136",
+        "ad": "1136 sayılı Avukatlık Kanunu değişikliği",
+        "kartlar": [
+          "vekalet"
+        ],
+        "baslik": "avukatlik kanun",
+        "ayrica": "degisiklik"
+      }
+    ],
+    "bilinen": [
+      {
+        "kaynak": "AAUT2026",
+        "rg_tarih": "2026-11-03",
+        "rg_sayi": "33419",
+        "mukerrer": null,
+        "baslik": "Avukatlık Asgari Ücret Tarifesi",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2026/11/20261103-3.htm"
+      },
+      {
+        "kaynak": "HKGT98",
+        "rg_tarih": "2025-12-31",
+        "rg_sayi": "33124",
+        "mukerrer": "5",
+        "baslik": "Harçlar Kanunu Genel Tebliği (Seri No: 98)",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231M5-28.pdf"
+      },
+      {
+        "kaynak": null,
+        "rg_tarih": "2025-12-31",
+        "rg_sayi": "33124",
+        "mukerrer": "5",
+        "baslik": "Harçlar Kanunu Genel Tebliği (Seri No: 99)",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231M5-29.pdf",
+        "not": "Seri No: 98 ile aynı mükerrer sayıda yayımlandı."
+      },
+      {
+        "kaynak": "HKGT98",
+        "rg_tarih": "2025-12-31",
+        "rg_sayi": "33124",
+        "mukerrer": null,
+        "baslik": "2026 Yılında Motorlu Taşıtlar Vergisi Tutarlarına Uygulanacak Yeniden Değerleme Oranı, Her Bir Kağıttan Alınacak Damga Vergisine İlişkin Üst Sınıra Uygulanacak Yeniden Değerleme Oranı ile Maktu Damga Vergisi ve Harç Tutarlarının Yeniden Belirlenmesi Hakkında Karar (Karar Sayısı: 10783)",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231-30.pdf",
+        "not": "Maktu harçları 2026 için %18,95 artıran karar; tutarları Tebliğ 98 eki ilan eder (Tebliğ m. 3/3) ve veri o ekten okundu."
+      },
+      {
+        "kaynak": "HMKGAT",
+        "rg_tarih": "2025-10-28",
+        "rg_sayi": "33061",
+        "mukerrer": null,
+        "baslik": "Hukuk Muhakemeleri Kanunu Gider Avansı Tarifesi",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/10/20251028-2.htm"
+      }
+    ],
+    "sinirlar": [
+      "Torba kanunlar başlıktan yakalanamaz: 492 ya da 1136 sayılı Kanunu değiştiren hüküm başka adlı bir kanunun içinde olabilir. Öneri (henüz yok): mevzuat.gov.tr'deki 492 ve 1136 kayıtlarının değişiklik listesine haftada bir bakan ek denetim.",
+      "Desenler yalnız fihrist başlığına bakar; tarifeyi dolaylı değiştiren ve başlığında harç ya da tarife adı geçmeyen yayım yakalanmaz.",
+      "Sunucu bulguyu bellekte tutar. Süreç yeniden başlarsa yalnız son 7 gün (derlenme gününden eskisi değil) yeniden taranır; daha eski ve veriye işlenmemiş yayım GitHub nöbetçisinin açtığı issue ile izlenir."
+    ]
+  }
 }

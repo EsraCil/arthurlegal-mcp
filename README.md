@@ -141,7 +141,10 @@ attorney minimum fee under the 2026 Attorney Minimum Fee Tariff (Official Gazett
 No. 33124), and the civil procedure cost advance (Official Gazette 28.10.2025, No. 33061). Every
 amount sits in `hesap-mcp/veri/` with a verbatim source quote; every result line carries its legal
 basis. Rules the official text does not settle are shown outside the total, marked for checking.
-No network, no files. Source: the `hesap-mcp/` folder.
+No files. The only network access is a freshness check: about once a day the tools read the Official
+Gazette's daily index pages (at most 20 page requests a day; no request data is sent). If a new tariff publication appears, the total is
+withheld and the result points to it; if the index cannot be read, the total is marked as unverified. A daily
+GitHub job runs the same check and opens an issue for each new publication. Source: the `hesap-mcp/` folder.
 
 ## Tool naming
 
