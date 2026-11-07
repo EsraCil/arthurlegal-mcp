@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.8.2"
+__version__ = "1.9.0"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry and fee calculator tools and the Official Gazette
