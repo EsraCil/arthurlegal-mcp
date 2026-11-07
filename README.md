@@ -258,6 +258,21 @@ base Python image change, then use its tag from then on:
 Files deleted from the code since the base image stay in the image until the next
 full build.
 
+### Automatic deploys
+
+[`.github/workflows/fly-dagitim.yml`](.github/workflows/fly-dagitim.yml) runs the
+code-only deploy above on GitHub's machines: when the tests pass on a push to
+`master`, it deploys that commit (only if it is still the tip of `master`, so an
+older commit never lands over a newer one), then checks the live server with
+[`.github/dagitim/canli_denetim.py`](.github/dagitim/canli_denetim.py): every running
+machine is on the new image, the tool counts did not drop, the desk page matches the
+commit, the calculation cards answer. If a check fails it redeploys the previous
+image and opens an issue. It needs the repository secret `FLY_API_TOKEN`, a deploy
+token scoped to this app (`flyctl tokens create deploy -a arthurlegal-mcp`). A
+manual run (Actions, "Fly dağıtımı", Run workflow) redeploys `master`; tick
+"Araç sayısı bilerek azaldı" when a release removes tools on purpose. Full images
+are still built by hand.
+
 `hybrid`, the default search mode, ranks keyword and meaning matches together,
 but not blindly. When the keyword channel found every word of the query, both
 count; when it matched only some of the words -- the usual case for a question

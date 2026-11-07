@@ -1,0 +1,132 @@
+# Fly dağıtımı.
+#
+# master'a gelen commit'te Testler yeşil biterse bu iş kodu Fly'a Dockerfile.code ile dağıtır: indeksler taban
+# imajda durur, gönderilen birkaç MB, derleme Fly'ın derleyicisinde (~5 dk). Sonra canlıyı denetler
+# (.github/dagitim/canli_denetim.py): çalışan her makine yeni imajda, araç sayısı düşmemiş, masa sayfası bu
+# commit'tekiyle aynı, hesap kartları cevap veriyor. Denetim tutmazsa önceki imaja döner ve issue açar.
+#
+# Yalnız bu deponun master'ına push'la gelen koşuda çalışır; PR ve çatal koşuları buraya gelmez. Testler sırası
+# karışık bitebilir: yalnız master'ın en son commit'i dağıtılır, eskisi yeninin üstüne yazılmaz.
+# Sır: FLY_API_TOKEN, yalnız arthurlegal-mcp uygulamasına yetkili dağıtım anahtarı (flyctl tokens create deploy).
+# Tam imaj (indeks ya da Python taban imajı değişince) burada yapılmaz: README "Code-only deploys".
+
+name: Fly dağıtımı
+
+on:
+  workflow_run:
+    workflows: ["Testler"]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      arac_azalabilir:
+        description: "Araç sayısı bilerek azaldı (denetim düşüşü hata saymasın)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fly-dagitim
+  cancel-in-progress: false
+
+jobs:
+  dagit:
+    name: Dağıt ve denetle
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'master' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      UYGULAMA: arthurlegal-mcp
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.SHA }}
+
+      - name: master'ın en son commit'i mi
+        id: son
+        run: |
+          son=$(git ls-remote origin refs/heads/master | cut -f1)
+          if [ "$son" != "$SHA" ]; then
+            echo "atla=1" >> "$GITHUB_OUTPUT"
+            echo "::notice::master ilerlemiş ($son); dağıtımı onun koşusu yapar, $SHA atlandı."
+          fi
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        if: steps.son.outputs.atla != '1'
+        with:
+          python-version: "3.11" # Dockerfile: python:3.11-slim
+
+      - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be # v1.5
+        if: steps.son.outputs.atla != '1'
+        with:
+          version: 0.4.123
+
+      - name: Önceki durum (araç sayıları, imaj)
+        id: once
+        if: steps.son.outputs.atla != '1'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          python .github/dagitim/canli_denetim.py olc > "$RUNNER_TEMP/once.json" || echo '{}' > "$RUNNER_TEMP/once.json"
+          flyctl image show -a "$UYGULAMA" --json > "$RUNNER_TEMP/imaj.json"
+          onceki=$(python -c "import json,sys; d=json.load(open(sys.argv[1])); print(d[0]['Registry'] + '/' + d[0]['Repository'] + '@' + d[0]['Digest'])" "$RUNNER_TEMP/imaj.json")
+          echo "onceki=$onceki" >> "$GITHUB_OUTPUT"
+          echo "Önce: $(cat "$RUNNER_TEMP/once.json"), imaj $onceki"
+
+      - name: Dağıt (Dockerfile.code)
+        if: steps.son.outputs.atla != '1'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: >-
+          flyctl deploy . -a "$UYGULAMA" --config fly.toml --dockerfile Dockerfile.code
+          --depot=false --remote-only --image-label "gh-${SHA::7}" --wait-timeout 10m
+
+      - name: Canlıyı denetle
+        if: steps.son.outputs.atla != '1'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          AZALABILIR: ${{ inputs.arac_azalabilir && '--arac-azalabilir' || '' }}
+        run: |
+          flyctl machines list -a "$UYGULAMA" --json > "$RUNNER_TEMP/makineler.json"
+          python .github/dagitim/canli_denetim.py denetle --etiket "gh-${SHA::7}" \
+            --once "$RUNNER_TEMP/once.json" --makineler "$RUNNER_TEMP/makineler.json" $AZALABILIR
+
+      - name: Önceki imaja dön
+        id: geri
+        if: failure() && steps.once.outcome == 'success'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          ONCEKI: ${{ steps.once.outputs.onceki }}
+        run: flyctl deploy -a "$UYGULAMA" --config fly.toml --image "$ONCEKI" --wait-timeout 10m
+
+      - name: Geri dönüşten sonra canlı uç
+        id: saglik
+        if: failure() && steps.geri.outcome == 'success'
+        run: python .github/dagitim/canli_denetim.py saglik --once "$RUNNER_TEMP/once.json"
+
+      - name: Issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GERI: ${{ steps.geri.outcome }}
+          SAGLIK: ${{ steps.saglik.outcome }}
+          KOSU: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          case "$GERI/$SAGLIK" in
+            success/success) durum="Önceki imaja dönüldü ve canlı uç cevap veriyor." ;;
+            success/*) durum="Önceki imaja dönüldü ama canlı uç denetimi tutmadı: elle bakılmalı." ;;
+            skipped/*) durum="Dağıtım başlamadan durdu; canlı uç değişmedi." ;;
+            *) durum="Önceki imaja dönülemedi: elle bakılmalı." ;;
+          esac
+          gh issue create --title "Fly dağıtımı tutmadı: ${SHA::7}" \
+            --body "$(printf 'Commit %s otomatik dağıtımda ya da canlı denetimde düştü.\n\n%s\n\nKoşu: %s' "$SHA" "$durum" "$KOSU")"
