@@ -28,6 +28,33 @@ def _akis() -> str:
         return fh.read()
 
 
+def _betik() -> str:
+    with open(os.path.join(ROOT, ".github", "dagitim", "dagit.sh"), encoding="utf-8") as fh:
+        return fh.read()
+
+
+class DeployRetryTest(unittest.TestCase):
+    """dagit.sh yalnız derleme aşamasındaki hatada yeniden dener; sürüm/sağlık hatası doğrudan geri dönüşe gider."""
+
+    def _derleme_hatasi(self, gunluk: str) -> bool:
+        desen = re.search(r'grep -qE "([^"]+)"', _betik()).group(1)
+        return re.search(desen, gunluk, re.M) is not None
+
+    def test_builder_failures_are_retried(self) -> None:
+        # 2026-11-07 ilk otomatik koşu: derleyici makinesi zamanında açılmadı
+        self.assertTrue(self._derleme_hatasi(
+            "✓ compatible remote builder found\n"
+            "Error: failed to fetch an image or build from source: error building: failed to get status: "
+            "rpc error: code = Unavailable\n"))
+        self.assertTrue(self._derleme_hatasi("Error: failed to create remote builder: deadline_exceeded\n"))
+
+    def test_release_failures_are_not_retried(self) -> None:
+        self.assertFalse(self._derleme_hatasi(
+            "✓ compatible remote builder found\n--> Build Summary:\nimage size: 2.6 GB\n"
+            "Error: timeout reached waiting for health checks to pass for machine 85e991b4657008\n"))
+        self.assertFalse(self._derleme_hatasi("✓ compatible remote builder found\n"))
+
+
 class WorkflowGuardsTest(unittest.TestCase):
     def test_runs_only_for_pushes_to_this_repos_master(self) -> None:
         metin = _akis()
@@ -44,8 +71,14 @@ class WorkflowGuardsTest(unittest.TestCase):
     def test_secret_only_reaches_flyctl_steps(self) -> None:
         metin = _akis()
         self.assertNotIn("FLY_API_TOKEN", metin.split("steps:")[0].split("jobs:")[1])
-        self.assertIn("--dockerfile Dockerfile.code", metin)
+        self.assertIn("bash .github/dagitim/dagit.sh", metin)
+        self.assertIn("--dockerfile Dockerfile.code", _betik())
         self.assertIn("cancel-in-progress: false", metin)
+
+    def test_rollback_also_runs_when_the_run_is_cancelled(self) -> None:
+        metin = _akis()
+        self.assertIn("(failure() || cancelled()) && steps.once.outcome == 'success'", metin)
+        self.assertIn("(failure() || cancelled()) && steps.geri.outcome == 'success'", metin)
 
     def test_only_master_head_is_deployed(self) -> None:
         self.assertIn("git ls-remote origin refs/heads/master", _akis())

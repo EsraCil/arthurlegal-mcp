@@ -1,7 +1,8 @@
 # Fly dağıtımı.
 #
 # master'a gelen commit'te Testler yeşil biterse bu iş kodu Fly'a Dockerfile.code ile dağıtır: indeksler taban
-# imajda durur, gönderilen birkaç MB, derleme Fly'ın derleyicisinde (~5 dk). Sonra canlıyı denetler
+# imajda durur, gönderilen birkaç MB, derleme Fly'ın derleyicisinde (~5 dk); derleyici açılmazsa bir kez daha dener,
+# yine olmazsa imajı bu makinede derler (.github/dagitim/dagit.sh). Sonra canlıyı denetler
 # (.github/dagitim/canli_denetim.py): çalışan her makine yeni imajda, araç sayısı düşmemiş, masa sayfası bu
 # commit'tekiyle aynı, hesap kartları cevap veriyor. Denetim tutmazsa önceki imaja döner ve issue açar.
 #
@@ -23,6 +24,11 @@ on:
         description: "Araç sayısı bilerek azaldı (denetim düşüşü hata saymasın)"
         type: boolean
         default: false
+      derleyici:
+        description: "İmaj nerede derlensin (fly: Fly'ın derleyicisi, düşerse GitHub; github: doğrudan GitHub)"
+        type: choice
+        options: [fly, github]
+        default: fly
 
 permissions:
   contents: read
@@ -42,7 +48,7 @@ jobs:
        github.event.workflow_run.head_branch == 'master' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 75
     env:
       UYGULAMA: arthurlegal-mcp
       SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
@@ -86,9 +92,8 @@ jobs:
         if: steps.son.outputs.atla != '1'
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: >-
-          flyctl deploy . -a "$UYGULAMA" --config fly.toml --dockerfile Dockerfile.code
-          --depot=false --remote-only --image-label "gh-${SHA::7}" --wait-timeout 10m
+          DERLEYICI: ${{ inputs.derleyici || 'fly' }}
+        run: bash .github/dagitim/dagit.sh
 
       - name: Canlıyı denetle
         if: steps.son.outputs.atla != '1'
@@ -102,7 +107,7 @@ jobs:
 
       - name: Önceki imaja dön
         id: geri
-        if: failure() && steps.once.outcome == 'success'
+        if: (failure() || cancelled()) && steps.once.outcome == 'success'
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           ONCEKI: ${{ steps.once.outputs.onceki }}
@@ -110,11 +115,11 @@ jobs:
 
       - name: Geri dönüşten sonra canlı uç
         id: saglik
-        if: failure() && steps.geri.outcome == 'success'
+        if: (failure() || cancelled()) && steps.geri.outcome == 'success'
         run: python .github/dagitim/canli_denetim.py saglik --once "$RUNNER_TEMP/once.json"
 
       - name: Issue
-        if: failure()
+        if: failure() || cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

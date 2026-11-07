@@ -267,7 +267,10 @@ older commit never lands over a newer one), then checks the live server with
 [`.github/dagitim/canli_denetim.py`](.github/dagitim/canli_denetim.py): every running
 machine is on the new image, the tool counts did not drop, the desk page matches the
 commit, the calculation cards answer. If a check fails it redeploys the previous
-image and opens an issue. It needs the repository secret `FLY_API_TOKEN`, a deploy
+image and opens an issue. If Fly's builder does not start, the build is tried once
+more and then made on the GitHub machine itself
+([`.github/dagitim/dagit.sh`](.github/dagitim/dagit.sh)); a failure after the build
+is not retried. It needs the repository secret `FLY_API_TOKEN`, a deploy
 token scoped to this app (`flyctl tokens create deploy -a arthurlegal-mcp`). A
 manual run (Actions, "Fly dağıtımı", Run workflow) redeploys `master`; tick
 "Araç sayısı bilerek azaldı" when a release removes tools on purpose. Full images
