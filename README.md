@@ -249,9 +249,12 @@ upload is a few megabytes and a deploy takes minutes:
 
 Run it from a clean checkout: `*.db` files are ignored by git, so a fresh worktree has
 no `baked/` and nothing large is sent. `--depot=false` uses Fly's own builder, which
-pulls the base image from the app's registry. Build a full image (`Dockerfile`) when
-the indexes, the Python packages or the base Python image change, then use its tag
-from then on: `--build-arg BASE=registry.fly.io/arthurlegal-mcp:<full-image-tag>`.
+pulls the base image from the app's registry. `Dockerfile.code` also runs the same
+pinned `pip install` line as `Dockerfile` (`tests/test_paketler.py` keeps them equal):
+a new or changed Python package is fetched by the builder, so it ships with a
+code-only deploy too. Build a full image (`Dockerfile`) only when the indexes or the
+base Python image change, then use its tag from then on:
+`--build-arg BASE=registry.fly.io/arthurlegal-mcp:<full-image-tag>`.
 Files deleted from the code since the base image stay in the image until the next
 full build.
 

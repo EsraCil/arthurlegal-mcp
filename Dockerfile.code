@@ -1,10 +1,15 @@
 # Code-only deploy. The six baked indexes (~2 GB) come from an earlier full image
 # built with ./Dockerfile; only the code is sent. Run it from a clean checkout
-# (no baked/ directory), see README "Code-only deploys". When the indexes, the
-# Python packages or the base image change, build a full image again and pass
-# its tag as BASE from then on.
+# (no baked/ directory), see README "Code-only deploys". When the indexes or the
+# base Python image change, build a full image again and pass its tag as BASE
+# from then on.
 ARG BASE=registry.fly.io/arthurlegal-mcp:onyuz-20261028
 FROM ${BASE}
 
 COPY . /app
-RUN chmod +x start.sh
+
+# The same exact packages as ./Dockerfile (tests/test_paketler.py keeps the lines equal), so a
+# code-only image runs what the tests ran against. Versions already in the base are skipped;
+# a new or changed package is fetched here by the builder from PyPI, not uploaded from the
+# deploying machine, so a package change no longer needs a full image.
+RUN pip install --no-cache-dir "de-eli-mcp==0.5.4" "pypdf==6.21.4" "numpy==2.4.6" "pypdfium2==5.14.0"  && chmod +x start.sh  && python -c "import sqlite3, json, zipfile, urllib.request, numpy, pypdfium2; print('stdlib ok, numpy', numpy.__version__, 'pypdfium2', pypdfium2.PYPDFIUM_INFO)"
