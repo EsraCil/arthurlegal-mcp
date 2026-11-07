@@ -191,7 +191,7 @@ class Harc(unittest.TestCase):
         o = hesap.harc("dava_acilis", mahkeme="sulh", deger=5_000)
         self.assertEqual(o["kalemler"][0]["tutar_tl"], 335.2)
         self.assertEqual(o["kalemler"][1]["tutar_tl"], 183.0)           # 732 / 4
-        self.assertTrue(any("alt sınırı" in t for t in o["teyit_edin"]))
+        self.assertTrue(any("peşin harca" in t for t in o["teyit_edin"]))  # alt sınırın sırası teyit bekler
 
     def test_dava_acilis_degersiz_ve_tebligatsiz(self):
         o = hesap.harc("dava_acilis", mahkeme="asliye", taraf_sayisi=3)

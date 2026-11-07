@@ -1,6 +1,16 @@
 {
   "surum": "2026-11",
   "derlenme_tarihi": "2026-11-07",
+  "ikinci_okuma": {
+    "tarih": "2026-11-07",
+    "yontem": "Resmî Gazete ekleri ve mevzuat.gov.tr kayıtları yeniden indirildi (SHA-256 kaynaklardaki değerlerle aynı); taranmış tarife sayfaları görüntüden bağımsız olarak ikinci kez okundu ve verideki her değerle karşılaştırıldı.",
+    "sonuc": {
+      "AAUT2026": "62 değerin 62'si aynı (58 maktu kalem, 3 ek saat ücreti, hakem heyeti) ve 10 nispi dilimin 10'u aynı.",
+      "HKGT98": "(1) sayılı tarifeden verideki 27 kalemin 27'si aynı (18 maktu tutar, 9 oran). Nispi karar ve ilam harçlarının alt sınırı (732 TL) tebliğ ekinde III-1 bentlerinin hemen ardından tek satırdır; mevzuat.gov.tr'deki 492 metnindeki eski tutarlar yıllık artışın kanun metnine değil mükerrer 138. madde uyarınca çıkarılan tebliğe işlenmesindendir.",
+      "HMKGAT": "Madde 4 (taraf sayısının beş katı tebligat ücreti + 530 TL) aynı. 15.09-07.11.2026 Resmî Gazete taramasında ve mevzuat.gov.tr'de bundan yeni HMK gider avansı tarifesi yok."
+    },
+    "kapsam_disi": "Tebliğ ekindeki A-III-1-f, A-III-1-g (ihalenin feshi) ile B-I-3-d, B-I-3-e (maaş haczi, İİK 125) veride yok; hesapta kullanılmıyor."
+  },
   "kaynaklar": [
     {
       "kod": "AAUT2026",
@@ -23,7 +33,7 @@
       "yururluk": "2026-01-01",
       "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231M5-28.pdf",
       "sha256": "5af3d63bb41b4203c959df066d7687e1cbab72c0bc1f7fdd06e8100a0eba77a7",
-      "not": "Tebliğ m. 3/4: 2026'da uygulanacak maktu harçlar ve hadler tebliğ ekindeki tarifelerde. (1) sayılı tarife (Yargı Harçları) ekin 2. sayfasındadır (taranmış görüntü). Her tutar 492 sayılı Kanunun mevzuat.gov.tr'deki güncel metninde parantez içinde işlenen 'Uygulanan Miktar' ile karşılaştırıldı; tek fark aşağıda (dogrulanamayanlar)."
+      "not": "Tebliğ m. 3/4: 2026'da uygulanacak maktu harçlar ve hadler tebliğ ekindeki tarifelerde. (1) sayılı tarife (Yargı Harçları) ekin 2. sayfasındadır (taranmış görüntü). Her tutar 492 sayılı Kanunun mevzuat.gov.tr'deki güncel metninde parantez içinde işlenen 'Uygulanan Miktar' ile karşılaştırıldı; tek fark (nispi harç alt sınırı) ikinci_okuma kaydında açıklandı."
     },
     {
       "kod": "K492",
@@ -205,7 +215,6 @@
     "kanun": {"citation": "HUKUK MUHAKEMELERİ KANUNU (Kanun No. 6100, RG sayı 27836) m. 120", "alinti": "Davacı, yargılama harçları ile her yıl Adalet Bakanlığınca çıkarılacak gider avansı tarifesinde belirlenecek olan tutarı, dava açarken mahkeme veznesine yatırmak zorundadır."}
   },
   "dogrulanamayanlar": [
-    "Nispi karar ve ilam harcının alt sınırı: 98 Seri No'lu Tebliğ ekinde 'Nispi harçlar (732 TL)'den aşağı olamaz.' satırı tek, (g) bendinden sonra durur. mevzuat.gov.tr'deki güncel 492 metninde aynı satır iki yerde ve eski tutarlarla (427,60 TL ve 615,40 TL) görünüyor. Hesap Resmî Gazete'deki ek tarifeyi (732 TL) esas alır; alt sınırın hangi bentlere uygulandığı teyit edilmeli.",
     "Alt sınırın peşin harca uygulanışı: hesap, karar ve ilam harcını önce alt sınırla, sonra dörtte birini (m. 28/a) alır. Uygulamanın bu sırayla yapıldığı resmî metinden teyit edilemedi.",
     "Maktu karar ve ilam harcının (732 TL) dava açılırken peşin alınıp alınmadığı: 492 s. K. m. 27 maktu harçların ilgili işlemden önce ödeneceğini söyler; ilgili işlem karardır. Hesap bu kalemi toplama katmaz, ayrıca gösterir.",
     "İstinaf ve temyiz başvurusunda (1) sayılı tarife A-I-3 başvurma harcının (1.124,50 TL) IV bölümündeki istinaf/temyiz harcıyla birlikte alınıp alınmadığı resmî metinden çıkarılamadı. Hesap A-I-3'ü toplama katmaz, ayrıca gösterir.",
