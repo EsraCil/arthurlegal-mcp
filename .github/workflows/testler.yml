@@ -37,7 +37,7 @@ jobs:
           python-version: "3.11" # Dockerfile: python:3.11-slim
 
       - name: Paketler (Dockerfile ile aynı)
-        run: pip install "de-eli-mcp==0.5.4" "pypdf==6.21.4" "numpy==2.4.6"
+        run: pip install "de-eli-mcp==0.5.4" "pypdf==6.21.4" "numpy==2.4.6" "pypdfium2==5.14.0"
 
       - name: Ağ geçidi testleri (kök tests/, dosya başına ayrı süreç)
         run: |

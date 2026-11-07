@@ -75,6 +75,14 @@ out-of-fold sensitivity 92-100% per topic; on 60 unseen legislation titles vergi
 enerji 0/3. Every response says how many items it dropped, `esik=0` disables it, and `status`
 reports the model and both measurements. Do not use it for publication verification.
 
+Official Gazette annexes (tariffs, schedules, forms) are often a separate PDF of scanned pages.
+`tr_resmi_gazete_getir` lists a page's annex links as `ekler` and, for a PDF, the pages without a
+text layer as `taranmis_sayfalar`. `tr_resmi_gazete_ek_sayfa(url, sayfa)` returns one page: its
+text, or the page as an MCP image block that the model reads itself. A JPEG scan goes out as the
+PDF's own bytes with no extra package; other scans (JBIG2, CCITT) are rendered with `pypdfium2`,
+which only the full image installs, and otherwise answer with an UYARI line. The tool is on `/mcp`
+only, not in the directory profile.
+
 ## Claude connector directory
 
 The directory listing points at a narrower profile of the same server:

@@ -539,8 +539,14 @@ def _madde_araligi(metin: Any) -> Optional[str]:
 # Dönen metin                                                                  #
 # --------------------------------------------------------------------------- #
 def _donen(deger: Any) -> Dict[str, Any]:
-    """Modele giden metnin kendisi mcpcore._as_text(value): özet onun üzerinden alınır."""
-    metin = mcpcore._as_text(deger)
+    """Modele giden metnin kendisi mcpcore._as_text(value): özet onun üzerinden alınır.
+
+    ContentResult (metin + görüntü bloğu) için modele giden metin bloklarıdır; görüntü baytı kayda girmez."""
+    bloklar = getattr(deger, "mcp_content", None)
+    if isinstance(bloklar, list):
+        metin = "\n".join(b.get("text", "") for b in bloklar if isinstance(b, dict) and b.get("type") == "text")
+    else:
+        metin = mcpcore._as_text(deger)
     return {"sha256": hashlib.sha256(metin.encode("utf-8", "surrogatepass")).hexdigest(),
             "ilk": metin[:ILK_KARAKTER]}
 

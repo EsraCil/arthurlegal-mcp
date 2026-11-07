@@ -321,6 +321,8 @@ GUIDE = """arthur-tr-hukuk-mcp — hangi soru için hangi araç
    Kuruma özel filtreler: kurum_listesi. Metin: kurum_karari_getir(kurum, id)
    SPK bülteni içinde: spk_bulten_icinde_ara(bulten="2026/27", query)
    Yayım teyidi ve RG künyesi: resmi_gazete_fihrist(date) / resmi_gazete_tara(query, date_from, date_to)
+   Ekler (tarife, cetvel, form): resmi_gazete_getir(url) sayfadaki ek bağlantılarını 'ekler' olarak verir;
+     ek PDF'inde 'taranmis_sayfalar' metin katmanı olmayan sayfalardır, tutarları metinde YOKTUR.
    Konu taraması: resmi_gazete_tara(konu="enerji"|"rekabet"|"vergi"|"icra", date_from, date_to)
      Yerel, ağsız, ücretsiz bir ön eleme. Başlıkta konu adı geçmese de yakalar —
      "Konkordato Gider Avansı Tarifesi" icradır ama 'icra' yazmaz. Etiketli gövdede
@@ -409,7 +411,12 @@ def build_tools() -> List[Tool]:
              mv.WITHIN_SCHEMA, _wrap(mv.search_within)),
         Tool("resmi_gazete_fihrist", "Bir günün Resmî Gazete fihristi (bölüm + başlık + link). Kurul kararlarının yayım teyidi.",
              rg.SOURCE.search_schema, _wrap(rg.fihrist)),
-        Tool("resmi_gazete_getir", "Resmî Gazete belge metni (fihrist url'sinden).", rg.SOURCE.get_schema, _wrap(rg.get)),
+        Tool("resmi_gazete_getir", "Resmî Gazete belge metni (fihrist url'sinden). HTML sayfada ek bağlantıları "
+             "'ekler' olarak döner; ek PDF'inde sayfa sayısını ve metin katmanı olmayan (taranmış) sayfaları "
+             "'taranmis_sayfalar' olarak bildirir.", rg.SOURCE.get_schema, _wrap(rg.get)),
+        Tool("resmi_gazete_ek_sayfa", "Resmî Gazete ek PDF'inin TEK sayfası (tarife, cetvel, form). Metni olan "
+             "sayfa metin döner; taranmış sayfa görüntü olarak döner, tutarları görüntüden siz okursunuz. "
+             "Yalnız www.resmigazete.gov.tr adresleri.", rg.EK_SAYFA_SCHEMA, _wrap(rg.ek_sayfa)),
         Tool("resmi_gazete_tara", "Tarih aralığında (≤60 gün) fihrist tarar; gün başına bir istek. "
              "query harfi harfine arar; konu ise yerel bir ön eleme ile başlıkta konu adı geçmeyen "
              "kalemleri de yakalar ('Katı Yakıtların Kontrolü Yönetmeliği' -> enerji). En az biri gerekir.",

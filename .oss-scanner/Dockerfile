@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "de-eli-mcp==0.5.4" "pypdf==6.21.4" "numpy==2.4.6"
+RUN pip install --no-cache-dir "de-eli-mcp==0.5.4" "pypdf==6.21.4" "numpy==2.4.6" "pypdfium2==5.14.0"
 
 # Tarayıcı sözleşmesi: depo imajda /src'de durur.
 COPY . /src

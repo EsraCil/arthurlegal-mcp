@@ -47,6 +47,7 @@ TITLES: Dict[str, str] = {
     "tr_mevzuat_icinde_ara": "Türkiye: search within one piece of legislation",
     "tr_resmi_gazete_fihrist": "Türkiye: Official Gazette daily index",
     "tr_resmi_gazete_getir": "Türkiye: get an Official Gazette document",
+    "tr_resmi_gazete_ek_sayfa": "Türkiye: read one page of an Official Gazette annex",
     "tr_resmi_gazete_tara": "Türkiye: scan Official Gazette indexes by date range",
     "tr_kurum_karari_ara": "Türkiye: search regulator decisions",
     "tr_kurum_karari_getir": "Türkiye: get a regulator decision",

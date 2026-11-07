@@ -52,11 +52,15 @@ from tool_titles import annotate  # noqa: E402
 __version__ = "1.8.2"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
-# narrower profile: the land-registry and fee calculator tools stay on /mcp
-# only, and the instructions describe the tools instead of directing Claude. Every other tool
-# is the same object on both paths.
+# narrower profile: the land-registry and fee calculator tools and the Official Gazette
+# annex page reader stay on /mcp only, and the instructions describe the tools instead of
+# directing Claude. Every other tool is the same object on both paths.
 DIRECTORY_PATH = "/directory/mcp"
 DIRECTORY_EXCLUDED_PREFIXES: Tuple[str, ...] = ("tkgm", "hesap")
+# Single tools kept off the directory. tr_resmi_gazete_ek_sayfa answers with a page image.
+DIRECTORY_EXCLUDED_TOOLS = frozenset(("tr_resmi_gazete_ek_sayfa",))
+# Result keys that name a tool the directory does not list; its copy of the tool drops them.
+DIRECTORY_DROPPED_KEYS: Dict[str, Tuple[str, ...]] = {"tr_resmi_gazete_getir": ("ek_okuma",)}
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Deployed bundle: every backend sits next to this file.
@@ -878,7 +882,19 @@ Each section below describes one jurisdiction's sources and citation conventions
 
 
 def _directory_excluded(name: str) -> bool:
-    return any(name.startswith(p + "_") for p in DIRECTORY_EXCLUDED_PREFIXES)
+    return name in DIRECTORY_EXCLUDED_TOOLS or any(name.startswith(p + "_") for p in DIRECTORY_EXCLUDED_PREFIXES)
+
+
+def _directory_handler(name: str, handler: Callable[[Dict[str, Any]], Any]) -> Callable[[Dict[str, Any]], Any]:
+    """The handler as the directory serves it: without result keys that point at /mcp-only tools."""
+    drop = DIRECTORY_DROPPED_KEYS.get(name)
+    if not drop:
+        return handler
+
+    def without(args: Dict[str, Any]) -> Any:
+        out = handler(args)
+        return {k: v for k, v in out.items() if k not in drop} if isinstance(out, dict) else out
+    return without
 
 
 def _directory_section(prefix: str, text: str) -> str:
@@ -895,8 +911,8 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
     # the directory takes no instructions. There the desk keeps the answer in the chat and the tools
     # keep their own cards (article, decision list); copies, because Tool has __slots__.
     kart = getattr(al_arayuz, "kart_meta", None) if al_arayuz is not None else None
-    tools = [Tool(t.name, t.description, t.input_schema, t.handler, meta=kart(t.name) if kart else t.meta,
-                  title=t.title, annotations=t.annotations)
+    tools = [Tool(t.name, t.description, t.input_schema, _directory_handler(t.name, t.handler),
+                  meta=kart(t.name) if kart else t.meta, title=t.title, annotations=t.annotations)
              for t in _tools
              if t.name not in ("status", "al_masasi", "al_masaya_yaz", "al_masada_basla")
              and not _directory_excluded(t.name)]

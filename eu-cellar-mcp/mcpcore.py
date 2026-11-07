@@ -42,8 +42,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-__all__ = ["Tool", "Resource", "McpError", "run", "run_stdio", "run_http", "build_parser",
-           "istek_baglami"]
+__all__ = ["Tool", "Resource", "McpError", "ContentResult", "run", "run_stdio", "run_http",
+           "build_parser", "istek_baglami"]
 
 # Cap the JSON-RPC request body: without this a single Content-Length header can
 # drive the process out of memory.
@@ -111,6 +111,26 @@ def istek_baglami() -> Dict[str, Any]:
 
 class McpError(Exception):
     """A tool failure that should reach the model as readable text, not a crash."""
+
+
+class ContentResult:
+    """A tool result that brings its own MCP content blocks, e.g. a page image.
+
+    A handler normally returns a dict or a string, which the dispatcher serialises into
+    one text block. A handler that hands the model a picture returns this instead:
+    ``mcp_content`` is the list of blocks exactly as the MCP spec writes them
+    (``{"type": "image", "data": <base64>, "mimeType": "image/jpeg"}`` beside a text
+    block) and goes out unchanged; ``data`` is a small JSON-able summary without the
+    image bytes, which a view receives as ``structuredContent``. The dispatcher looks
+    for the ``mcp_content`` attribute, not this class, so every vendored copy of this
+    file accepts the others' results.
+    """
+
+    __slots__ = ("mcp_content", "data")
+
+    def __init__(self, content: List[Dict[str, Any]], data: Optional[Dict[str, Any]] = None) -> None:
+        self.mcp_content = list(content)
+        self.data = data
 
 
 class Tool:
@@ -303,6 +323,15 @@ class Dispatcher:
             return _err(msg_id, -32602, "Unknown tool: %s" % name)
         try:
             value = tool.handler(args)
+            blocks = getattr(value, "mcp_content", None)
+            if isinstance(blocks, list):
+                # ContentResult: the blocks go out as the tool built them (text + image);
+                # the view gets the summary, never the image bytes.
+                own: Dict[str, Any] = {"content": list(blocks)}
+                data = getattr(value, "data", None)
+                if tool.meta and isinstance(data, dict):
+                    own["structuredContent"] = data
+                return _ok(msg_id, own)
             result: Dict[str, Any] = {"content": [{"type": "text", "text": _as_text(value)}]}
             # A tool with a view hands the view the same object as data: the view
             # reads structuredContent, the model keeps reading the identical text.

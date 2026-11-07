@@ -60,8 +60,10 @@ class DirectoryProfile(unittest.TestCase):
         self.assertIn("tr_mevzuat_madde_getir", names)
         main = {t.name for t in server._tools}
         # al_masaya_yaz and al_masada_basla tell Claude where to write; the directory takes no instructions.
+        # tr_resmi_gazete_ek_sayfa answers with a page image and stays on /mcp.
+        self.assertIn("tr_resmi_gazete_ek_sayfa", main)
         self.assertEqual(names, {n for n in main if not n.startswith(("tkgm_", "hesap_"))
-                                 and n not in ("al_masaya_yaz", "al_masada_basla")})
+                                 and n not in ("al_masaya_yaz", "al_masada_basla", "tr_resmi_gazete_ek_sayfa")})
 
     def test_fee_cards_on_main_and_on_its_desk(self):
         main = {t.name: t for t in server._tools}
