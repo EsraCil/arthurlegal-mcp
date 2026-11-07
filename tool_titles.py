@@ -27,7 +27,7 @@ PREFIX_LABELS = {
     "tr": "Türkiye", "nl": "Netherlands", "pl": "Poland", "at": "Austria",
     "ie": "Ireland", "fi": "Finland", "es": "Spain", "uk": "UK", "eu": "EU",
     "jp": "Japan", "gleif": "LEI", "tkgm": "Land registry", "az": "Azerbaijan",
-    "scholar": "Scholarship", "contracts": "Contracts", "de": "Germany",
+    "scholar": "Scholarship", "contracts": "Contracts", "de": "Germany", "hesap": "Türkiye fees",
 }
 
 TITLES: Dict[str, str] = {
@@ -179,6 +179,10 @@ TITLES: Dict[str, str] = {
     "al_masasi": "ArthurLegal desk (interactive view)",
     "al_masaya_yaz": "Show the answer on the ArthurLegal desk",
     "al_masada_basla": "Put the question on the ArthurLegal desk",
+    # Fee calculator cards (Türkiye)
+    "hesap_kalemleri": "Türkiye: fee calculator menu",
+    "hesap_vekalet_ucreti": "Türkiye: attorney minimum fee (tariff calculation)",
+    "hesap_yargi_harci": "Türkiye: court fees and cost advance (tariff calculation)",
 }
 
 # Tools that can change something (locally: write a file or the UI answer).

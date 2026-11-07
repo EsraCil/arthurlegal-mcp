@@ -11,7 +11,7 @@ signed resource contracts - GLEIF entity identity.
     https://arthurlegal-mcp.fly.dev/mcp
 
 The same server also answers at `/directory/mcp` with the 107 read-only tools listed in the
-Claude connector directory: everything except the land-registry `tkgm_` tools. See
+Claude connector directory: everything except the land-registry `tkgm_` and fee calculator `hesap_` tools. See
 [Claude connector directory](#claude-connector-directory).
 
 Anyone with the URL can call every tool. Self-hosting? Deploy your own copy (see
@@ -125,10 +125,20 @@ discrepancy. On this hosted endpoint file paths are refused (parcel text is pass
 and the tools that write files, fetch elevation data or read title records are disabled; run
 `tkgm-mcp/server.py` locally over stdio for those. Source: the `tkgm-mcp/` folder.
 
+## Turkish fee calculator cards (`hesap_`)
+
+On `/mcp` only, three tools compute Turkish legal costs in code rather than in the model: the
+attorney minimum fee under the 2026 Attorney Minimum Fee Tariff (Official Gazette 03.11.2026, No.
+33419), court fees under Law No. 492 tariff (1) with the 2026 amounts (Official Gazette 31.12.2025,
+No. 33124), and the civil procedure cost advance (Official Gazette 28.10.2025, No. 33061). Every
+amount sits in `hesap-mcp/veri/` with a verbatim source quote; every result line carries its legal
+basis. Rules the official text does not settle are shown outside the total, marked for checking.
+No network, no files. Source: the `hesap-mcp/` folder.
+
 ## Tool naming
 
 Every tool carries its jurisdiction as a prefix -- `tr_` `nl_` `pl_` `at_` `ie_` `fi_`
-`es_` `uk_` `eu_` `jp_` `gleif_` `tkgm_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
+`es_` `uk_` `eu_` `jp_` `gleif_` `tkgm_` `hesap_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
 `get_act` means six different things and `search_legislation` four, so the
 prefix is what keeps a Spanish question from being answered with Finnish law.
 
