@@ -115,5 +115,64 @@ class RepairStatusTests(unittest.TestCase):
         self.assertEqual(len(self.vectors()), 4, "an unchanged act keeps its vector on a re-crawl")
 
 
+class StatusNoteTests(unittest.TestCase):
+    """F-197: LO 15/1999 stays 'vigente' (its repeal is "sin perjuicio de ..."), so the search result
+    carries BOE's note as `status_note`; only_in_force=true still returns it, with the note."""
+
+    @classmethod
+    def setUpClass(cls):
+        path = os.path.join(tempfile.mkdtemp(), "index.db")
+        with mock.patch.dict(os.environ, {"INDEX_PATH": path}):
+            spec = importlib.util.spec_from_file_location("es_server_status_note",
+                                                          os.path.join(es_fakes.BACKEND, "server.py"))
+            cls.server = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(cls.server)
+        idx = cls.server._index
+        for ref, title, status, head in (
+                ("BOE-A-1999-23750", "Ley Orgánica 15/1999, de protección de datos de carácter personal", "vigente",
+                 SIN_PERJUICIO),
+                ("BOE-A-2016-8275", "Ley de protección de datos derogada", "derogada", DEROGADA),
+                ("BOE-A-2026-1", "Real Decreto de protección de datos, derogación futura", "vigente", FUTURA),
+                ("BOE-A-2018-16673", "Ley Orgánica 3/2018, de protección de datos personales", "vigente",
+                 "TÍTULO I\n\nDisposiciones generales")):
+            idx.upsert({"ref": ref, "title": title, "body": "Ley Orgánica\nJefatura del Estado" + crawl.TEXT_MARK + head,
+                        "status": status, "lang": "es"})
+        idx.db.commit()
+        idx.reindex_fts()
+        cls.addClassCleanup(idx.db.close)
+
+    def search(self, **kw):
+        out = self.server._t_search(dict({"query": "protección de datos", "mode": "lexical"}, **kw))
+        return {r["ref"]: r for r in out["results"]}
+
+    def test_the_marker_is_crawls(self):
+        self.assertEqual(self.server._TEXT_MARK, crawl.TEXT_MARK)
+
+    def test_a_partial_repeal_carries_the_note_and_stays_in_force(self):
+        res = self.search(only_in_force=True)
+        self.assertEqual(sorted(res), ["BOE-A-1999-23750", "BOE-A-2018-16673", "BOE-A-2026-1"])
+        lo = res["BOE-A-1999-23750"]
+        self.assertEqual(lo["status"], "vigente")
+        self.assertEqual(lo["status_note"], SIN_PERJUICIO)
+        self.assertTrue(res["BOE-A-2026-1"]["status_note"].startswith("Norma derogada, con efectos de 1 de marzo de 2027"))
+        self.assertNotIn("status_note", res["BOE-A-2018-16673"])
+
+    def test_a_repealed_act_needs_no_note(self):
+        res = self.search()
+        self.assertEqual(res["BOE-A-2016-8275"]["status"], "derogada")
+        self.assertNotIn("status_note", res["BOE-A-2016-8275"])
+
+    def test_the_note_is_the_leading_note_lines_only(self):
+        body = "Ley" + crawl.TEXT_MARK + DEROGADA
+        self.assertEqual(self.server._status_note(body), DEROGADA.split("\n", 1)[0])
+        # Ley 30/1983 (BOE-A-1983-34079) opens with two notes, then the text.
+        dos = ("Norma derogada para las Comunidades Autónomas que cumplan los requisitos del nuevo sistema de "
+               "financiación, por la disposición derogatoria única de la Ley 21/2001, de 27 de diciembre. "
+               "Ref. BOE-A-2001-24962.\nNorma derogada, excepto respecto de aquellas ...")
+        self.assertEqual(self.server._status_note("Ley" + crawl.TEXT_MARK + dos + "\n\nEXPOSICIÓN DE MOTIVOS"), dos)
+        self.assertEqual(self.server._status_note("Ley sin texto"), "")
+        self.assertEqual(self.server._status_note("Ley" + crawl.TEXT_MARK + "Norma modificada por ..."), "")
+
+
 if __name__ == "__main__":
     unittest.main()

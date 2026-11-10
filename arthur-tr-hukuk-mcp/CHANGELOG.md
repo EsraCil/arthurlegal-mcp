@@ -1,7 +1,30 @@
 # Changelog
 
-## Yayımlanmamış
+## 0.6.1 — 2026-11-10
 
+- **BTK'nın yeni kararlarında tarih bir gün erken okunuyordu.** btk.tr Nisan 2026'dan beri girilen kararlarda tarihi Türkiye saatiyle gece yarısının UTC karşılığı olarak veriyor (`2026-09-14T21:00:00.000Z` = 15.09.2026); ilk on karakter alındığı için `date` ve atıf (`BTK, … tarih ve … sayılı Kurul Kararı`) bir gün erkendi. Damga artık Türkiye'deki güne çevriliyor (`sources/btk.py`, `_gun`). Etkilenen kayıt 8'dir (02.04.2026 ile 15.09.2026 arası kararlar; liste düzeltilmiş okumayla baştan dolaşılarak ölçüldü, kalan 1.899 kayıt aynı kaldı); bunlar ek dosyasıyla düzeltilir.
+- EPDK (F-067): soğuk önbellekte ilk `kurum_karari_ara(kurum="epdk")` beş piyasa sayfasını ve ~126 kategori listesini
+  art arda çekiyordu (canlı ölçüm: 39,6 sn; aynı çağrı ikinci kez 0,4 sn). Barındırılan sunucu (`MCP_TRANSPORT=http`)
+  açılıştan sonra listeleri tek bir arka plan işçisiyle bir kez çeker, iki istek arası 4 sn (makine başına ~131 istek,
+  ~9 dk; iki makine toplamı dakikada en çok 30 istek). Süresi (6 saat) geçen liste aramada beklenmeden verilir ve aynı işçi onu aynı hızla tazeler; tazeleme yalnız
+  EPDK arandığında olur. 24 saatten eski liste verilmez, arama kendisi çeker. Üst üste üç hatada işçi sıradaki işleri
+  bırakır. `EPDK_ISITMA=0` kapatır, `EPDK_ISITMA=1` her taşımada açar; yerel stdio kurulumu ısıtmaz. Ağ geçidi
+  açılışta `sources.epdk.acilista_isit()`'ı çağırır.
+- `status` (F-017): tarihsiz kayıt (EPDK 8, KVKK 1) kurumun `from` tarihini boşaltıyordu; artık en eski dolu tarih.
+- Talimat (F-070): `error` / `error_code` taşıyan yanıt da erişilemeyen kaynak sayılır.
+
+## 0.6.0 — 2026-11-07
+
+Sürüm numarası 0.5.1'den sonra ilk kez burada (#45) yükseldi. Aşağıdaki kayıtların çoğu 29.09–27.10.2026 arasında,
+sürüm hâlâ 0.5.1 yazarken canlıya çıktı.
+
+- `resmi_gazete_ek_sayfa(url, sayfa)` (#44): Resmî Gazete ek PDF'inin tek sayfası. Metni olan sayfa metin, taranmış
+  sayfa MCP görüntü bloğu olarak döner. JPEG taraması bağımlılıksız okunur; JBIG2 gibi kodlamalar isteğe bağlı
+  `pypdfium2` (5.14.0) ister, o yoksa sayfa UYARI satırıyla döner. Yalnız www.resmigazete.gov.tr adresleri; dizin
+  profilinde (`/directory/mcp`) sunulmaz. `resmi_gazete_getir` HTML sayfada ek bağlantılarını `ekler`, ek PDF'inde
+  metin katmanı olmayan sayfaları `taranmis_sayfalar` olarak verir.
+- Güvenlik (#35): `net.Http` her isteği ve yönlendirmeyi kaynağın kendi alan adında tutar; yanıt ve açılmış gövde
+  64 MB ile sınırlı. EPDK'da 64 MB'tan büyük zip üyesi okunmaz, arşiv içindeki arşiv açılmaz.
 - `mevzuat_madde_getir`: kademeli kenar başlıkları (TBK, TMK, TTK). TBK m.344 tek başına istenince başlıksız,
   listeyle istenince "II. BELİRLENMESİ2" dönüyordu. Üç kusur: (1) başlık, maddenin nasıl istendiğine bağlıydı
   (Bedesten ağacında TBK'nın hiçbir maddesinin başlığı yok; tam metne yalnız liste yolu bakıyordu); (2) dipnot işareti
@@ -64,9 +87,9 @@
   iki ölçüm setinin 480 sonuç listesinin 474'ü birebir aynı (kalan 6'sında ilk 3 aynı, fark puanı eşit alt sıralarda).
   Sunucu tarafı hybrid medyanı (yerel): PL 536 → 204 ms, ES 238 → 100, NL 144 → 57, TR 395 → 292. Altı indeks
   ~141 MB. Başka bir bağlantı yazınca (`PRAGMA data_version`) ya da bu bağlantı vektör yazınca kopya yenilenir.
-  Barındırılan sunucuda kapalı: 512 MB'lık makinede 141 MB vektörle boş bellek 77-117 MB'a indi, SQLite dosyaları
-  işletim sistemi önbelleğinden düştü ve TR ile PL aramaları ~1,2 sn'den 7-8 sn'ye çıktı (kelime araması dahil).
-  Açmak için ≥1 GB bellek.
+  Barındırılan sunucuda açık: makineler 1 GB, `SEMANTIC_RESIDENT_MB=160` (10.10.2026; canlı `status`: resident
+  140 MB). 512 MB'lık makinede kapalı kalmalı: 141 MB vektörle boş bellek 77-117 MB'a indi, SQLite dosyaları işletim
+  sistemi önbelleğinden düştü ve TR ile PL aramaları ~1,2 sn'den 7-8 sn'ye çıktı (kelime araması dahil).
 - KVKK: karar metni yanlış adresten isteniyordu (`/Icerik/<id>/x`). Site bu adresi `/error`'a yönlendiriyor, o sayfanın
   menüsü 291 kararın hepsine gövde olarak yazılmıştı (4.672 karakter, hepsi aynı); `kurum_karari_getir(kurum="kvkk")`
   de karar yerine menüyü döndürüyordu. Adres artık karar numarasını taşır (`/Icerik/8887/2026-1183`; arama sonucundaki

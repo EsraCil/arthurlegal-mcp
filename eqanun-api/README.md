@@ -27,8 +27,7 @@ runs on a stock Python 3.9+._
 
 The search endpoint is `GET /getDetailSearch`; the parameter set (`name`,
 `title`, `text`, `exact`, `statusId`, `array`, `start`, `length`, …) was
-determined by observing the official frontend's own requests. See
-[`API.md`](API.md) for the full reconstructed API reference. The separate
+determined by observing the official frontend's own requests. The separate
 `e-qanun.ai` portal is Cloudflare-challenged with no public API and is **not** an
 integration target.
 
@@ -173,7 +172,8 @@ python3 server.py --transport http --port 8000
 ```
 
 Env fallbacks: `EQANUN_MCP_TRANSPORT`, `EQANUN_MCP_HOST`, `EQANUN_MCP_PORT`,
-`EQANUN_USER_AGENT`.
+`EQANUN_USER_AGENT`. `EQANUN_TIMEOUT` (seconds per request, default 12) and
+`EQANUN_RETRIES` (default 1) bound how long a dead upstream takes to be reported.
 
 > Exposure note: the HTTP transport has **no authentication**, and it issues an
 > `Mcp-Session-Id` on `initialize` without enforcing it on later requests. It
@@ -275,7 +275,6 @@ PASS/FAIL.
 ```text
 .
 ├── README.md
-├── API.md                  # reconstructed e-qanun.az API reference
 ├── LICENSE                 # MIT
 ├── requirements.txt
 ├── eqanun/                 # dependency-free core (Python 3.9+)

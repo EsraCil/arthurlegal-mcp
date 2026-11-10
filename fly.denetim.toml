@@ -51,7 +51,8 @@ primary_region = "ams"
 
 [[vm]]
   size = "shared-cpu-1x"
-  # The process holds ~80 MB; the rest is the page cache for ~2 GB of SQLite
+  # The process holds ~230-300 MB (about 140 MB of it the resident vectors, measured through
+  # status in October-November 2026); the rest is the page cache for ~2 GB of SQLite
   # files, which the Turkish and Polish searches lean on: at 512 MB, 141 MB of
   # resident vectors starved it and those searches took 7-8 s (2026-10-10).
   memory = "1gb"

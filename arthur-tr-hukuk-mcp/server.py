@@ -16,7 +16,8 @@ BDDK, Sigorta Tahkim — and puts a local FTS5 + vector index behind them
 so a question asked in plain Turkish finds a decision that shares none of its
 words.
 
-Standard library only. ``pypdf`` is the one optional dependency (PDF text).
+Standard library only. Optional: ``pypdf`` (PDF text) and ``pypdfium2`` (scanned Official
+Gazette annex pages that are not plain JPEG).
 
 Tool families
 -------------
@@ -48,7 +49,7 @@ import sources  # noqa: E402
 from sources import bedesten_ictihat, bedesten_mevzuat, anayasa, uyusmazlik, resmi_gazete, spk  # noqa: E402
 from textx import HAS_PYPDF  # noqa: E402
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 INDEX_PATH = os.environ.get("INDEX_PATH") or os.path.join(HERE, "data", "index.db")
 
 _index: Optional[retrieval.Index] = None
@@ -275,7 +276,10 @@ def t_status(args: Dict[str, Any]) -> Any:
     idx = index()
     by_kurum = {}
     try:
-        for row in idx.db.execute("SELECT subject, COUNT(*) AS n, MIN(date) AS d0, MAX(date) AS d1 FROM docs GROUP BY subject"):
+        # NULLIF: a record with no date (EPDK 8, KVKK 1; the source gives none) sorts first and
+        # made the whole range start at "".
+        for row in idx.db.execute("SELECT subject, COUNT(*) AS n, COALESCE(MIN(NULLIF(date, '')), '') AS d0, "
+                                  "MAX(date) AS d1 FROM docs GROUP BY subject"):
             by_kurum[row["subject"] or "?"] = {"docs": row["n"], "from": row["d0"], "to": row["d1"]}
     except Exception:  # noqa: BLE001
         pass
@@ -474,7 +478,7 @@ KİK, Sayıştay, TÜRKPATENT ve İSTAÇ bilinçli olarak YOK: resmi uçları ç
 reCAPTCHA, DNS). Bu kurumlar sorulursa bunu söyleyin; sonuç uydurmayın.
 
 İLK ÇAĞRI. Karmaşık soruda önce `hukuk_arastirma_rehberi`; sonuçlar ince göründüğünde `status`. Yüklenememiş
-kaynak ERİŞİLEMEZ demektir, "karar yok" demek değildir. `unavailable: true` veya `upstream_blocked: true`
+kaynak ERİŞİLEMEZ demektir, "karar yok" demek değildir. `unavailable: true`, `upstream_blocked: true` ya da `error` / `error_code`
 taşıyan yanıtı boş sonuç gibi yorumlamayın; bilginin ardından "UYARI: veri çekilemedi, teyidiniz gerekli: <bağlantı>" yazın.
 
 TEYİT BAĞLANTISI. Araç o belge için `source_url` döndürdüyse o adres; döndürmediyse kaynağın resmî giriş sayfası:

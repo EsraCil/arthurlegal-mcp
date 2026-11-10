@@ -2,7 +2,7 @@
 # Start de-eli (the one backend that cannot be imported), then the aggregator.
 #
 # The aggregator is what answers; de-eli is a local dependency of it. If de-eli
-# fails, the aggregator still serves the other nine jurisdictions and reports the
+# fails, the aggregator still serves every other backend and reports the
 # failure through `status` -- a missing jurisdiction is announced, never silently
 # served as an empty result.
 set -e
@@ -10,7 +10,8 @@ set -e
 if command -v de-eli-mcp >/dev/null 2>&1; then
     echo "de-eli backend starting on 127.0.0.1:8790" >&2
     # Keep it alive: nothing else restarts a background process, and a dead de-eli
-    # takes all fifteen de_ tools with it. A restarted de-eli forgets its sessions;
+    # takes its fifteen de_ tools with it (de_norm_getir and de_gesetz_ara run in-process
+    # and stay). A restarted de-eli forgets its sessions;
     # the aggregator opens a new one on the first 404 (server.py, _DeEliProxy).
     ( while :; do
           TRANSPORT=http PORT=8790 de-eli-mcp >>/tmp/de-eli.log 2>&1 || true
@@ -86,6 +87,20 @@ fi
 # does nothing -- and tr_semantik_ara reports semantic: off until it is done.
 if [ -n "$EMBEDDINGS_API_KEY" ] && [ -f "$APP/arthur-tr-hukuk-mcp/data/index.db" ]; then
     (cd "$APP/arthur-tr-hukuk-mcp" && python crawl.py --embed-only >/tmp/tr-embed.log 2>&1         && echo "arthur-tr-hukuk-mcp vectors ready" >&2 || echo "arthur-tr-hukuk-mcp embedding failed (see /tmp/tr-embed.log)" >&2) &
+fi
+
+# The other five indexes are baked with their vectors, but a refresh run on the
+# workstation (no Voyage key there) adds or rewrites documents without one. Fill
+# only the missing vectors here, one index after another, in the background; an
+# index that is complete costs one query. The server picks the new vectors up on
+# its own (`PRAGMA data_version`), and those documents are found by keyword
+# until then.
+if [ -n "$EMBEDDINGS_API_KEY" ]; then
+    (for j in pl-sejm-mcp ie-statutebook-mcp nl-rechtspraak-mcp fi-finlex-mcp es-boe-mcp; do
+        [ -f "$APP/$j/data/index.db" ] || continue
+        (cd "$APP/$j" && python -c "import sys; sys.path.insert(0, '.'); from retrieval import Index; print(Index('data/index.db').embed_missing())" >"/tmp/$j-embed.log" 2>&1) \
+            || echo "$j embedding failed (see /tmp/$j-embed.log)" >&2
+    done; echo "index vectors checked" >&2) &
 fi
 
 cd "$APP"

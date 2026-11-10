@@ -1,7 +1,7 @@
 # lex-scholar-api
 
-Dependency-free Python client + **single-endpoint MCP server** federating nine
-open-access **legal scholarship** indexes, for the ArthurLegal assistants (Claude
+Dependency-free Python client + **single-endpoint MCP server** federating ten
+open-access **legal scholarship** sources (eight search indexes plus two DOI resolvers), for the ArthurLegal assistants (Claude
 Projects and Copilot Studio).
 
 > Status (2026-07-25): **working, 20/20 live tests passing.** One `/mcp`
@@ -15,7 +15,7 @@ Projects and Copilot Studio).
 Peer-reviewed legal scholarship is scattered across national indexes that do not
 talk to each other: Brazilian doctrine is in SciELO, French in HAL, Spanish in
 Dialnet, Indonesian and Iranian in DOAJ, US law reviews in Law Review Commons.
-Asking one comparative-law question meant nine different searches.
+Asking one comparative-law question meant eight different searches.
 
 This server makes it one call — and, critically, **does not fan out blindly**.
 A deterministic router reads the question and picks the 2-3 indexes that can
@@ -24,7 +24,7 @@ actually answer it.
 ## Two design commitments
 
 **One endpoint, many sources.** `source` is a tool parameter, not a deployment.
-Adding a tenth index later changes nothing for the agent or the connector.
+Adding another index later changes nothing for the agent or the connector.
 
 **Multi-jurisdiction by construction.** `compare_jurisdictions` runs one question
 across several countries and returns the answers *grouped*, each routed to its

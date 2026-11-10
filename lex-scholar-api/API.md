@@ -1,6 +1,6 @@
 # Upstream API reference (verified)
 
-Black-box map of the nine indexes behind this server. Every endpoint, parameter
+Black-box map of the ten sources behind this server. Every endpoint, parameter
 and count below was **verified live on 2026-07-24/25** from a normal client. No
 authentication is used anywhere; where a "key" exists it is optional and noted.
 

@@ -2,13 +2,13 @@
   "swagger": "2.0",
   "info": {
     "title": "LexScholarMCP",
-    "description": "No-auth MCP server federating nine open-access LEGAL SCHOLARSHIP indexes through a single endpoint: DOAJ (peer-review guaranteed), Law Review Commons (US law reviews, energy/oil-gas/arbitration subject sets), SciELO (Latin America, real full text), HAL (France), Dialnet (Spain, discovery only), OpenAIRE (EU), Crossref + Unpaywall (DOI/open-copy resolution), OpenAlex (metered, gap jurisdictions). A deterministic router picks the 2-3 indexes that fit each question instead of querying all of them. Tools: search_legal_scholarship, compare_jurisdictions, get_scholarship_article, get_scholarship_fulltext, resolve_doi, list_sources. COMPARATIVE DOCTRINE source — peer-reviewed scholarship, NOT legislation or case law; never the final legal authority.",
+    "description": "No-auth MCP server federating ten open-access LEGAL SCHOLARSHIP sources through a single endpoint: DOAJ (peer-review guaranteed), Law Review Commons (US law reviews, energy/oil-gas/arbitration subject sets), SciELO (Latin America, real full text), HAL (France), Dialnet (Spain, discovery only), DergiPark (Turkey), OpenAIRE (EU), Crossref + Unpaywall (DOI/open-copy resolution), OpenAlex (metered, gap jurisdictions). A deterministic router picks the 2-3 indexes that fit each question instead of querying all of them. Tools: search_legal_scholarship, compare_jurisdictions, get_scholarship_article, get_scholarship_fulltext, resolve_doi, list_sources. COMPARATIVE DOCTRINE source — peer-reviewed scholarship, NOT legislation or case law; never the final legal authority.",
     "version": "1.0.0",
     "contact": {
       "name": "ArthurLegal"
     }
   },
-  "host": "london-millions-index-neck.trycloudflare.com",
+  "host": "REPLACE-WITH-YOUR-PUBLIC-HTTPS-HOST",
   "basePath": "/",
   "schemes": [
     "https"
@@ -22,7 +22,7 @@
   "paths": {
     "/mcp": {
       "post": {
-        "summary": "Legal Scholarship MCP (9 indexes, one endpoint)",
+        "summary": "Legal Scholarship MCP (10 sources, one endpoint)",
         "description": "Streamable HTTP MCP endpoint (JSON-RPC 2.0). Copilot Studio discovers the tools automatically on connect.",
         "operationId": "InvokeServer",
         "x-ms-agentic-protocol": "mcp-streamable-1.0",

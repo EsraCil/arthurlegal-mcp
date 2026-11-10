@@ -53,8 +53,9 @@ source).
 
 `mcpcore.py` (dependency-free MCP JSON-RPC server, stdio + Streamable HTTP) and
 `retrieval.py` (SQLite FTS5 + trigram + vector hybrid retrieval with RRF) are
-vendored from the ArthurLegal jurisdiction servers. `retrieval.py` gained one
-Turkish-specific change here: dotless-ı query expansion (`_dotless_variants`).
+vendored from the ArthurLegal jurisdiction servers. `retrieval.py` gained
+dotless-ı query expansion (`_dotless_variants`) here; this copy is now the canonical
+one, and ten other arthurlegal-mcp backends carry it unchanged.
 
 ## Data sources
 

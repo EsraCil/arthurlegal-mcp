@@ -5,7 +5,7 @@ the Referer-guarded static full-text host at ``https://e-qanun.az``. Uses only t
 Python standard library so it runs on a stock Python 3.9+ with no pip installs.
 
 API surface was reconstructed by black-box observation of the official frontend
-(see ``API.md``); no authentication is used and the client identifies itself by
+(see ``README.md``); no authentication is used and the client identifies itself by
 name rather than impersonating a browser. All content is public legal acts
 published by the Ministry of Justice.
 

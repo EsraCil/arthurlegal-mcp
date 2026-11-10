@@ -1,13 +1,13 @@
 # CLAUDE.md — arthur-tr-hukuk-mcp (eski adı ArthurLegalTR)
 
-Turkish legal research MCP server. Standard library only (+ optional `pypdf`).
+Turkish legal research MCP server. Standard library only (+ optional `pypdf`, `pypdfium2`).
 
 ## Run / test
 
 ```bash
 python server.py                                  # stdio
 python server.py --transport http --port 8080     # POST /mcp, GET /health
-python tests/test_offline.py                      # 55 offline tests, no network
+python tests/test_offline.py                      # 56 offline tests, no network
 python crawl.py --source kvkk,bddk --embed        # build data/index.db
 ```
 
@@ -18,7 +18,8 @@ python crawl.py --source kvkk,bddk --embed        # build data/index.db
   Add a regulator = add a module + its name to `sources.MODULES`. Nothing else changes.
 - `net.py` — urllib client: cookies, token bucket, charset fallback, IRI quoting, TLS cipher override.
 - `textx.py` — HTML/PDF → text, Turkish lower/fold, pagination, excerpts.
-- `retrieval.py` — vendored FTS5 + trigram + vector index (RRF). `_dotless_variants` is the only local change.
+- `retrieval.py` — FTS5 + trigram + vector index (RRF). This is the canonical copy: the ten backends listed in
+  arthurlegal-mcp's `tests/test_retrieval.py` carry it byte for byte (that test checks), so edit it here first.
 - `mcpcore.py` — vendored JSON-RPC MCP core. Do not edit; upstream is arthurlegal-mcp.
 - `crawl.py` — builds the local index; stamps `subject = <kurum key>` so `semantik_ara` can filter.
 
@@ -26,7 +27,7 @@ python crawl.py --source kvkk,bddk --embed        # build data/index.db
 
 - **Citations come from the record.** Every result carries `citation`; adapters build it from upstream
   fields, never from inference. Do not "improve" a citation by guessing a missing number.
-- **Unavailable ≠ empty.** A failed upstream returns `error` / `upstream_blocked` / `unavailable`. Never
+- **Unavailable ≠ empty.** A failed upstream returns `error` (usually with `error_code`) / `unavailable`. Never
   convert that into an empty `results` list.
 - **Bedesten rate limit is real** (10 req / 30 s per IP). `bedesten_ictihat.BUCKET` is shared with mevzuat.
   Don't add parallel fan-out over Bedesten.

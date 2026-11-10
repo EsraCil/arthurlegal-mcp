@@ -1,6 +1,6 @@
 """lexscholar — federated, dependency-free client for open-access legal scholarship.
 
-One search surface over nine no-auth sources (DOAJ, Law Review Commons, SciELO,
+One search surface over ten no-auth sources (DOAJ, DergiPark, Law Review Commons, SciELO,
 HAL, Dialnet, OpenAIRE, Crossref, Unpaywall, OpenAlex), with a deterministic
 router that picks the 2-3 that fit each question.
 

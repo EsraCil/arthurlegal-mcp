@@ -43,8 +43,13 @@ class PackagePinsTest(unittest.TestCase):
 
     def test_every_install_matches_the_full_image(self) -> None:
         expected = _pins("Dockerfile")
+        # The OSS Scanner image leaves .github and .oss-scanner out (.dockerignore); there only the
+        # two Dockerfiles can be compared. A checkout has .github, so nothing is skipped in CI.
+        in_image = not os.path.isdir(os.path.join(ROOT, ".github"))
         for name in FILES[1:]:
             with self.subTest(file=name):
+                if in_image and not os.path.exists(os.path.join(ROOT, name)):
+                    self.skipTest("%s is not in this image" % name)
                 self.assertEqual(_pins(name), expected)
 
 

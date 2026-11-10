@@ -1,7 +1,7 @@
 # Copilot Studio runbook — LexScholar MCP connector
 
-How to give a Copilot Studio agent access to nine open-access legal
-scholarship indexes through **one** custom connector.
+How to give a Copilot Studio agent access to ten open-access legal
+scholarship sources through **one** custom connector.
 
 > **Import through the web UI only.** Do not use the Power Platform CLI (`pac`)
 > or any scripted attach/publish flow for this environment — it breaks the

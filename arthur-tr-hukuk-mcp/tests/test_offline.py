@@ -867,6 +867,24 @@ def test_epdk_canli_metin_cikmazsa_indeksteki_okunmus_metin_gelir():
         server.index = eski
 
 
+def test_status_tarihsiz_kayit_kurumun_ilk_tarihini_bosaltmaz():
+    # Canlı status epdk ve kvkk için "from": "" veriyordu: tarihsiz kayıt ("") MIN'de ilk sıraya geçiyordu.
+    import server
+    idx = retrieval.Index(os.path.join(tempfile.mkdtemp(), "t.db"))
+    for ref, tarih in (("kvkk:1", "2018-06-28"), ("kvkk:2", ""), ("kvkk:3", "2026-06-10"), ("gib:1", "")):
+        idx.upsert({"ref": ref, "subject": ref.split(":")[0], "title": "t", "body": "b", "date": tarih})
+    idx.db.commit()
+    eski, eski_durum = server.index, server.retrieval.embeddings_status
+    server.index = lambda: idx
+    server.retrieval.embeddings_status = lambda *a, **k: {}
+    try:
+        kurum = server.t_status({})["local_index"]["by_kurum"]
+    finally:
+        server.index, server.retrieval.embeddings_status = eski, eski_durum
+    assert kurum["kvkk"] == {"docs": 3, "from": "2018-06-28", "to": "2026-06-10"}, kurum
+    assert kurum["gib"]["from"] == "", kurum          # hiç tarihi olmayan kurum: boş metin, None değil
+
+
 def test_tarih_onar_epdk_atifinda_tarih_yoksa_karar_satirindan_alir():
     import crawl
     idx = retrieval.Index(os.path.join(tempfile.mkdtemp(), "t.db"))

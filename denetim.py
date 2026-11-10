@@ -181,7 +181,7 @@ def etkinlestir(tools: Iterable[Any], surumler: Optional[Dict[str, str]] = None,
 def arka_uc_surumleri(yuklenenler: Iterable[Dict[str, Any]]) -> Dict[str, str]:
     """server.py'nin ``_loaded`` listesinden önek → sürüm.
 
-    Sürüm modülün kendi beyanıdır: ``__version__`` (v1.6 sunucuları, ``srv_tr`` 0.5.1 gibi),
+    Sürüm modülün kendi beyanıdır: ``__version__`` (v1.6 sunucuları, ``srv_tr`` 0.6.1 gibi),
     yoksa ``SERVER_VERSION`` (eski sözlük biçimli sunucular), yoksa paketin ``__version__``'ı.
     Modülü olmayan (de-eli vekili) ya da sürüm bildirmeyen önek listeye girmez.
     """

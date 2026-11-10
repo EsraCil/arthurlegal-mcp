@@ -4,7 +4,8 @@
 
 A read-only legal research server for lawyers. One Streamable-HTTP MCP endpoint (`server.py` + `mcpcore.py`,
 deployed on Fly.io at `https://arthurlegal-mcp.fly.dev/mcp`, plus a `/directory/mcp` profile without the `tkgm_`
-tools) aggregates about 125 tools over 15 jurisdictions. Each backend folder (`arthur-tr-hukuk-mcp`,
+and `hesap_` tools, `tr_resmi_gazete_ek_sayfa` and the desk hand-over tools) aggregates 130 tools over 12
+jurisdictions and five other sources (LEI, scholarship, contracts, land registry, fee cards). Each backend folder (`arthur-tr-hukuk-mcp`,
 `nl-rechtspraak-mcp`, `eu-cellar-mcp`, `tkgm-mcp`, …) fetches public court, legislation and regulator websites.
 
 The endpoint has no authentication by design: anyone on the internet can call any tool. Treat all of these as
@@ -25,11 +26,14 @@ locations, `EMBEDDINGS_API_KEY` (Voyage), and the Fly organisation's private net
 
 - **Most:** the gateway (`server.py`, `mcpcore.py`), the shared HTTP client `arthur-tr-hukuk-mcp/net.py` (every
   Turkish source fetches through it; it restricts each source to its own domain, caps response and decompressed
-  size), any code that turns a tool argument into a URL, host or file path, decompression and archive handling,
-  TLS settings, and the desk/card HTML in `arayuz/` and `tkgm-mcp/ui/`.
+  size), any code that turns a tool argument into a URL, host or file path (for example `tr_resmi_gazete_ek_sayfa`,
+  which takes a URL and accepts only `https://www.resmigazete.gov.tr/`), decompression and archive handling,
+  rendering of untrusted scanned PDF pages with native code (`pypdfium2`/PDFium in
+  `arthur-tr-hukuk-mcp/sources/resmi_gazete.py`), TLS settings, and the desk/card HTML in `arayuz/` and `tkgm-mcp/ui/`.
 - **Medium:** per-country backends (`*-mcp/`, `lex-scholar-api`, `eqanun-api`, `resourcecontracts-api`), the local
   semantic index (`retrieval.py`, SQLite FTS5 + vectors), `tkgm-mcp` file output (stdio/local mode only; under
-  HTTP it writes no files).
+  HTTP it writes no files), `hesap-mcp/tazelik.py` (reads the Official Gazette's daily index pages about once a
+  day; no caller input is sent).
 - **Least:** `tests/`, `varlik/` (static images), `denetim.py` (audit logging used only on a separate test app),
   `arthur-tr-hukuk-mcp/ocr.py` (needs Tesseract, not installed in the deployment).
 - **Out of scope:** the upstream websites themselves, `de-eli-mcp` (a pip package run on 127.0.0.1:8790), Voyage,

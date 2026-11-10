@@ -1,6 +1,6 @@
 """eqanun — dependency-free client for Azerbaijan's official legislation API.
 
-See ``API.md`` for the reconstructed API reference and ``README.md`` for usage.
+See ``README.md`` for the reconstructed API surface and usage.
 """
 
 from .client import (

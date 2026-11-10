@@ -17,8 +17,12 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AKIS = os.path.join(ROOT, ".github", "workflows", "fly-dagitim.yml")
 
-_spec = importlib.util.spec_from_file_location(
-    "canli_denetim", os.path.join(ROOT, ".github", "dagitim", "canli_denetim.py"))
+_BETIK = os.path.join(ROOT, ".github", "dagitim", "canli_denetim.py")
+if not os.path.exists(_BETIK):
+    # OSS Scanner imajı .github klasörünü almaz (.dockerignore); orada denetlenecek iş akışı yoktur.
+    raise unittest.SkipTest(".github klasörü bu ortamda yok (imaj içi koşu)")
+
+_spec = importlib.util.spec_from_file_location("canli_denetim", _BETIK)
 canli_denetim = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(canli_denetim)
 

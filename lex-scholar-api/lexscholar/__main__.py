@@ -45,7 +45,7 @@ def _add_filters(sp: argparse.ArgumentParser) -> None:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
         prog="lexscholar",
-        description="Federated search over open-access legal scholarship (9 no-auth sources)",
+        description="Federated search over open-access legal scholarship (10 no-auth sources)",
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 

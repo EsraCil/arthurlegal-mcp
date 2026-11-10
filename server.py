@@ -10,20 +10,20 @@ time. One endpoint means one.
 
 How it is put together, and why
 -------------------------------
-The nine standard-library servers are **loaded in-process**, not proxied. Their
+The standard-library servers and the three older ones are **loaded in-process**, not proxied. Their
 tool handlers are called directly, so aggregation costs nothing measurable — and
 the whole thing ships as a single container with no network between the parts.
 de-eli runs on FastMCP and is async, so it is proxied over HTTP when reachable
 (measured at ~15 ms against a ~1,400 ms search: about 1%).
 
 **Every tool is prefixed with its jurisdiction.** This is not cosmetic. Across
-the ten servers `get_act` means five different things, `search_legislation`
-three, `search_acts` three. Merging them unprefixed would route a Spanish query
+the underlying servers `get_act` means six different things, `search_legislation`
+four, `search_acts` three. Merging them unprefixed would route a Spanish query
 to a Finnish server and answer confidently with the wrong country's law — the
 one failure mode this whole package exists to prevent.
 
-**The nine per-server `server_status` tools collapse into one.** Nine tools that
-each answer "am I healthy" is nine ways to ask the same question; `status`
+**The per-server `server_status` tools collapse into one.** A tool per backend that
+each answers "am I healthy" is that many ways to ask the same question; `status`
 answers it once for everything, and reports which backends failed to load rather
 than quietly serving fewer tools.
 
@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.9.0"
+__version__ = "1.9.1"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry and fee calculator tools and the Official Gazette
@@ -72,8 +72,8 @@ AL = HERE
 STDLIB_BACKENDS = [
     # Türkiye loads FIRST on purpose: every backend does `import retrieval` by bare
     # name and Python caches the first copy. arthur-tr-hukuk-mcp's retrieval.py is the
-    # same module plus dotless-ı query expansion, so letting it win costs the
-    # others nothing and keeps Turkish queries working.
+    # canonical copy (with dotless-ı query expansion); the other backends here carry it
+    # byte for byte (tests/test_retrieval.py), so edit it there first and copy it over.
     ("tr", os.path.join(AL, "arthur-tr-hukuk-mcp"), "srv_tr",
      "🇹🇷 Türkiye — içtihat + mevzuat + 8 düzenleyici kurum + Resmî Gazete"),
     ("nl", os.path.join(ROOT, "nl-rechtspraak-mcp"), "srv_nl", "🇳🇱 Hollanda — içtihat + mevzuat"),
@@ -251,7 +251,7 @@ class _DeEliProxy:
     A session does not outlive the de-eli process. The MCP Streamable HTTP spec
     answers a request carrying an unknown session id with HTTP 404, after which
     the client must initialize again. Before this was handled, one de-eli restart
-    left all fifteen de_ tools failing with "Not Found" until the aggregator itself
+    left all fifteen de-eli tools failing with "Not Found" until the aggregator itself
     restarted (observed live on 2026-10-09).
     """
 
@@ -361,6 +361,11 @@ _RII_STALE = (
 _RII_CURRENT = (
     "like NeuRIS's `/v1/rechtsprechung` (de_case_search), which since 2026 carries the same "
     "courts from 2010 with full-text search (84,474 decisions on 2026-10-09)")
+# de-eli 0.5.4 also calls OLDP "the only one with full-text search"; for the federal courts that
+# sent full-text questions to the community source instead of NeuRIS.
+_OLDP_STALE = "and the only one with full-text search."
+_OLDP_CURRENT = ("and its only full-text search for them; for the federal courts NeuRIS's "
+                 "de_case_search searches full text too.")
 
 
 def _de_call(proxy: _DeEliProxy, name: str, args: Dict[str, Any]) -> Any:
@@ -554,6 +559,7 @@ def _load_de_eli(url: str) -> None:
         description = spec.get("description", "")
         for stale in _RII_STALE:
             description = description.replace(stale, _RII_CURRENT)
+        description = description.replace(_OLDP_STALE, _OLDP_CURRENT)
         _tools.append(Tool(name, "[%s] %s" % (label, description),
                            spec.get("inputSchema", {"type": "object", "properties": {}}),
                            make(name)))
@@ -597,6 +603,19 @@ def _warm_resident() -> Optional[threading.Thread]:
     thread = threading.Thread(target=warm, name="resident-warmup", daemon=True)
     thread.start()
     return thread
+
+
+def _warm_epdk() -> Optional[threading.Thread]:
+    """Warm the EPDK decision lists once, slowly, in the background (F-067).
+
+    The first EPDK search on a cold cache fetched ~126 category lists back to back (~40 s). The
+    pacing, the on/off switch (EPDK_ISITMA; default on only under MCP_TRANSPORT=http) and the
+    refresh of stale lists live in arthur-tr-hukuk-mcp/sources/epdk.py.
+    """
+    mod = sys.modules.get("sources.epdk")
+    if mod is None or not callable(getattr(mod, "acilista_isit", None)):
+        return None
+    return mod.acilista_isit()
 
 
 def _runtime() -> Dict[str, Any]:
@@ -672,7 +691,8 @@ def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any
         **_runtime(),
         "backends_loaded": loaded,
         "tools_exposed": len(_tools) if exposed is None else exposed,
-        "note": "Every tool is prefixed with its jurisdiction (%s). Across the underlying "
+        "note": "Every research tool is prefixed with its jurisdiction or source (%s); `status` "
+                "and the `al_` desk tools belong to the endpoint itself. Across the underlying "
                 "servers `get_act` means six different things, so the prefix is "
                 "what keeps a Spanish question from being answered with Finnish law."
                 % ", ".join("%s_" % p for p in prefixes),
@@ -699,7 +719,7 @@ def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any
         out["backend_status"] = detail
     # de-eli is a separate process, so "loaded at boot" says nothing about now.
     # Probe it live: a dead or wedged German backend must show up here instead of
-    # as fifteen tools that each fail on their own.
+    # as de-eli tools that each fail on their own.
     if _de_proxy is not None:
         try:
             out["de_live"] = {"reachable": True, "tools": _de_proxy.ping(),
@@ -707,7 +727,9 @@ def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any
         except Exception as exc:  # noqa: BLE001
             out["de_live"] = {"reachable": False, "error": "%s: %s" % (type(exc).__name__, exc)}
             out["warning"] = (out.get("warning", "") + " The German backend is loaded but "
-                              "not answering: every de_ tool will fail until it is back.").strip()
+                              "not answering: its de_ tools (de-eli) will fail until it is back; "
+                              "de_norm_getir and de_gesetz_ara (gesetze-im-internet.de) are not "
+                              "affected.").strip()
     return _scrub_status(out) if _public_status() else out
 
 
@@ -826,11 +848,11 @@ def _attach_views() -> None:
 
 INSTRUCTIONS_HEADER = """MADDE ATFI KURALI: Bir kanun maddesini (not, sözleşme, protokol, dilekçe veya karar gövdesi dâhil) yazmadan önce tr_mevzuat_madde_getir(number="6769", madde_no="120") ile metnini ve başlığını çekin; yanıttaki citation alanını birebir kullanın ve maddeye yüklediğiniz içeriğin (hakkın sahibi, şart, süre, sonuç) başlık ve metinle örtüştüğünü kontrol edin. Çekilemeyen maddeyi ezberden yazmayın; açıkça "UYARI: veri çekilemedi, teyidiniz gerekli: https://www.mevzuat.gov.tr/" yazın.
 
-CANLI VERİ: Araç veri getiremezse (hata, `unavailable`, `upstream_blocked`, onay yok) hafızadan doldurmayın; aynı UYARI satırını aracın `source_url`'si ya da kaynağın resmî giriş sayfasıyla yazın; bağlantı uydurulmaz, "[doğrulayın]" etiketi kullanılmaz.
+CANLI VERİ: Araç veri getiremezse (hata, `error_code`, `unavailable`, `upstream_blocked`, onay yok) hafızadan doldurmayın; aynı UYARI satırını aracın `source_url`'si ya da kaynağın resmî giriş sayfasıyla yazın; bağlantı uydurulmaz, "[doğrulayın]" etiketi kullanılmaz.
 
-ArthurLegal — 15 yargı çevresi tek uçta.
+ArthurLegal — 12 yargı çevresi ve 5 ek kaynak (LEI, doktrin, sözleşme, tapu-kadastro, hesap kartları) tek uçta.
 
-ARAÇ ÖNEKLERİ. Her araç ait olduğu yargı çevresinin önekini taşır:
+ARAÇ ÖNEKLERİ. Her araştırma aracı ait olduğu yargı çevresinin ya da kaynağın önekini taşır:
 `tr_` Türkiye (içtihat, mevzuat, EPDK/Rekabet/SPK/BDDK/KVKK/BTK/GİB/Sigorta Tahkim,
 Resmî Gazete, semantik arşiv; KİK/Sayıştay/TÜRKPATENT/İSTAÇ YOK — resmi uçları cevap vermiyor) · `nl_` Hollanda · `pl_` Polonya ·
 `at_` Avusturya · `ie_` İrlanda · `fi_` Finlandiya · `es_` İspanya · `uk_` Birleşik Krallık ·
@@ -840,6 +862,7 @@ Resmî Gazete, semantik arşiv; KİK/Sayıştay/TÜRKPATENT/İSTAÇ YOK — resm
 koordinat ya da yer adı; dosya İSTEMEYİN), rapor, ölçü, kroki; ilk canlı çağrıda onay kartı döner,
 önce `tkgm_baslangic`. `hesap_` hesap kartları: avukatlık asgari ücreti, yargı harcı, gider avansı;
 hesabı kod yapar, tutarı kendiniz hesaplamayın; cevapta aracın tazelik satırını aynen yazın.
+`status` ve `al_` ArthurLegal Masası araçları bu uca aittir, bir yargı çevresine değil.
 
 TÜRKİYE İÇİN GİRİŞ NOKTASI: karmaşık Türk hukuku sorusunda önce `tr_hukuk_arastirma_rehberi`
 (hangi soru için hangi araç), sonra `tr_kurum_listesi` (8 kurumun filtreleri).
@@ -863,9 +886,11 @@ if al_arayuz is not None and getattr(al_arayuz, "TESLIM_KURALI", None):
     INSTRUCTIONS_HEADER = _head + "\n\n" + al_arayuz.TESLIM_KURALI + _sep + _rest
 
 
-# Directory profile: describes what the tools return, in English, and gives no
-# orders to Claude (the directory rejects instructions that tell Claude how to
-# behave). The facts are the same as in INSTRUCTIONS_HEADER.
+# Directory profile header: describes what the tools return, in English, without the
+# citation rule that opens INSTRUCTIONS_HEADER. The backend sections that follow it
+# (build_directory) are the same as on /mcp, in their own language and with their own
+# usage rules; only the Turkish one loses its opening citation rule. The facts are the
+# same as in INSTRUCTIONS_HEADER.
 DIRECTORY_INSTRUCTIONS_HEADER = """ArthurLegal MCP: read-only legal research across twelve jurisdictions, plus legal-entity identity (LEI), open-access legal scholarship and published resource contracts, behind one endpoint.
 
 TOOL PREFIXES. Each tool name starts with the jurisdiction or source it answers for:
@@ -874,7 +899,7 @@ The prefix is part of the meaning: `get_act` is a different operation in differe
 
 CITATIONS. Results carry a `citation` field built from the official record, and a `source_url` where the source provides one; both are meant to be quoted as returned. For a Turkish statutory article, `tr_mevzuat_madde_getir` returns the article text, its heading and a ready citation in one call.
 
-UNAVAILABLE SOURCES. When an official source cannot be reached, a tool returns an error or a result marked `unavailable` / `upstream_blocked`, together with the official source page. That means the answer is missing, not that no such law or decision exists. `status` shows which jurisdictions are loaded and how much each has indexed.
+UNAVAILABLE SOURCES. When an official source cannot be reached, a tool returns an error (`error`, `error_code`) or a result marked `unavailable` / `upstream_blocked`, together with the official source page. That means the answer is missing, not that no such law or decision exists. `status` shows which jurisdictions are loaded and how much each has indexed.
 
 INTERACTIVE VIEWS. In clients that render MCP Apps, `tr_mevzuat_madde_getir` shows its result as an article card, `tr_ictihat_ara` as a list of decisions, and `al_masasi` opens the ArthurLegal desk (Turkish interface: legislation, case law and regulator decisions in one panel). Other clients receive the same data as text.
 
@@ -944,6 +969,7 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
 if __name__ == "__main__":
     build()
     _warm_resident()
+    _warm_epdk()
     text = INSTRUCTIONS_HEADER + "\n\n" + "\n\n".join(_instructions)
     directory_tools, directory_text, directory_views = build_directory()
     sys.stderr.write("arthurlegal-mcp: %d backend, %d araç (%s: %d)"

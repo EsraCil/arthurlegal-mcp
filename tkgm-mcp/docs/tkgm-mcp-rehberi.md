@@ -67,16 +67,17 @@ yüzlerce parsellik döküm için döngü kurma (araç bunu durdurur).
 | `tkgm_geometri` | Alan, çevre, kenar boyları, semtler, iç açılar (grad) | kısa JSON |
 | `tkgm_kroki` | A4, mm birimli **ölçekli SVG**; `komsular` ile çevre parseller | dosya yolu / SVG |
 | `tkgm_harita` | OpenStreetMap altlıklı etkileşimli HTML harita | dosya yolu / HTML |
-| `tkgm_arazi_3d` | Copernicus GLO-30 üstüne parsel; kot, eğim, bakı + çevre binaların TAHMİNİ kütlesi + 3D HTML (yalnız yerel) | özet, `uyari_3d`, dosya yolu, `arayuzde_ac` |
+| `arazi_3d` | Copernicus GLO-30 üstüne parsel; kot, eğim, bakı + çevre binaların TAHMİNİ kütlesi + 3D HTML (yalnız yerel sunucu, öneksiz ad) | özet, `uyari_3d`, dosya yolu, `arayuzde_ac` |
 | `tkgm_koridor_kesisim` | Hat + genişlik → parsel başına kesilen alan, eksen boyu | tablo + CSV |
-| `tkgm_parsel_foyu` | Tek parsel için Word föyü (yalnız yerel) | .docx yolu |
-| `tkgm_portfoy_tablosu` | Çok parsel için Excel dökümü (yalnız yerel) | .xlsx yolu |
+| `parsel_foyu` | Tek parsel için Word föyü (yalnız yerel sunucu, öneksiz ad) | .docx yolu |
+| `portfoy_tablosu` | Çok parsel için Excel dökümü (yalnız yerel sunucu, öneksiz ad) | .xlsx yolu |
 | `tkgm_tarife_kalemi` | 2026 tapu harcı ve döner sermaye cetvelinde işlem kalemi bulur | kod, oran/tutar |
 | `tkgm_harc_hesapla` | Tapu harcı + TKGM döner sermaye bedeli; her kalem kaynağıyla | kısa JSON |
-| `tkgm_tapu_kaydi_oku` | Kullanıcının kendi aldığı tapu kaydı METNİ → şema (yalnız yerel, maskeli) | kısa JSON |
+| `tapu_kaydi_oku` | Kullanıcının kendi aldığı tapu kaydı METNİ → şema (yalnız yerel sunucu, öneksiz ad, maskeli) | kısa JSON |
 | `tkgm_disa_aktar` | GeoJSON / KML / DXF (R12, TM koordinatlı) / CSV | dosya yolu / içerik |
 | `tkgm_koordinat_donustur` | Coğrafi ↔ ITRF96 TM 3° / UTM 6° | koordinatlar |
 | `tkgm_dayanak_koprusu` | Dayanak madde adresleri + hazır `tr_` çağrıları | kısa JSON |
+| `tkgm_arayuze_yaz` | Yerel arayüzün (`python server.py --ui`) Sor sekmesinden gelen soruya verilen cevabı arayüze teslim eder (yalnız yerel kipte çalışır) | dosya yolu |
 
 **Token disiplini.** Yerel kipte görsel ve raporlar **dosyaya** yazılır, yanıtta yol ve birkaç
 satır özet döner. `parsel_raporu`nun `rapor_md` alanı kullanıcıya olduğu gibi gösterilmek içindir.

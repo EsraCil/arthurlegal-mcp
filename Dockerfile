@@ -3,13 +3,15 @@ FROM python:3.11-slim
 WORKDIR /app
 COPY . /app
 
-# pypdf (pure Python) is the Turkish backend's one optional dependency: Rekabet,
+# pypdf (pure Python) is an optional dependency of the Turkish backend: Rekabet,
 # EPDK, SPK, BTK and Sigorta Tahkim publish decisions as PDF.
 # numpy is optional too: with it the semantic scan in retrieval.py is ~6x faster
 # (16,545 vectors: 1.3 s -> 0.2 s); without it the same ranking comes slower.
 # pypdfium2 (Apache-2.0 / BSD-3-Clause; PDFium BSD) is optional as well: tr_resmi_gazete_ek_sayfa
 # renders scanned Official Gazette annex pages that are not plain JPEG (JBIG2, CCITT) with it.
 # Without it a JPEG scan still goes through; the other pages answer with an UYARI line.
+# olefile (old Word .doc files) is left out on purpose: the crawl workstation reads EPDK's .doc
+# decisions, and the server answers them from the index.
 # Exact versions, the same lines in .github/workflows/testler.yml and .oss-scanner/Dockerfile:
 # the image installs what the tests ran against. The process runs as root inside its own VM; moving
 # it to a separate user changes where start.sh seeds the indexes and needs a tested full build.
