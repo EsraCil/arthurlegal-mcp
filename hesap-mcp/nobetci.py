@@ -43,6 +43,24 @@ def yayim_basligi(y: Dict[str, Any]) -> str:
 
 def yayim_govdesi(y: Dict[str, Any]) -> str:
     kartlar = ", ".join(y.get("kartlar") or []) or "?"
+    if y.get("tur") == "donem":
+        return "\n".join([
+            "Bir hesap kartının verisi geçerlilik tarihini geçti (`izlenen.gecerlilik`). Yeni dönemin değeri Resmî Gazete "
+            "fihristinde görünmeyebilir (ör. önceki yılın 31 Aralık TCMB oranı, Mali ve Sosyal Haklar genelgesindeki "
+            "kıdem tavanı); bu yüzden takvimle kilitlenir.",
+            "",
+            "- Ne: %s" % y.get("baslik"),
+            "- Kaynak: %s" % y.get("url"),
+            "- Etkilenen kart: %s" % kartlar,
+            "",
+            "Sunucu yeni dönem verisi işlenene kadar bu kartta kesin toplam vermez (`yeni_duzenleme`).",
+            "",
+            "Yapılacak: yeni dönemin değerini resmî kaynaktan okuyun (SHA-256 ile), `hesap-mcp/veri/tarife_2026.json`'a "
+            "ekleyin, `izlenen.gecerlilik` tarihini (faizde `faiz.kapsam.son` ve `faiz.kapsam.oranlar_teyit` de) ileri "
+            "alın ve `hesap-mcp/tests/test_faiz_iscilik.py`'deki sabitleri güncelleyin.",
+            "",
+            "Bu issue'yu tarife nöbetçisi açtı; aynı dönem için yenisi açılmaz.",
+        ])
     return "\n".join([
         "Günlük Resmî Gazete taraması, hesap kartlarını etkileyebilecek ve veride bilinmeyen bir yayım buldu.",
         "",

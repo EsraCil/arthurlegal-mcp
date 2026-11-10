@@ -51,8 +51,19 @@ class Veri(unittest.TestCase):
         self.assertEqual(k["AAUT2026"]["url"], "https://www.resmigazete.gov.tr/eskiler/2026/11/20261103-3.htm")
         self.assertEqual((k["HKGT98"]["rg_tarih"], k["HKGT98"]["rg_sayi"], k["HKGT98"]["mukerrer"]), ("2025-12-31", "33124", "5"))
         self.assertEqual((k["HMKGAT"]["rg_tarih"], k["HMKGAT"]["rg_sayi"]), ("2025-10-28", "33061"))
+        # Resmî Gazete ya da mevzuat.gov.tr; iki bilinçli istisna: TCMB'nin oran tarihçesi (yalnız tamlık dizini, oranlar
+        # RG'den) ve ÇSGB'nin kıdem tavanı tablosu (tavan Resmî Gazete'de yayımlanmaz). İstisnaların RG künyesi yoktur.
+        istisna = {"TCMBTABLO": "https://www.tcmb.gov.tr/", "CSGBKT": "https://csgb.gov.tr/",
+                   "CSGBKT2026A": "https://www.csgb.gov.tr/", "CSGBKT2026B": "https://www.csgb.gov.tr/"}
         for x in VERI["kaynaklar"]:
+            if x["kod"] in istisna:
+                self.assertTrue(x["url"].startswith(istisna[x["kod"]]), x["kod"])
+                self.assertIsNone(x["rg_tarih"], x["kod"])
+                self.assertRegex(x["sha256"], r"^[0-9a-f]{64}$", x["kod"])
+                continue
             self.assertTrue(x["url"].startswith("https://www.resmigazete.gov.tr/") or x["url"].startswith("https://www.mevzuat.gov.tr/"), x["kod"])
+            if x["url"].startswith("https://www.resmigazete.gov.tr/"):
+                self.assertRegex(x.get("sha256") or x.get("ek_sha256") or "", r"^[0-9a-f]{64}$", x["kod"])
 
     def test_aaut_tutarlari_sabit(self):
         m = {r["kod"]: r for r in VERI["aaut"]["maktu"]}
@@ -247,7 +258,7 @@ class Arac(unittest.TestCase):
         with self.assertRaises(McpError):
             server._t_harc({"islem": "dava_acilis", "mahkeme": "asliye", "deger": "-5"})
         with self.assertRaises(McpError):
-            server._t_kalemler({"kart": "faiz"})
+            server._t_kalemler({"kart": "sure"})
 
     def test_menu_veriden(self):
         m = json.loads(server._t_kalemler({}))

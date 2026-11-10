@@ -4,7 +4,7 @@
 
 A read-only legal research server for lawyers. One Streamable-HTTP MCP endpoint (`server.py` + `mcpcore.py`,
 deployed on Fly.io at `https://arthurlegal-mcp.fly.dev/mcp`, plus a `/directory/mcp` profile without the `tkgm_`
-and `hesap_` tools, `tr_resmi_gazete_ek_sayfa` and the desk hand-over tools) aggregates 130 tools over 12
+and `hesap_` tools, `tr_resmi_gazete_ek_sayfa` and the desk hand-over tools) aggregates 132 tools over 12
 jurisdictions and five other sources (LEI, scholarship, contracts, land registry, fee cards). Each backend folder (`arthur-tr-hukuk-mcp`,
 `nl-rechtspraak-mcp`, `eu-cellar-mcp`, `tkgm-mcp`, …) fetches public court, legislation and regulator websites.
 

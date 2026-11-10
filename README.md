@@ -7,7 +7,7 @@ Kingdom - European Union - Japan - Azerbaijan - Germany - legal scholarship -
 signed resource contracts - GLEIF entity identity - Turkish land registry (TKGM) -
 Turkish fee calculator cards.
 
-130 tools, one hosted endpoint, no authentication:
+132 tools, one hosted endpoint, no authentication:
 
     https://arthurlegal-mcp.fly.dev/mcp
 
@@ -140,10 +140,14 @@ and the tools that write files, fetch elevation data or read title records are d
 
 ## Turkish fee calculator cards (`hesap_`)
 
-On `/mcp` only, three tools compute Turkish legal costs in code rather than in the model: the
+On `/mcp` only, five tools compute Turkish legal costs in code rather than in the model: the
 attorney minimum fee under the 2026 Attorney Minimum Fee Tariff (Official Gazette 03.11.2026, No.
 33419), court fees under Law No. 492 tariff (1) with the 2026 amounts (Official Gazette 31.12.2025,
-No. 33124), and the civil procedure cost advance (Official Gazette 28.10.2025, No. 33061). Every
+No. 33124), the civil procedure cost advance (Official Gazette 28.10.2025, No. 33061), an interest
+breakdown period by period (statutory interest and commercial default interest under Law No. 3095, with
+the 32 central bank rate communiques since 2005 each read from its Official Gazette issue), and gross
+severance and notice pay (Law No. 1475 art. 14, Law No. 4857 art. 17; the severance ceiling comes from
+the labour ministry's table, since the Official Gazette does not publish it). Every
 amount sits in `hesap-mcp/veri/` with a verbatim source quote; every result line carries its legal
 basis. Rules the official text does not settle are shown outside the total, marked for checking.
 No files. The only network access is a freshness check: about once a day the tools read the Official

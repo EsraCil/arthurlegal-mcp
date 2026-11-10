@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""hesap-mcp — Türk avukatları için hesap kartları: avukatlık asgari ücreti, yargı harcı, gider avansı.
+"""hesap-mcp — Türk avukatları için hesap kartları: avukatlık asgari ücreti, yargı harcı, gider avansı, faiz dökümü,
+kıdem ve ihbar tazminatı.
 
     python server.py                                 # stdio
     python server.py --transport http --port 8070    # HTTP
 
-Hesabı model değil KOD yapar (hesap.py); tutarlar veri/tarife_2026.json'daki resmî metinden gelir ve
-her kalem dayanağını ve kaynağını taşır. Dosya yazma yok, yalnız standart kütüphane.
+Hesabı model değil KOD yapar (hesap.py, faiz.py, iscilik.py); tutar ve oranlar veri/tarife_2026.json'daki resmî
+metinden gelir ve her kalem dayanağını ve kaynağını taşır. Dosya yazma yok, yalnız standart kütüphane.
 
 Tek ağ erişimi tazelik denetimidir (tazelik.py): günde yaklaşık bir kez Resmî Gazete'nin günlük fihristine bakılır;
 kartları etkileyebilecek yeni bir yayım varsa ya da bakılamadıysa sonuç bunu söyler (tazelik kilidi).
@@ -18,22 +19,27 @@ import math
 import re
 from typing import Any, Dict, Optional
 
+import faiz
 import hesap
+import iscilik
 import tazelik
 from mcpcore import McpError, Tool, run
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 TAZELIK_KURALI = ("Cevapta tazelik satırını (kaynak RG tarih/sayı, son kontrol) aynen yazın. Durum `guncel` "
                   "değilse toplamı kesin sonuç gibi sunmayın; UYARI satırını ve bağlantıyı verin.")
 
-INSTRUCTIONS = """Hesap kartları: avukatlık asgari ücreti (AAÜT), yargı harcı ve gider avansı. Hesabı KOD yapar.
+INSTRUCTIONS = """Hesap kartları: avukatlık asgari ücreti (AAÜT), yargı harcı ve gider avansı, faiz dökümü (kanuni, ticari
+temerrüt, sabit oran), kıdem ve ihbar tazminatı. Hesabı KOD yapar.
 - Tutarı kendiniz hesaplamayın, toplamayın, yuvarlamayın: aracın döndürdüğü kalemleri, dayanaklarını ve kaynak
   bağlantısını aynen aktarın. Önce `hesap_kalemleri` (işlem menüsü ve her işlemin istediği girdiler).
 - Vekâlet ücreti çıktısı tarifenin ASGARİ tutarıdır; "önerilen" ya da "uygun" ücret diye sunmayın.
 - `teyit_edin` ve `ayrica` kalemlerini kullanıcıya iletin; bunlar toplama katılmaz.
 - Tebligat ücreti tarifede yazmaz: kullanıcıdan isteyin, tahmin etmeyin.
-- Faiz, işçilik alacağı ve süre hesabı bu araçlarda yok.
+- Faiz: başlangıç (temerrüt) ve bitiş tarihini, işin ticari olup olmadığını kullanıcı söyler; oranı siz önermeyin.
+- İşçilik alacağı BRÜTTÜR; hak kazanma koşullarını (fesih nedeni) ve net tutarı araç hesaplamaz.
+- Süre (son gün) hesabı bu araçlarda yok.
 - TAZELİK: her sonuç `tazelik` taşır (Resmî Gazete'nin günlük denetimi). Cevapta tazelik satırını (`tazelik.satir`:
   kaynak RG tarih/sayı, son kontrol) aynen yazın. Durum `guncel` değilse toplamı kesin sonuç gibi sunmayın; UYARI
   satırını ve bağlantıyı verin. `yeni_duzenleme`de toplam null'dır, `teyit_bekleyen_tutarlar` kesin değildir;
@@ -68,14 +74,30 @@ def _sayi(deger: Any, ad: str) -> Optional[float]:
     return x
 
 
+KARTLAR = ("vekalet", "harc", "faiz", "iscilik")
+
+
+def _durum() -> Dict[str, Any]:
+    return dict(hesap.durum(), faiz=faiz.durum(), iscilik=iscilik.durum())
+
+
+def _tarih(deger: Any, ad: str):
+    try:
+        return iscilik.tarih_ayikla(deger, ad)
+    except hesap.HesapHatasi as exc:
+        raise McpError(str(exc)) from None
+
+
 def _t_kalemler(args: Dict[str, Any]) -> Any:
     m = hesap.menu()
+    m["faiz"] = faiz.menu()
+    m["iscilik"] = iscilik.menu()
     kart = args.get("kart")
-    if kart in ("vekalet", "harc"):
+    if kart in KARTLAR:
         m = {"surum": m["surum"], kart: m[kart]}
     elif kart:
-        raise McpError("`kart`: 'vekalet' ya da 'harc'.")
-    m["veri"] = hesap.durum()
+        raise McpError("`kart`: %s." % ", ".join("'%s'" % k for k in KARTLAR))
+    m["veri"] = _durum()
     return _kisa(tazelik.kilitle(m, kart or None, kilit=False))
 
 
@@ -109,15 +131,40 @@ def _t_harc(args: Dict[str, Any]) -> Any:
     return _kisa(tazelik.kilitle(out, "harc"))
 
 
+def _t_faiz(args: Dict[str, Any]) -> Any:
+    tur = str(args.get("faiz_turu") or args.get("islem") or "")
+    anapara = _sayi(args.get("anapara"), "anapara")
+    bas, bit = _tarih(args.get("baslangic"), "baslangic"), _tarih(args.get("bitis"), "bitis")
+    oran = _sayi(args.get("oran"), "oran")
+    try:
+        out = faiz.faiz(tur, anapara, bas, bit, oran)
+    except hesap.HesapHatasi as exc:
+        raise McpError(str(exc)) from None
+    out["veri"] = _durum()
+    return _kisa(tazelik.kilitle(out, "faiz"))
+
+
+def _t_iscilik(args: Dict[str, Any]) -> Any:
+    giris, cikis = _tarih(args.get("giris"), "giris"), _tarih(args.get("cikis"), "cikis")
+    brut, ek = _sayi(args.get("brut_ucret"), "brut_ucret"), _sayi(args.get("ek_menfaat"), "ek_menfaat")
+    try:
+        out = iscilik.iscilik(str(args.get("islem") or "kidem_ihbar"), giris, cikis, brut, ek)
+    except hesap.HesapHatasi as exc:
+        raise McpError(str(exc)) from None
+    out["veri"] = _durum()
+    return _kisa(tazelik.kilitle(out, "iscilik"))
+
+
 _TUTAR = {"type": ["number", "string"], "description": "TL; 1250000 ya da \"1.250.000,00\""}
+_TARIH = {"type": "string", "description": "YYYY-AA-GG ya da GG.AA.YYYY"}
 
 TOOLS = [
     Tool("kalemleri",
-         "Hesap kartlarının işlem menüsü: avukatlık asgari ücreti (AAÜT 2026) ve yargı harcı/gider avansı işlemleri, "
-         "her işlemin istediği girdiler ve seçenekleri (mahkemeler, maktu kalemler), kaynak Resmî Gazete künyeleri ve "
+         "Hesap kartlarının işlem menüsü: avukatlık asgari ücreti (AAÜT 2026), yargı harcı/gider avansı, faiz dökümü ve "
+         "işçilik alacağı (kıdem, ihbar) işlemleri, her işlemin istediği girdiler ve seçenekleri, kaynak künyeleri ve "
          "verinin tazeliği (Resmî Gazete'nin günlük denetimi). " + TAZELIK_KURALI,
          {"type": "object", "properties": {
-             "kart": {"type": "string", "enum": ["vekalet", "harc"], "description": "Yalnız bir kartın menüsü."}}},
+             "kart": {"type": "string", "enum": list(KARTLAR), "description": "Yalnız bir kartın menüsü."}}},
          _t_kalemler),
     Tool("vekalet_ucreti",
          "Avukatlık Asgari Ücret Tarifesi'ne (RG 03.11.2026, 33419) göre ASGARİ avukatlık ücreti; hesap kodla yapılır, "
@@ -152,6 +199,31 @@ TOOLS = [
              "pesin_odenen": _TUTAR,
              "yargi": {"type": "string", "enum": ["adli", "idari"]}}},
          _t_harc),
+    Tool("faiz",
+         "Faiz dökümü, dönem dönem ve gün sayılı (icra takibi ve alacak için): kanuni faiz (3095 m. 1; 31.07.2026'dan beri "
+         "TCMB reeskont oranının %80'i, önceki dönemler BKK 2005/9831 ve CB Kararı 8485), ticari işlerde temerrüt faizi "
+         "(3095 m. 2/2: TCMB avans oranı, 31 Aralık ve 30 Haziran kuralı) ya da sözleşmede yazılı sabit oran. Oranlar "
+         "Resmî Gazete'deki TCMB tebliğlerinden; hesap kodla, basit faiz (m. 3). faiz_turu: kanuni|ticari|sabit; anapara, "
+         "baslangic (temerrüt), bitis (takip/ödeme) [+ oran yalnız sabitte]. " + TAZELIK_KURALI,
+         {"type": "object", "required": ["faiz_turu", "anapara", "baslangic", "bitis"], "properties": {
+             "faiz_turu": {"type": "string", "enum": ["kanuni", "ticari", "sabit"]},
+             "anapara": _TUTAR,
+             "baslangic": dict(_TARIH, description="Faizin başlangıç (temerrüt) tarihi; YYYY-AA-GG ya da GG.AA.YYYY"),
+             "bitis": dict(_TARIH, description="Bitiş (takip ya da ödeme) tarihi; faiz bu günden önceki güne kadar işler"),
+             "oran": {"type": ["number", "string"], "description": "Yalnız sabit: sözleşmede yazılı yıllık oran, yüzde"}}},
+         _t_faiz),
+    Tool("iscilik_alacagi",
+         "İşçilik alacağı ön hesabı, BRÜT: kıdem tazminatı (1475 m. 14; 30 günlük giydirilmiş ücret, çıkış tarihindeki "
+         "dönemin kıdem tavanıyla sınırlı, tam yıl + artan gün) ve ihbar tazminatı (4857 m. 17; 2/4/6/8 hafta). Kıdem "
+         "tavanı ÇSGB tablosundan (Resmî Gazete'de yayımlanmaz). islem: kidem_ihbar|kidem|ihbar; giris, cikis, brut_ucret "
+         "[+ ek_menfaat: düzenli ek ödemeler, aylık]. Hak kazanma ve net tutar hesaba girmez. " + TAZELIK_KURALI,
+         {"type": "object", "required": ["giris", "cikis", "brut_ucret"], "properties": {
+             "islem": {"type": "string", "enum": ["kidem_ihbar", "kidem", "ihbar"]},
+             "giris": dict(_TARIH, description="İşe giriş tarihi"),
+             "cikis": dict(_TARIH, description="İş sözleşmesinin sona erdiği tarih"),
+             "brut_ucret": dict(_TUTAR, description="Son aylık brüt ücret (TL)"),
+             "ek_menfaat": dict(_TUTAR, description="Düzenli ek ödemeler (yol, yemek, ikramiye...), aylık toplam (TL)")}},
+         _t_iscilik),
 ]
 
 

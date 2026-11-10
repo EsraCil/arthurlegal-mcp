@@ -96,12 +96,13 @@ STDLIB_BACKENDS = [
     # file paths.
     ("tkgm", os.path.join(ROOT, "tkgm-mcp"), "srv_tkgm",
      "🇹🇷 Tapu-kadastro — canlı parsel (TKGM Parsel Sorgu, dakikada en çok 30 istek), rapor, kroki"),
-    # Fee calculator cards: no files. The code does the arithmetic; amounts come from hesap-mcp/veri, each
-    # row quoting the Official Gazette text it was taken from. Its only network access is the freshness check
+    # Fee calculator cards: no files. The code does the arithmetic; amounts and rates come from hesap-mcp/veri, each
+    # row quoting the official text it was taken from (interest rates: the central bank communiques in the Official
+    # Gazette; severance ceiling: the labour ministry table, which the Gazette does not publish). Its only network access is the freshness check
     # (hesap-mcp/tazelik.py): about once a day it reads the Official Gazette's daily index pages; a new
     # tariff publication, or an index it could not read, is reported on the result instead of a firm total.
     ("hesap", os.path.join(ROOT, "hesap-mcp"), "srv_hesap",
-     "🇹🇷 Hesap kartları — avukatlık asgari ücreti, yargı harcı, gider avansı (hesabı kod yapar)"),
+     "🇹🇷 Hesap kartları — avukatlık asgari ücreti, yargı harcı, gider avansı, faiz, kıdem ve ihbar (hesabı kod yapar)"),
     # German statute text from gesetze-im-internet.de. NeuRIS, behind the proxied
     # de-eli tools, lacks the core codes in its test phase (BGB, HGB, StGB, ZPO ...),
     # so the text of a norm comes from here: same de_ prefix, different tool names.
@@ -780,7 +781,8 @@ except ImportError:
 # (the tkgm_ tools below are on this endpoint).
 MASA_TOOLS = ("tr_mevzuat_madde_getir", "tr_mevzuat_ara", "tr_mevzuat_icindekiler", "tr_ictihat_ara", "tr_ictihat_getir",
               "tr_kurum_karari_ara", "tr_kurum_karari_getir", "tr_semantik_ara", "tr_belge_getir",
-              "tr_spk_bulten_icinde_ara", "status", "hesap_kalemleri", "hesap_vekalet_ucreti", "hesap_yargi_harci")
+              "tr_spk_bulten_icinde_ara", "status", "hesap_kalemleri", "hesap_vekalet_ucreti", "hesap_yargi_harci",
+              "hesap_faiz", "hesap_iscilik_alacagi")
 REMOTE_MODULES = {
     "tapu": {"durum": "claude"}, "beyin": {"durum": "masaustu"}, "mask": {"durum": "masaustu"},
     "uyap": {"durum": "masaustu"}, "donna": {"durum": "hazir"},
@@ -860,8 +862,9 @@ Resmî Gazete, semantik arşiv; KİK/Sayıştay/TÜRKPATENT/İSTAÇ YOK — resm
 `gleif_` tüzel kişi kimliği (LEI) · `scholar_` doktrin · `contracts_` sözleşme emsali ·
 `tkgm_` tapu-kadastro: parseli TKGM Parsel Sorgu'dan canlı getirir (il/ilçe/mahalle + ada/parsel,
 koordinat ya da yer adı; dosya İSTEMEYİN), rapor, ölçü, kroki; ilk canlı çağrıda onay kartı döner,
-önce `tkgm_baslangic`. `hesap_` hesap kartları: avukatlık asgari ücreti, yargı harcı, gider avansı;
-hesabı kod yapar, tutarı kendiniz hesaplamayın; cevapta aracın tazelik satırını aynen yazın.
+önce `tkgm_baslangic`. `hesap_` hesap kartları: avukatlık asgari ücreti, yargı harcı, gider avansı, faiz dökümü
+(kanuni, ticari temerrüt), kıdem ve ihbar tazminatı (brüt); hesabı kod yapar, tutarı ve oranı kendiniz
+hesaplamayın; cevapta aracın tazelik satırını aynen yazın.
 `status` ve `al_` ArthurLegal Masası araçları bu uca aittir, bir yargı çevresine değil.
 
 TÜRKİYE İÇİN GİRİŞ NOKTASI: karmaşık Türk hukuku sorusunda önce `tr_hukuk_arastirma_rehberi`

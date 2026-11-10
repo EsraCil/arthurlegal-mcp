@@ -67,7 +67,8 @@ class DirectoryProfile(unittest.TestCase):
 
     def test_fee_cards_on_main_and_on_its_desk(self):
         main = {t.name: t for t in server._tools}
-        for name in ("hesap_kalemleri", "hesap_vekalet_ucreti", "hesap_yargi_harci"):
+        for name in ("hesap_kalemleri", "hesap_vekalet_ucreti", "hesap_yargi_harci", "hesap_faiz",
+                     "hesap_iscilik_alacagi"):
             self.assertIn(name, main)
             self.assertTrue(main[name].annotations.get("readOnlyHint"), name)
         if server.al_arayuz is None:

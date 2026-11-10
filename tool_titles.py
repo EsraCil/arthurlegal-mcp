@@ -184,6 +184,8 @@ TITLES: Dict[str, str] = {
     "hesap_kalemleri": "Türkiye: fee calculator menu",
     "hesap_vekalet_ucreti": "Türkiye: attorney minimum fee (tariff calculation)",
     "hesap_yargi_harci": "Türkiye: court fees and cost advance (tariff calculation)",
+    "hesap_faiz": "Türkiye: statutory and commercial default interest (period breakdown)",
+    "hesap_iscilik_alacagi": "Türkiye: severance and notice pay (gross, employment claims)",
 }
 
 # Tools that can change something (locally: write a file or the UI answer).

@@ -13,6 +13,8 @@ olmadığını söyler:
   (`yeni_duzenleme`): toplam kesin sonuç olarak verilmez. Bulgu süreç boyunca kalır.
 * Resmî Gazete'ye ulaşılamazsa ya da tarama tamamlanmazsa `kontrol_edilemedi`: toplam verilir ama
   "teyit edilmedi" diye işaretlenir.
+* Kartın verisinin geçerlilik tarihi (`izlenen.gecerlilik`) geçtiyse kart da `yeni_duzenleme` gibi kilitlenir: yeni
+  yılın faiz oranı ve kıdem tavanının Temmuz değişikliği fihristte görünmeyebilir, takvim bunu yakalar.
 
 Nezaket: yalnız https://www.resmigazete.gov.tr; istekler arasında en az 1 sn; süreç başına günde en çok
 20 istek; aynı anda tek tarama (kilit); başarısız denemeden sonra 30 dk beklenir. Kullanıcının hesap
@@ -216,6 +218,8 @@ class _Desen:
 
 
 def _kunye(k: Dict[str, Any]) -> str:
+    if k.get("kunye"):                      # Resmî Gazete'de yayımlanmayan kaynak (ör. ÇSGB kıdem tavanı tablosu)
+        return k["kunye"]
     if not k.get("rg_tarih"):
         return k.get("ad") or k.get("kod") or ""
     y, a, g = k["rg_tarih"].split("-")
@@ -243,6 +247,9 @@ class Nobetci:
         self._bilinen = list(izlenen.get("bilinen", []))
         self._kart_kaynaklari: Dict[str, List[str]] = dict(izlenen.get("kartlar") or {})
         self._kisa_adlar: Dict[str, str] = dict(izlenen.get("kisa_adlar") or {})
+        # Kartın verisinin geçerli olduğu son gün: sonrasında yeni dönem verisi (yeni yılın faiz oranı, yeni kıdem tavanı)
+        # işlenene kadar kart kilitlenir. Fihristte görünmeyen değişiklikler (genelge, 31 Aralık oranı) için.
+        self._gecerlilik: Dict[str, Dict[str, Any]] = dict(izlenen.get("gecerlilik") or {})
         self._kaynaklar = {k["kod"]: k for k in veri.get("kaynaklar", [])}
         d = veri.get("derlenme_tarihi")
         self._derlenme = date.fromisoformat(d) if d else None
@@ -402,6 +409,22 @@ class Nobetci:
                             "url": k["url"] or k["fihrist"], "desen": k["desen_adi"], "kartlar": k["kartlar"]})
         return out
 
+    def donem_sonu(self, kart: Optional[str], bugun: date) -> List[Dict[str, Any]]:
+        """Verisinin geçerlilik tarihi geçmiş kartlar: yeni dönem verisi işlenmeden kesin toplam verilmez."""
+        out = []
+        for k in ([kart] if kart else sorted(self._gecerlilik)):
+            g = self._gecerlilik.get(k)
+            if not g or not g.get("son"):
+                continue
+            son = date.fromisoformat(g["son"])
+            if bugun > son:
+                ertesi = son + timedelta(days=1)
+                out.append({"tarih": ertesi.isoformat(), "rg": "Yeni dönem (%s)" % _rg_tarihi(ertesi),
+                            "baslik": "%s %s tarihine kadar; %s" % (g.get("ad") or k, _rg_tarihi(son), g.get("neden") or ""),
+                            "bolum": "", "url": g.get("url") or RG_GIRIS, "desen": "Veri dönemi sona erdi",
+                            "kartlar": [k], "tur": "donem"})
+        return out
+
     def _kaynak_kodlari(self, kart: Optional[str]) -> List[str]:
         if kart:
             return list(self._kart_kaynaklari.get(kart, []))
@@ -423,7 +446,7 @@ class Nobetci:
         kaynaklar = [self._kaynaklar[k] for k in self._kaynak_kodlari(kart) if k in self._kaynaklar]
         kunyeler = [_kunye(k) for k in kaynaklar]
         veri_kaynaklari = ["%s, %s" % (self._kisa_adlar.get(k["kod"]) or k.get("ad"), _kunye(k)) for k in kaynaklar]
-        yeni = self.bulgular(kart)
+        yeni = self.donem_sonu(kart, self._bugun(simdi)) + self.bulgular(kart)
         son = self._son_basarili.astimezone(TR) if self._son_basarili else None
         son_yazi = son.strftime("%d.%m.%Y %H:%M") if son else None
         out: Dict[str, Any] = {"durum": "guncel", "toplam": "kesin", "veri_kaynaklari": veri_kaynaklari,
@@ -436,8 +459,11 @@ class Nobetci:
                                                       or (self._hata_zamani or simdi) >= self._son_basarili))
         if yeni:
             ilk = yeni[0]
-            uyari = ("UYARI: %s tarihli Resmî Gazete'de bu hesabı etkileyebilecek yeni düzenleme var, teyidiniz "
-                     "gerekli: %s" % (_rg_tarihi(date.fromisoformat(ilk["tarih"])), ilk["url"]))
+            if ilk.get("tur") == "donem":
+                uyari = "UYARI: %s; teyidiniz gerekli: %s" % (ilk["baslik"].rstrip(". "), ilk["url"])
+            else:
+                uyari = ("UYARI: %s tarihli Resmî Gazete'de bu hesabı etkileyebilecek yeni düzenleme var, teyidiniz "
+                         "gerekli: %s" % (_rg_tarihi(date.fromisoformat(ilk["tarih"])), ilk["url"]))
             if len(yeni) > 1:
                 uyari += " (ayrıca %d yayım daha: tazelik.yeni)" % (len(yeni) - 1)
             out.update(durum="yeni_duzenleme", toplam="verilmedi", uyari=uyari,
@@ -452,10 +478,10 @@ class Nobetci:
             metin = "resmî metne" if len(tarihler) <= 1 else "resmî metinlere"
             bas = ("Resmî Gazete denetimi bu kurulumda kapalı" if self._kurulum_hatasi
                    else "Resmî Gazete'ye bugün ulaşılamadı")
+            dayanak = ("%s tarihli %s" % (_tarih_listesi(tarihler), metin)) if tarihler else "verideki resmî kaynağa"
             out.update(durum="kontrol_edilemedi", toplam="teyit edilmedi",
                        neden=self._kurulum_hatasi or self._son_hata or "son başarılı kontrol 24 saatten eski",
-                       uyari="UYARI: %s; tutarlar %s tarihli %s göredir, teyidiniz gerekli: %s"
-                             % (bas, _tarih_listesi(tarihler) or "veri", metin, RG_GIRIS),
+                       uyari="UYARI: %s; tutarlar %s göredir, teyidiniz gerekli: %s" % (bas, dayanak, RG_GIRIS),
                        satir="%s · son kontrol: %s" % (
                            kaynak_satiri, ("%s; bugün yapılamadı (teyit edilmedi)" % son_yazi) if son_yazi
                            else "yapılamadı (teyit edilmedi)"))
@@ -537,7 +563,7 @@ def komut(argv: Optional[List[str]] = None, getir: Optional[Getirici] = None,
     bugun = n._bugun()
     bas = bugun - timedelta(days=gun - 1)
     tamam = n.tara(bas, bugun)
-    yeni = n.bulgular()
+    yeni = n.donem_sonu(None, bugun) + n.bulgular()
     sonuc: Dict[str, Any] = {
         "durum": "yeni_duzenleme" if yeni else ("guncel" if tamam else "kontrol_edilemedi"),
         "aralik": [bas.isoformat(), bugun.isoformat()],
