@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.9.1"
+__version__ = "1.9.2"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry and fee calculator tools and the Official Gazette
@@ -809,7 +809,11 @@ def _attach_views() -> None:
         if meta:
             tool.meta = meta
     # "uzak": in Claude Desktop the same chat may also have the lawyer's local install (arthurlegal-yerel), whose
-    # desk runs memory, masking and UYAP; the description points Claude there.
+    # desk runs memory, masking and UYAP and is the only one that keeps the query history: Claude gives a desk
+    # view a fresh browser store in every conversation and this endpoint stores no query. Claude does not pick
+    # between the two desks by description (it opened this one every time), so the decision is made here: with
+    # arthurlegal-yerel in the required connector list the desk is not opened and the result sends Claude to the
+    # local al_masasi. uzakta_kal turns that off (no desk on the local server, or the user wants this one).
     tanim = al_arayuz.masa_araci("uzak")
     able = [t.name for t in _tools if t.name in MASA_TOOLS]
     # The chat transcript sits behind the full-screen desk and the desk cannot read it: Claude hands
@@ -822,7 +826,8 @@ def _attach_views() -> None:
         able.append("al_masada_basla")
     _tools.append(Tool(
         tanim["name"], tanim["description"], tanim["inputSchema"],
-        lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum"), args.get("baglayicilar")),
+        lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum"), args.get("baglayicilar"),
+                                           yerele_devret=args.get("uzakta_kal") is not True),
         meta=al_arayuz.arac_meta("al_masasi")))
     if teslim:
         def hand_over(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -830,7 +835,7 @@ def _attach_views() -> None:
                 return al_arayuz.teslim_cevabi(args, al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES))
             except al_arayuz.TeslimHatasi as exc:
                 raise McpError(str(exc)) from None
-        tanim = teslim()
+        tanim = teslim("uzak")
         _tools.append(Tool(tanim["name"], tanim["description"], tanim["inputSchema"], hand_over,
                            meta=al_arayuz.arac_meta("al_masaya_yaz")))
     if basla:
@@ -840,7 +845,7 @@ def _attach_views() -> None:
                 return al_arayuz.baslangic_cevabi(args, al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES))
             except al_arayuz.TeslimHatasi as exc:
                 raise McpError(str(exc)) from None
-        tanim = basla()
+        tanim = basla("uzak")
         _tools.append(Tool(tanim["name"], tanim["description"], tanim["inputSchema"], start,
                            meta=al_arayuz.arac_meta("al_masada_basla")))
     for k in al_arayuz.kaynaklar():
@@ -956,9 +961,11 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
     desk = next((t for t in _tools if t.name == "al_masasi"), None)
     if desk is not None:
         able = [t.name for t in tools if t.name in MASA_TOOLS]
-        # Own description: no pointer to another server and no hand-over sentence (those tools are not here).
+        # Own description and schema: no pointer to another server, no hand-over sentence (those tools are not
+        # here), no uzakta_kal and no required list; the directory desk never redirects to another server.
+        dizin = al_arayuz.masa_araci("dizin")
         directory_desk = Tool(
-            desk.name, al_arayuz.masa_araci("dizin")["description"], desk.input_schema,
+            desk.name, dizin["description"], dizin["inputSchema"],
             lambda args: al_arayuz.masa_cevabi("uzak", able, DIRECTORY_MODULES, args.get("bolum"),
                                                args.get("baglayicilar")),
             meta=desk.meta)

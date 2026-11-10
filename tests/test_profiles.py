@@ -147,6 +147,15 @@ class DirectoryProfile(unittest.TestCase):
         self.assertNotIn("al_masaya_yaz", directory.handler({})["not"])
         self.assertNotIn("al_masaya_yaz", directory.handler({})["yetenekler"])
         self.assertEqual(directory.handler({"baglayicilar": ["Gmail"]})["baglayicilar"], [{"ad": "Gmail", "durum": "bagli"}])
+        # The main desk hands over to the lawyer's install when it is connected; the directory desk never sends
+        # Claude to another server and keeps its plain schema.
+        yerel = {"baglayicilar": [{"ad": "arthurlegal-yerel"}]}
+        self.assertIn("yonlendir", main.handler(yerel))
+        self.assertNotIn("yonlendir", directory.handler(yerel))
+        self.assertNotIn("arthurlegal-yerel", directory.handler(yerel)["not"])
+        self.assertNotIn("required", directory.input_schema)
+        self.assertNotIn("uzakta_kal", directory.input_schema["properties"])
+        self.assertEqual(main.input_schema["required"], ["baglayicilar"])
         # Only the main endpoint points Claude at the lawyer's local install; the directory names no other server
         # and no hand-over tool it does not have.
         self.assertIn("arthurlegal-yerel", main.description)

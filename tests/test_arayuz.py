@@ -120,6 +120,35 @@ class ServerViewsTest(unittest.TestCase):
         self.assertEqual(tools["al_masasi"].handler({"baglayicilar": [{"ad": "Slack", "durum": "hata"}]})["baglayicilar"],
                          [{"ad": "Slack", "durum": "hata"}])
 
+    def test_desk_is_handed_to_the_local_install(self) -> None:
+        # A desk opened from this endpoint cannot keep the query history (Claude gives the view a fresh browser
+        # store in every conversation, the endpoint stores nothing). With the lawyer's install connected in the
+        # same chat the desk is not opened here: the result sends Claude to the local al_masasi.
+        server._attach_views()
+        tools = {t.name: t for t in server._tools}
+        desk = tools["al_masasi"]
+        self.assertEqual(desk.input_schema["required"], ["baglayicilar"])
+        self.assertIn("uzakta_kal", desk.input_schema["properties"])
+        yerel = [{"ad": "arthurlegal-mcp"}, {"ad": "arthurlegal-yerel", "durum": "bagli"}, {"ad": "Gmail"}]
+        devir = desk.handler({"bolum": "gecmis", "baglayicilar": yerel})
+        self.assertEqual(devir["yonlendir"], {"sunucu": "arthurlegal-yerel", "arac": "al_masasi"})
+        self.assertEqual(devir["bolum"], "gecmis")
+        for parca in ("AÇILMADI", "arthurlegal-yerel", "al_masasi", "uzakta_kal=true"):
+            self.assertIn(parca, devir["not"])
+        self.assertNotIn("Masa açıldı", devir["not"])
+        # No install in the chat, an install that is not connected, or the user staying here: the desk opens.
+        for args in ({"baglayicilar": [{"ad": "Gmail"}]}, {"baglayicilar": []}, {},
+                     {"baglayicilar": [{"ad": "arthurlegal-yerel", "durum": "hata"}]},
+                     {"baglayicilar": yerel, "uzakta_kal": True}):
+            with self.subTest(args=args):
+                acik = desk.handler(args)
+                self.assertNotIn("yonlendir", acik)
+                self.assertIn("Masa açıldı", acik["not"])
+        # A truthy string is not the user's decision to stay.
+        self.assertIn("yonlendir", desk.handler({"baglayicilar": yerel, "uzakta_kal": "evet"}))
+        for ad in ("al_masada_basla", "al_masaya_yaz"):
+            self.assertIn("arthurlegal-yerel", tools[ad].description, ad)
+
     def test_views_are_whole_pages(self) -> None:
         server._attach_views()
         for r in server._resources:
