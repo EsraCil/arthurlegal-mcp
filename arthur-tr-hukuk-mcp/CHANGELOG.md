@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.0 — 2026-11-10
+
+- İndeks ekleri: yeni kurum kararları tam imaj (2,3 GB, ~3 saat) beklemeden canlıya gider. Tabandan bu yana eklenen ya
+  da düzeltilen belgeler küçük, bir kez yazılan dosyalarda (`ek/YYYY-MM-DD.jsonl.gz`, sıkıştırılmış JSON satırları)
+  durur; ağ geçidinin `start.sh`'i açılışta onları gömülü indeksin üstüne işler (kök `indeks_ek.py`), sonra eksik
+  vektörleri doldurur. Eşgüçlü: içeriği aynı belge yeniden yazılmaz. Başlığı ya da gövdesi değişen belgenin vektörü
+  silinir; yalnız tarih, atıf, durum, adres, kurum, konu ya da meta alanı düzeltilen belge yerinde güncellenir, vektörü
+  kalır. Arama dizinleri (FTS5) belge belge güncellenir: bu indekste baştan kurmak (`reindex_fts`) yerelde 72 sn ve
+  932 MB WAL sürdü, 103 belgelik ek 0,45 sn ve 11 MB. Bozuk, yarım ya da başka indekse ait dosya atlanır ve günlüğe
+  yazılır. `status` → `local_index.index_updates`: uygulanan ek dosyası ve belge sayısı, en yeni ekin tarihi.
+- `ek_tarama.py`: zamanlanmış tarama (GitHub Actions, Pazartesi ve Perşembe 03.30 UTC). Gömülü indeks olmadan,
+  veri dalındaki kayıttan (bilinen ref'ler, Rekabet'te metni gelmemiş kararlar) kurulan iskelet indeksle
+  `crawl.py`'nin yalnız-yeni yolunu ve Rekabet metin tamamlamayı koşturur, yeni kararları ek dosyası olarak yazar.
+  Sayfa sınırları haftada iki koşuya göre (Rekabet 10, KVKK 3, BTK 2 sayfa); aynı sunucuya iki istek arası en az 1 sn.
+  `crawl.tara_kurum`: `main` ile tarama aynı kurum yolunu kullanır (davranış değişmedi).
+- 10.11.2026 taramasının eki (103 belge: EPDK 12, Rekabet 28 + metni gelen 2, SPK 55, BDDK 3, BTK 3; 757 KB)
+  tabana uygulanınca bugünkü taranmış indeksle belge, ref, bütün alanlar, vektörler, state ve anahtar kelime
+  aramalarında aynı; `integrity_check` ve FTS5 bütünlük denetimi temiz; ikinci uygulama dosyayı değiştirmiyor.
+
 ## 0.6.1 — 2026-11-10
 
 - **BTK'nın yeni kararlarında tarih bir gün erken okunuyordu.** btk.tr Nisan 2026'dan beri girilen kararlarda tarihi Türkiye saatiyle gece yarısının UTC karşılığı olarak veriyor (`2026-09-14T21:00:00.000Z` = 15.09.2026); ilk on karakter alındığı için `date` ve atıf (`BTK, … tarih ve … sayılı Kurul Kararı`) bir gün erkendi. Damga artık Türkiye'deki güne çevriliyor (`sources/btk.py`, `_gun`). Etkilenen kayıt 8'dir (02.04.2026 ile 15.09.2026 arası kararlar; liste düzeltilmiş okumayla baştan dolaşılarak ölçüldü, kalan 1.899 kayıt aynı kaldı); bunlar ek dosyasıyla düzeltilir.

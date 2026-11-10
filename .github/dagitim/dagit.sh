@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Fly'a Dockerfile.code ile dağıtır (.github/workflows/fly-dagitim.yml). Ortam: SHA, UYGULAMA, FLY_API_TOKEN, DERLEYICI.
+# Fly'a Dockerfile.code ile dağıtır (.github/workflows/fly-dagitim.yml). Ortam: SHA, UYGULAMA, FLY_API_TOKEN, DERLEYICI,
+# ETIKET (iş akışı verir: gh-<commit>, veri dalında ek varsa gh-<commit>-ek-<veri>; yoksa gh-<commit>).
 #
 #   DERLEYICI=fly     Önce Fly'ın derleyicisi. Derleme aşamasında düşerse (çoğu kez derleyici makinesi uykudan geç
 #                     uyanır, 2026-11-07) 60 sn sonra bir kez daha; yine düşerse imaj bu makinede derlenir.
@@ -9,7 +10,7 @@
 # Sürüm ya da sağlık denetimi aşamasında düşen dağıtım yeniden denenmez: iş akışı önceki imaja döner.
 set -uo pipefail
 
-etiket="gh-${SHA::7}"
+etiket="${ETIKET:-gh-${SHA::7}}"
 ortak=(. -a "$UYGULAMA" --config fly.toml --dockerfile Dockerfile.code --image-label "$etiket" --wait-timeout 10m)
 gunluk="${RUNNER_TEMP:-/tmp}/dagitim.log"
 

@@ -4,9 +4,10 @@
     python .github/dagitim/canli_denetim.py denetle --etiket gh-abc1234 --once once.json --makineler makineler.json
     python .github/dagitim/canli_denetim.py saglik --once once.json
 
-olc      iki uçtaki araç sayısı (JSON).
+olc      iki uçtaki araç sayısı ve yerel indekslerin belge sayıları (JSON).
 denetle  dağıtımdan sonra: çalışan her makine yeni imajda, status yeni imajı söylüyor, araç sayısı düşmemiş,
-         masa sayfası bu commit'tekiyle bayt bayt aynı, hesap kartları cevap veriyor.
+         masa sayfası bu commit'tekiyle bayt bayt aynı, hesap kartları cevap veriyor, yerel indekslerin
+         belge sayısı düşmemiş (indeks ekleri açılışta arka planda işlenir; birkaç dakika beklenir).
 saglik   önceki imaja dönüldükten sonra: iki uç cevap veriyor, araç sayısı düşmemiş.
 
 Yalnız standart kütüphane. Makineler yeni açılmış olabilir: ağ hatasında birkaç kez dener.
@@ -96,10 +97,49 @@ def makineler_tamam(makineler: list[dict], etiket: str) -> list[str]:
             for m in calisan if not m.get("config", {}).get("image", "").endswith(":" + etiket)]
 
 
-def _status_imaji() -> str:
+def _status() -> dict:
     oturum = _baglan("/mcp")
     sonuc = _sonuc("/mcp", oturum, "tools/call", {"name": "status", "arguments": {}})
-    return json.loads(sonuc["content"][0]["text"]).get("build", {}).get("image", "")
+    return json.loads(sonuc["content"][0]["text"])
+
+
+def _status_imaji() -> str:
+    return _status().get("build", {}).get("image", "")
+
+
+def belge_sayilari(durum: dict) -> dict[str, int]:
+    """status'tan yerel indekslerin belge sayısı: tr'de local_index.documents, ötekilerde indexed_*."""
+    sayilar = {}
+    for onek, d in (durum.get("backend_status") or {}).items():
+        if not isinstance(d, dict):
+            continue
+        yerel = d.get("local_index")
+        n = yerel.get("documents") if isinstance(yerel, dict) else None
+        if n is None:
+            n = d.get("indexed_documents", d.get("indexed_decisions"))
+        if isinstance(n, int) and not isinstance(n, bool):
+            sayilar[onek] = n
+    return sayilar
+
+
+def belge_olc(kez: int = 4) -> dict[str, int]:
+    """Her bağlantı bir makineye düşer: birkaç kez sorulur, her indeksin en küçüğü alınır."""
+    sonuc: dict[str, int] = {}
+    for _ in range(kez):
+        for onek, n in belge_sayilari(_dene(_status)).items():
+            sonuc[onek] = min(n, sonuc.get(onek, n))
+    return sonuc
+
+
+def belgeleri_karsilastir(once: dict, sonra: dict, azalabilir: bool) -> list[str]:
+    """İndeks ekleri dağıtımda gelmezse (veri dalı alınamadı, ek atlandı) indeks tabana döner: belge düşer."""
+    hatalar = []
+    for onek, n in sorted(once.items()):
+        if onek not in sonra:
+            hatalar.append(f"{onek}: indeksin belge sayısı status'ta yok")
+        elif not azalabilir and sonra[onek] < n:
+            hatalar.append(f"{onek}: indeksteki belge {n} → {sonra[onek]} düştü")
+    return hatalar
 
 
 def _masa_ayni() -> bool:
@@ -127,7 +167,25 @@ def _yaz(satirlar: list[str]) -> None:
             fh.write("\n".join(f"- {s}" for s in satirlar) + "\n")
 
 
-def denetle(etiket: str, once: dict, makineler: list[dict] | None, azalabilir: bool) -> list[str]:
+def _belgeleri_bekle(once: dict, azalabilir: bool, deneme: int = 9, bekle: int = 20) -> tuple[dict, list[str]]:
+    sonra: dict = {}
+    hatalar = ["status okunamadı"]
+    for kez in range(1, deneme + 1):
+        try:
+            sonra = belge_olc()
+            hatalar = belgeleri_karsilastir(once, sonra, azalabilir)
+        except Exception as hata:  # ağ ya da yeni açılan makine
+            hatalar = [f"status okunamadı: {hata}"]
+        if not hatalar or kez == deneme:
+            break
+        print(f"  belge sayısı {kez}. denemede tutmadı ({hatalar[0]}); ekler işleniyor olabilir, {bekle} sn",
+              file=sys.stderr)
+        time.sleep(bekle)
+    return sonra, hatalar
+
+
+def denetle(etiket: str, once: dict, makineler: list[dict] | None, azalabilir: bool,
+            belge_azalabilir: bool = False) -> list[str]:
     hatalar: list[str] = []
     if makineler is not None:
         hatalar += makineler_tamam(makineler, etiket)
@@ -141,8 +199,14 @@ def denetle(etiket: str, once: dict, makineler: list[dict] | None, azalabilir: b
         hatalar.append("masa sayfası bu commit'tekiyle aynı değil")
     if not _dene(_hesap_cevap_veriyor):
         hatalar.append("hesap_kalemleri cevap vermedi")
-    _yaz([f"araç sayısı önce {once or '-'}, sonra {sonra}", f"imaj {etiket}"] +
-         ([f"HATA: {h}" for h in hatalar] or ["canlı denetim tamam"]))
+    satirlar = [f"araç sayısı önce {({k: v for k, v in once.items() if k in UCLAR}) or '-'}, sonra {sonra}",
+                f"imaj {etiket}"]
+    once_belge = once.get("belgeler") or {}
+    if once_belge:
+        sonra_belge, belge_hatalari = _belgeleri_bekle(once_belge, belge_azalabilir)
+        hatalar += belge_hatalari
+        satirlar.append(f"indeks belgeleri önce {once_belge}, sonra {sonra_belge}")
+    _yaz(satirlar + ([f"HATA: {h}" for h in hatalar] or ["canlı denetim tamam"]))
     return hatalar
 
 
@@ -160,10 +224,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--once", help="olc çıktısı (JSON dosyası)")
     ap.add_argument("--makineler", help="flyctl machines list --json çıktısı")
     ap.add_argument("--arac-azalabilir", action="store_true", help="araç sayısı bilerek azaldı")
+    ap.add_argument("--belge-azalabilir", action="store_true", help="bir indeksin belge sayısı bilerek azaldı")
     a = ap.parse_args(argv)
 
     if a.islem == "olc":
-        print(json.dumps(_dene(olc)))
+        sayilar: dict = dict(_dene(olc))
+        try:
+            sayilar["belgeler"] = belge_olc()
+        except Exception as hata:  # belge sayısı olmadan da dağıtılır; yalnız o denetim atlanır
+            print(f"  belge sayıları okunamadı: {hata}", file=sys.stderr)
+        print(json.dumps(sayilar))
         return 0
     once = {}
     if a.once and os.path.exists(a.once):
@@ -177,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.makineler:
         with open(a.makineler, encoding="utf-8") as fh:
             makineler = json.load(fh)
-    return 1 if denetle(a.etiket, once, makineler, a.arac_azalabilir) else 0
+    return 1 if denetle(a.etiket, once, makineler, a.arac_azalabilir, a.belge_azalabilir) else 0
 
 
 if __name__ == "__main__":

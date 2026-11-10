@@ -12,6 +12,7 @@ Case-law search needs an index first:
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict
 
 from mcpcore import McpError, Tool, run
@@ -155,6 +156,15 @@ def _t_vocabulary(args: Dict[str, Any]) -> Any:
         raise McpError(str(exc)) from exc
 
 
+def _index_updates() -> Dict[str, Any]:
+    """Updates applied at boot on top of the baked index (indeks_ek.py at the repository root)."""
+    try:
+        value = json.loads(_index.get_state("ek") or "null")
+    except ValueError:
+        return {}
+    return {"index_updates": value} if isinstance(value, dict) else {}
+
+
 def _t_status(args: Dict[str, Any]) -> Any:
     return {
         "server": "nl-rechtspraak-mcp",
@@ -173,6 +183,7 @@ def _t_status(args: Dict[str, Any]) -> Any:
             "unknown parameters: ?q=, ?keyword= and ?text= all return the "
             "unfiltered 3,751,381. Verified 2026-08-30."
         ),
+        **_index_updates(),
         **embeddings_status(),
     }
 

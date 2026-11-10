@@ -10,6 +10,14 @@
 # karışık bitebilir: yalnız master'ın en son commit'i dağıtılır, eskisi yeninin üstüne yazılmaz.
 # Sır: FLY_API_TOKEN, yalnız arthurlegal-mcp uygulamasına yetkili dağıtım anahtarı (flyctl tokens create deploy).
 # Tam imaj (indeks ya da Python taban imajı değişince) burada yapılmaz: README "Code-only deploys".
+#
+# İndeks ekleri: derlemeden önce veri/ek dalındaki <arka uç>/ek/*.jsonl.gz dosyaları (ve kayıt) kodun yanına
+# alınır (.github/dagitim/ek_getir.py; yalnız o yollar, yalnız düzenli dosya, biçimi denetlenmiş); start.sh
+# açılışta onları gömülü indeksin üstüne işler. Dal yoksa dağıtım eksiz sürer; dal var ama alınamıyorsa ya da
+# bir dosya denetimden geçmiyorsa dağıtım durur (indeks sessizce eskiye dönmesin). İmaj etiketi dalın ucunu da
+# taşır (gh-<commit>-ek-<veri>): aynı koda yeni veriyle yapılan dağıtım ayrı etiket alır. Kurum kararı taraması
+# (kurum-taramasi.yml) yeni ek yazınca bu işi workflow_dispatch ile başlatır. Canlı denetim yerel indekslerin
+# belge sayısının düşmediğine de bakar.
 
 name: Fly dağıtımı
 
@@ -29,6 +37,10 @@ on:
         type: choice
         options: [fly, github]
         default: fly
+      belge_azalabilir:
+        description: "Bir indeksin belge sayısı bilerek azaldı (denetim düşüşü hata saymasın)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -71,6 +83,22 @@ jobs:
         with:
           python-version: "3.11" # Dockerfile: python:3.11-slim
 
+      # Sır almaz: yalnız veri dalından ek dosyalarını getirir ve denetler.
+      - name: İndeks ekleri (veri/ek dalı)
+        id: ek
+        if: steps.son.outputs.atla != '1'
+        run: python .github/dagitim/ek_getir.py --hedef .
+
+      - name: İmaj etiketi
+        if: steps.son.outputs.atla != '1'
+        env:
+          EK_SHA: ${{ steps.ek.outputs.sha }}
+        run: |
+          etiket="gh-${SHA::7}"
+          [ -z "$EK_SHA" ] || etiket="$etiket-ek-${EK_SHA::7}"
+          echo "ETIKET=$etiket" >> "$GITHUB_ENV"
+          echo "İmaj etiketi: $etiket"
+
       - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be # v1.5
         if: steps.son.outputs.atla != '1'
         with:
@@ -100,10 +128,11 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           AZALABILIR: ${{ inputs.arac_azalabilir && '--arac-azalabilir' || '' }}
+          BELGE_AZALABILIR: ${{ inputs.belge_azalabilir && '--belge-azalabilir' || '' }}
         run: |
           flyctl machines list -a "$UYGULAMA" --json > "$RUNNER_TEMP/makineler.json"
-          python .github/dagitim/canli_denetim.py denetle --etiket "gh-${SHA::7}" \
-            --once "$RUNNER_TEMP/once.json" --makineler "$RUNNER_TEMP/makineler.json" $AZALABILIR
+          python .github/dagitim/canli_denetim.py denetle --etiket "$ETIKET" \
+            --once "$RUNNER_TEMP/once.json" --makineler "$RUNNER_TEMP/makineler.json" $AZALABILIR $BELGE_AZALABILIR
 
       - name: Önceki imaja dön
         id: geri

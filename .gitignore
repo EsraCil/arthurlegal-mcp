@@ -5,3 +5,8 @@ __pycache__/
 *.db-shm
 data/
 .crawled
+# Index updates live on the veri/ek branch, never on master (README "Indexes"); the deploy fetches them.
+*/ek/*.jsonl.gz
+*/ek/kayit.json.gz
+*/ek/*.yaziliyor
+veri-ek/

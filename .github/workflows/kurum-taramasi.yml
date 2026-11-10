@@ -1,0 +1,163 @@
+# Kurum kararı taraması.
+#
+# Türk kurum kararları (EPDK, Rekabet, SPK, BDDK, BTK, KVKK, Sigorta Tahkim) eklemelidir: her karar ref'iyle
+# tekildir, yenisi eklenir. Bu iş yeni kararları tarar ve gömülü indeksin üstüne açılışta işlenen küçük bir ek
+# dosyası yazar (indeks_ek.py, arthur-tr-hukuk-mcp/ek_tarama.py). Tam imaj (2,3 GB, ~3 saat) gerekmez.
+#
+# Zaman: Pazartesi ve Perşembe 03.30 UTC. Kurulların çoğu Perşembe toplanır (karar tarihlerinden: EPDK %89, BDDK
+# %87, Rekabet %75, KVKK %68; BTK %53 Salı). Pazartesi koşusu Perşembe toplantısından sonra ~4 günlük yayım payı
+# bırakır ve 06.00 UTC'deki haftalık denetimden önce biter. SPK bülteni haftada ~2 kez çıkar (Pzt, Sal, Cum).
+#
+# Üç iş, her biri en dar yetkiyle:
+#   tara      contents: read. Gömülü indeks burada yok (2 GB, depoda değil); veri/ek dalındaki kayıt
+#             (arthur-tr-hukuk-mcp/ek/kayit.json.gz) bilinen ref'leri taşır. crawl.py'nin yalnız-yeni yolu koşar
+#             (ref'i bilinmeyen her kayıt yeni sayılır, karar tarihine bakılmaz), Rekabet'te metni gelmemiş
+#             kararlar tamamlanır. Yeni ek ve güncel kayıt eser (artifact) olarak kalır. Kaynak sitelerden gelen
+#             sayfa ve PDF'leri işleyen bu iş yazma yetkisi taşımaz.
+#   yaz       contents: write (+ actions: read, eseri indirmek için). Eki ve kaydı master'daki kodla denetler,
+#             veri/ek dalına commit'ler. master'a hiçbir şey yazılmaz (korumalı; GITHUB_TOKEN'la push yeni iş de
+#             tetiklemez).
+#   tetikle   actions: write. Fly dağıtımını workflow_dispatch ile başlatır; dağıtım daldaki ekleri imaja alır.
+# Yalnız master'da yazar ve tetikler. Elle "kuru" seçilirse yalnız tarar ve raporlar. Dal push'unda koşmaz: her
+# koşu kurum sitelerine ~160 istek atar. (10.11.2026'da bir kez dal push'uyla kuru denendi: GitHub makinelerinden
+# yedi kurumun yedisi cevap verdi, 163 istek, hata yok.)
+#
+# İş özeti kurum başına yeni karar sayısını, en yeni karar tarihini, istek sayısını ve hataları JSON olarak yazar;
+# aynı JSON "kurum-tarama-ozet" başlıklı bir not (annotation) olarak da durur. Haftalık denetim onu REST'le okur:
+# GET /repos/{depo}/actions/workflows/kurum-taramasi.yml/runs → koşunun işleri → "Tara" işinin check run'ı →
+# GET /repos/{depo}/check-runs/{kimlik}/annotations (iş özeti sayfasının REST karşılığı yok).
+# Nazik: kurumların kendi hız sınırlayıcıları + aynı sunucuya iki istek arası en az 1 sn; bir koşu ~170-230
+# istek. Bir kurum hata verirse ötekiler sürer.
+
+name: Kurum kararı taraması
+
+on:
+  schedule:
+    - cron: "30 3 * * 1,4" # Pazartesi ve Perşembe 03.30 UTC (06.30 TSİ)
+  workflow_dispatch:
+    inputs:
+      kuru:
+        description: "Kuru koşu: tara ve raporla; veri dalına yazma, dağıtma"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kurum-taramasi-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tara:
+    name: Tara
+    runs-on: ubuntu-latest
+    timeout-minutes: 75 # ilk GitHub koşusu 33 dk sürdü: EPDK oradan istek başına ~13 sn yanıt veriyor
+    permissions:
+      contents: read
+    env:
+      KURU: ${{ (github.event_name == 'push' || inputs.kuru || github.ref != 'refs/heads/master') && '--kuru' || '' }}
+    outputs:
+      belge: ${{ steps.tara.outputs.belge }}
+      dosya: ${{ steps.tara.outputs.dosya }}
+      veri_sha: ${{ steps.veri.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11" # Dockerfile: python:3.11-slim
+
+      # Çalışma bilgisayarındaki taramayla aynı sürümler: PDF (pypdf) ve EPDK'nın eski Word kararları (olefile).
+      - name: Paketler
+        run: pip install "pypdf==6.21.4" "olefile==0.47"
+
+      - name: Veri dalı (kayıt ve önceki ekler)
+        id: veri
+        run: python .github/dagitim/ek_getir.py --hedef "$RUNNER_TEMP/veri" --gerekli
+
+      - name: Tara
+        id: tara
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python arthur-tr-hukuk-mcp/ek_tarama.py tara --veri "$RUNNER_TEMP/veri" --cikti "$RUNNER_TEMP/cikti" $KURU
+
+      - name: Ek ve kayıt (eser)
+        if: env.KURU == '' && steps.tara.outputs.belge != '0' && steps.tara.outputs.belge != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kurum-ek
+          path: ${{ runner.temp }}/cikti/arthur-tr-hukuk-mcp/ek/
+          retention-days: 7
+          if-no-files-found: error
+
+  yaz:
+    name: Veri dalına yaz
+    needs: tara
+    if: >-
+      github.ref == 'refs/heads/master' && github.event_name != 'push' && !inputs.kuru &&
+      needs.tara.outputs.belge != '0' && needs.tara.outputs.belge != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      # Denetim kodu master'dan; veri dalında yalnız veri durur.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: kod
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: veri/ek
+          path: veri
+
+      - name: Taramanın eseri
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n kurum-ek -D "$RUNNER_TEMP/ek"
+
+      - name: Denetle, commit'le, gönder
+        env:
+          DOSYA: ${{ needs.tara.outputs.dosya }}
+          BELGE: ${{ needs.tara.outputs.belge }}
+          BEKLENEN: ${{ needs.tara.outputs.veri_sha }}
+        run: |
+          set -euo pipefail
+          ad=arthur-tr-hukuk-mcp
+          [[ "$DOSYA" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(-[1-9][0-9]{0,2})?\.jsonl\.gz$ ]] \
+            || { echo "::error::beklenmeyen ek adı"; exit 1; }
+          [ "$(git -C veri rev-parse HEAD)" = "$BEKLENEN" ] \
+            || { echo "::error::veri/ek bu koşu sırasında ilerledi; bu ek yazılmadı, sonraki koşu yeniden bulur"; exit 1; }
+          python kod/indeks_ek.py dogrula --ad "$ad" "$RUNNER_TEMP/ek/$DOSYA" "$RUNNER_TEMP/ek/kayit.json.gz"
+          hedef="veri/$ad/ek"
+          [ ! -e "$hedef/$DOSYA" ] || { echo "::error::$DOSYA veri dalında zaten var: ekler bir kez yazılır"; exit 1; }
+          mkdir -p "$hedef"
+          install -m 644 "$RUNNER_TEMP/ek/$DOSYA" "$hedef/$DOSYA"
+          install -m 644 "$RUNNER_TEMP/ek/kayit.json.gz" "$hedef/kayit.json.gz"
+          git -C veri add -- "$ad/ek/$DOSYA" "$ad/ek/kayit.json.gz"
+          git -C veri -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Kurum kararları: $DOSYA ($BELGE belge)"
+          git -C veri push origin HEAD:refs/heads/veri/ek
+
+  tetikle:
+    name: Fly dağıtımını başlat
+    needs: yaz
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: workflow_dispatch (master)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/fly-dagitim.yml/dispatches" -f ref=master

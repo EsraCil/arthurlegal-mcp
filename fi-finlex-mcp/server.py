@@ -11,6 +11,7 @@ Search needs an index; browsing and direct fetches do not:
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import struct
@@ -211,6 +212,15 @@ def _t_get_act(args: Dict[str, Any]) -> Any:
         raise McpError(str(exc)) from exc
 
 
+def _index_updates() -> Dict[str, Any]:
+    """Updates applied at boot on top of the baked index (indeks_ek.py at the repository root)."""
+    try:
+        value = json.loads(_index.get_state("ek") or "null")
+    except ValueError:
+        return {}
+    return {"index_updates": value} if isinstance(value, dict) else {}
+
+
 def _t_status(args: Dict[str, Any]) -> Any:
     return {
         "server": "fi-finlex-mcp",
@@ -228,6 +238,7 @@ def _t_status(args: Dict[str, Any]) -> Any:
             "The root https://opendata.finlex.fi/ returns 403 while every "
             "/finlex/avoindata/v1/... path works.",
         ],
+        **_index_updates(),
         **embeddings_status(),
     }
 

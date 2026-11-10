@@ -49,7 +49,7 @@ import sources  # noqa: E402
 from sources import bedesten_ictihat, bedesten_mevzuat, anayasa, uyusmazlik, resmi_gazete, spk  # noqa: E402
 from textx import HAS_PYPDF  # noqa: E402
 
-__version__ = "0.6.1"
+__version__ = "0.7.0"
 INDEX_PATH = os.environ.get("INDEX_PATH") or os.path.join(HERE, "data", "index.db")
 
 _index: Optional[retrieval.Index] = None
@@ -272,6 +272,16 @@ def _triyaj_durum() -> Dict[str, Any]:
     return triyaj.kunye()
 
 
+def _ek_durumu(idx) -> Optional[Dict[str, Any]]:
+    """Açılışta gömülü indeksin üstüne işlenen ekler (kök indeks_ek.py, start.sh): dosya ve belge sayısı,
+    en yeni ekin tarihi, atlanan dosya. Ek yoksa None: status bugünkü gibi kalır."""
+    try:
+        deger = json.loads(idx.get_state("ek", "") or "null")
+    except ValueError:
+        return None
+    return deger if isinstance(deger, dict) else None
+
+
 def t_status(args: Dict[str, Any]) -> Any:
     idx = index()
     by_kurum = {}
@@ -294,6 +304,9 @@ def t_status(args: Dict[str, Any]) -> Any:
         "rate_limits": {"bedesten": "10 istek / 30 sn (yerel kova: %s sn/istek)" % os.environ.get("BEDESTEN_RATE_REFILL_S", "3.5")},
         "note": "Yüklenememiş kaynak = ERİŞİLEMEZ, boş değil. status'u sonuçlar ince göründüğünde çağırın.",
     }
+    ek = _ek_durumu(idx)
+    if ek:
+        out["local_index"]["index_updates"] = ek
     return out
 
 

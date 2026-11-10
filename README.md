@@ -260,6 +260,53 @@ Turkish index is vectorised on the machine at boot).
 | `fi-finlex-mcp` | `python crawl.py --type statute-consolidated --from 2025 --to 2026` | consolidated statutes 2025-2026, Finnish and Swedish | 250 | 2026-10-26 |
 | `es-boe-mcp` | `python crawl.py --max 0`, then `python crawl.py --backfill-text` | consolidated legislation: metadata and the first 8,000 characters of the text in force | 12,439 | 2026-10-26 |
 
+### Index updates
+
+Regulator decisions are append-only: a decision is unique by its `ref`, does not change once
+published, and new ones are added. The one exception is Rekabet, which lists a decision by its
+title first and publishes the reasoned text later (the body is updated once). So the Turkish
+index is refreshed without a full image:
+
+- [`.github/workflows/kurum-taramasi.yml`](.github/workflows/kurum-taramasi.yml) runs on Mondays
+  and Thursdays at 03:30 UTC (most boards meet on Thursdays; Monday leaves about four days for
+  publication and finishes before the weekly audit at 06:00 UTC), or by hand (`kuru`: report
+  only). There is no baked index on GitHub's machines; a small registry on the `veri/ek` branch
+  (`arthur-tr-hukuk-mcp/ek/kayit.json.gz`: every known ref, and the Rekabet decisions still
+  without text) stands in for it. [`arthur-tr-hukuk-mcp/ek_tarama.py`](arthur-tr-hukuk-mcp/ek_tarama.py)
+  runs the same `crawl.py --only-new` path (a ref it does not know is new, whatever its decision
+  date: the lists are in publication order) and the Rekabet text backfill, with page limits sized
+  for two runs a week and at least one second between two requests to the same host. A regulator
+  that fails does not stop the others. The new and corrected documents go into one file, e.g.
+  `arthur-tr-hukuk-mcp/ek/2026-11-13.jsonl.gz` (gzipped JSON lines, written once); the job
+  commits it and the registry to `veri/ek` (never to `master`) and starts the deploy. The job
+  that parses the regulators' pages and PDFs has read-only permissions; writing and deploying
+  are separate jobs.
+- The deploy ([`fly-dagitim.yml`](.github/workflows/fly-dagitim.yml)) brings only
+  `<backend>/ek/*.jsonl.gz` and the registry from `veri/ek` into the build, as regular files,
+  checked by format ([`.github/dagitim/ek_getir.py`](.github/dagitim/ek_getir.py)), and labels
+  the image `gh-<commit>-ek-<data commit>`. No branch: it deploys without updates. A branch it
+  cannot read, or a file that fails the check: the deploy stops, so the index never silently
+  falls back. The live check then also requires that no local index lost documents.
+- At boot `start.sh` applies the files on top of the copied index with [`indeks_ek.py`](indeks_ek.py),
+  in the background, before filling missing vectors. Applying is idempotent and incremental (103
+  Turkish documents: 0.5 s; rebuilding the search tables instead took 72 s and a 932 MB WAL). A
+  document whose title or body changed loses its vector and gets a new one in the same pass; one
+  whose date, citation or other metadata alone was corrected keeps it. A broken, truncated or
+  foreign file is skipped and logged. `status` shows `index_updates` (files, documents, latest).
+- The run's summary and an annotation titled `kurum-tarama-ozet` carry it as JSON: new decisions,
+  newest decision date, requests and errors per regulator.
+
+The format fits every local index (they share `retrieval.Index`):
+`python indeks_ek.py uret --taban <live base> --yeni <refreshed copy> --ad pl-sejm-mcp --cikti <dir>`
+turns a workstation refresh of Poland, Ireland or another index into an update file, and
+`python indeks_ek.py karsilastir <base + updates> <refreshed copy>` checks that the two are the
+same. Only the Turkish regulators are crawled on a schedule.
+
+A full image is needed only when the base is rebuilt (or the Python base image changes): apply
+the branch's updates to a copy of the base, refresh it (`tazele.sh`), bake it, regenerate the
+registry from it (`python ek_tarama.py kayit`), and reset `veri/ek` to the registry alone.
+Updates accumulate until then (Turkish decisions: a few MB of text a month).
+
 ### Code-only deploys
 
 A full image carries the indexes, so every full deploy uploads about 2.3 GB of build

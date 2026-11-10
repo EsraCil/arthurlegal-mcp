@@ -10,3 +10,6 @@
 **/data/*.db-wal
 **/data/*.db-shm
 .crawled
+# <backend>/ek/*.jsonl.gz is NOT listed: the deploy puts the veri/ek branch's index updates there.
+# veri-ek/ is a local staging copy of that branch.
+veri-ek

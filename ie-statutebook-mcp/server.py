@@ -11,6 +11,7 @@ Search needs an index; direct fetches do not:
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict
 
 from mcpcore import McpError, Tool, run
@@ -139,6 +140,15 @@ def _t_list_year(args: Dict[str, Any]) -> Any:
     }
 
 
+def _index_updates() -> Dict[str, Any]:
+    """Updates applied at boot on top of the baked index (indeks_ek.py at the repository root)."""
+    try:
+        value = json.loads(_index.get_state("ek") or "null")
+    except ValueError:
+        return {}
+    return {"index_updates": value} if isinstance(value, dict) else {}
+
+
 def _t_status(args: Dict[str, Any]) -> Any:
     return {
         "server": "ie-statutebook-mcp",
@@ -150,6 +160,7 @@ def _t_status(args: Dict[str, Any]) -> Any:
         "last_crawl": _index.get_state("last_crawl") or "never — run crawl.py",
         "upstream_quirk": "No search endpoint: /search and /searchresults.html "
                           "both 404. Search is served locally.",
+        **_index_updates(),
         **embeddings_status(),
     }
 

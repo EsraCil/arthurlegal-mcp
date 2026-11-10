@@ -12,6 +12,9 @@
     python crawl.py --pack                  # dağıtım öncesi: gövde sonda, FTS yeniden + optimize, VACUUM
     python crawl.py --tarih-onar            # boş tarihleri atıftan, Rekabet'te karar metninden tamamlar
 
+The scheduled refresh (GitHub Actions, ``ek_tarama.py``) runs the same ``--only-new`` path per regulator
+(``tara_kurum``) against a skeleton index and ships the result as an index update file (``../indeks_ek.py``).
+
 ``--only-new`` is the refresh mode. ``upsert`` REPLACES a document's body and
 DROPS its vector, so re-crawling a source that was first crawled with
 ``--fetch-text`` would silently overwrite full texts with listing stubs and
@@ -335,6 +338,34 @@ def _pack(idx: "retrieval.Index", log) -> Dict[str, Any]:
     return ozet
 
 
+def tara_kurum(idx: "retrieval.Index", key: str, src, *, only_new: bool = False, fetch_text: bool = False,
+               limit: int = 0, pages: int = 0, years=None, issues=None, markets=None, log=None,
+               tagged: "_Tagged" = None):
+    """Tek kurumun taraması: ``main`` ve zamanlanmış tarama (ek_tarama.py) aynı yolu kullanır.
+
+    Adaptörün kabul etmediği seçenek düşürülür. ``(sonuç, tagged)`` döner; ``tagged.skipped``
+    indekste zaten olduğu için atlanan kayıt sayısıdır.
+    """
+    import inspect
+    opts: Dict[str, Any] = {"log": log or (lambda m: sys.stderr.write(m + "\n"))}
+    if fetch_text:
+        opts["fetch_text"] = True
+    if limit:
+        opts["limit"] = limit
+    if pages:
+        opts["max_pages"] = pages
+    if key == "spk" and years:
+        opts["years"] = list(years)
+    if key == "sigorta_tahkim" and issues:
+        opts["issues"] = list(issues)
+    if key == "epdk" and markets:
+        opts["markets"] = list(markets)
+    accepted = set(inspect.signature(src.crawl).parameters)
+    opts = {k: v for k, v in opts.items() if k in accepted or "kwargs" in accepted}
+    tagged = tagged if tagged is not None else _Tagged(idx, key, only_new=only_new)
+    return src.crawl(tagged, **opts), tagged
+
+
 def _parse_range(spec: str) -> List[int]:
     out: List[int] = []
     for part in (spec or "").split(","):
@@ -401,27 +432,13 @@ def main(argv=None) -> int:
             if not src or not src.crawlable:
                 log("skip %s: not crawlable (%s)" % (key, sources.failed().get(key, "")))
                 continue
-            opts: Dict[str, Any] = {"log": log}
-            if args.fetch_text:
-                opts["fetch_text"] = True
-            if args.limit:
-                opts["limit"] = args.limit
-            if args.pages:
-                opts["max_pages"] = args.pages
-            if key == "spk" and args.years:
-                opts["years"] = _parse_range(args.years)
-            if key == "sigorta_tahkim" and args.issues:
-                opts["issues"] = _parse_range(args.issues)
-            if key == "epdk" and args.markets:
-                opts["markets"] = [m.strip() for m in args.markets.split(",") if m.strip()]
-            # Drop options the adapter does not accept.
-            import inspect
-            accepted = set(inspect.signature(src.crawl).parameters)
-            opts = {k: v for k, v in opts.items() if k in accepted or "kwargs" in accepted}
             t0 = time.time()
-            tagged = _Tagged(idx, key, only_new=args.only_new)
             try:
-                res = src.crawl(tagged, **opts)
+                res, tagged = tara_kurum(
+                    idx, key, src, only_new=args.only_new, fetch_text=args.fetch_text, limit=args.limit,
+                    pages=args.pages, years=_parse_range(args.years) if args.years else None,
+                    issues=_parse_range(args.issues) if args.issues else None,
+                    markets=[m.strip() for m in args.markets.split(",") if m.strip()], log=log)
             except Exception as exc:  # noqa: BLE001
                 log("%s: crawl failed: %s: %s" % (key, type(exc).__name__, exc))
                 continue

@@ -21,6 +21,21 @@
 #
 # Sigorta Tahkim: LATEST_KNOWN (sources/sigorta_tahkim.py) yeni sayi cikinca
 # elle artirilir; 67 numarali dergi 2026-09-20'de henuz yoktu (404).
+#
+# Yeni yol (0.7.0, 2026-11-10): yeni kurum kararlari GitHub Actions'ta haftada iki
+# kez taranir (.github/workflows/kurum-taramasi.yml -> ek_tarama.py: ayni --only-new
+# yolu, Rekabet 10 / KVKK 3 / BTK 2 sayfa) ve canliya kucuk bir ek dosyasi olarak
+# gider (veri/ek dali; kok indeks_ek.py, start.sh acilista uygular). Tam imaj
+# gerekmez. Bu betik artik yalniz taban yeniden kurulurken kosar:
+#   1. veri dalindaki ekleri tabanin kopyasina uygula:
+#        python ../indeks_ek.py uygula --indeks <kopya> --klasor <veri>/arthur-tr-hukuk-mcp/ek --ad arthur-tr-hukuk-mcp
+#   2. INDEX_PATH=<kopya> sh tazele.sh   (--pack dahil), baked/'a koy, tam imaj
+#   3. kaydi yeni tabandan uret, veri dalini yalniz kayitla sifirla:
+#        python ek_tarama.py kayit --indeks <kopya> --cikti <veri>/arthur-tr-hukuk-mcp/ek/kayit.json.gz
+# Elle yapilan bir tazelemeyi tam imajsiz gondermek icin farki ek olarak uret (taban:
+# canlidaki taban + veri dalindaki ekler) ve kaydi bu indeksten yeniden uret:
+#   python ../indeks_ek.py uret --taban <taban+ekler> --yeni <bu indeks> --ad arthur-tr-hukuk-mcp --cikti <veri>
+#   python ek_tarama.py kayit --indeks <bu indeks> --cikti <veri>/arthur-tr-hukuk-mcp/ek/kayit.json.gz
 set -e
 cd "$(dirname "$0")"
 export PYTHONIOENCODING=utf-8

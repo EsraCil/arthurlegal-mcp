@@ -12,6 +12,7 @@ Build the search index first (~20 requests, under a minute):
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from typing import Any, Dict, List
@@ -164,6 +165,15 @@ def _t_daily(args: Dict[str, Any]) -> Any:
         raise McpError(str(exc)) from exc
 
 
+def _index_updates() -> Dict[str, Any]:
+    """Updates applied at boot on top of the baked index (indeks_ek.py at the repository root)."""
+    try:
+        value = json.loads(_index.get_state("ek") or "null")
+    except ValueError:
+        return {}
+    return {"index_updates": value} if isinstance(value, dict) else {}
+
+
 def _t_status(args: Dict[str, Any]) -> Any:
     return {
         "server": "es-boe-mcp",
@@ -172,6 +182,7 @@ def _t_status(args: Dict[str, Any]) -> Any:
         "indexed_documents": _index.count(),
         "last_crawl": _index.get_state("last_crawl") or "never — run crawl.py",
         "index_scope": "consolidated legislation: " + _scope(),
+        **_index_updates(),
         **embeddings_status(),
     }
 

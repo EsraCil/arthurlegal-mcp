@@ -1,6 +1,6 @@
 # Testler ve sır taraması.
 #
-# Her push'ta (bütün dallar) ve PR'da GitHub'ın Linux bilgisayarında çalışır. İki iş:
+# Her push'ta (veri/ek dışındaki bütün dallar) ve PR'da GitHub'ın Linux bilgisayarında çalışır. İki iş:
 #   1. Testler: kök tests/ (ağ geçidi) ve her arka ucun kendi tests/ klasörü. Python sürümü ve paketler
 #      Dockerfile'daki ile aynı. Kök testler dosya başına ayrı süreçte koşar: tek süreçte test_profiles,
 #      kendinden önce koşan bir testin değiştirdiği araç başlıklarını görüyor ve de_norm_getir'de kırmızı
@@ -13,7 +13,8 @@ name: Testler
 
 on:
   push:
-    branches: ["**"]
+    # veri/ek yalnız indeks eklerini taşır (kurum-taramasi.yml); kod ve test yok.
+    branches: ["**", "!veri/**"]
   pull_request:
   workflow_dispatch:
 
