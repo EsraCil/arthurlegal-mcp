@@ -136,6 +136,13 @@ class ServerViewsTest(unittest.TestCase):
         for parca in ("AÇILMADI", "arthurlegal-yerel", "al_masasi", "uzakta_kal=true"):
             self.assertIn(parca, devir["not"])
         self.assertNotIn("Masa açıldı", devir["not"])
+        # No dead end: with the local desk tool switched off in Claude Desktop (or absent), the note has Claude open
+        # this desk and tell the user why.
+        self.assertIn("araç listenizde YOKSA", devir["not"])
+        self.assertIn("araç menüsünde", devir["not"])
+        kaldi = desk.handler({"baglayicilar": yerel, "uzakta_kal": True})
+        self.assertIn("araç menüsünde", kaldi["not"])
+        self.assertNotIn("araç menüsünde", desk.handler({"baglayicilar": [{"ad": "Gmail"}]})["not"])
         # No install in the chat, an install that is not connected, or the user staying here: the desk opens.
         for args in ({"baglayicilar": [{"ad": "Gmail"}]}, {"baglayicilar": []}, {},
                      {"baglayicilar": [{"ad": "arthurlegal-yerel", "durum": "hata"}]},

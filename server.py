@@ -49,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.9.2"
+__version__ = "1.9.3"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
 # narrower profile: the land-registry and fee calculator tools and the Official Gazette
@@ -810,10 +810,12 @@ def _attach_views() -> None:
             tool.meta = meta
     # "uzak": in Claude Desktop the same chat may also have the lawyer's local install (arthurlegal-yerel), whose
     # desk runs memory, masking and UYAP and is the only one that keeps the query history: Claude gives a desk
-    # view a fresh browser store in every conversation and this endpoint stores no query. Claude does not pick
-    # between the two desks by description (it opened this one every time), so the decision is made here: with
-    # arthurlegal-yerel in the required connector list the desk is not opened and the result sends Claude to the
-    # local al_masasi. uzakta_kal turns that off (no desk on the local server, or the user wants this one).
+    # view a fresh browser store in every conversation and this endpoint stores no query. Which desk opens is not
+    # left to the model's choice: with arthurlegal-yerel in the required connector list the desk is not opened
+    # and the result sends Claude to the local al_masasi. "Connected" does not mean that tool is callable (Claude
+    # Desktop lets a user switch a server's tools off one by one, and they stay off; the classic interface has no
+    # local desk): the note then tells Claude to open this desk with uzakta_kal=true and say why, and the desk
+    # itself never hands over twice in one conversation.
     tanim = al_arayuz.masa_araci("uzak")
     able = [t.name for t in _tools if t.name in MASA_TOOLS]
     # The chat transcript sits behind the full-screen desk and the desk cannot read it: Claude hands
