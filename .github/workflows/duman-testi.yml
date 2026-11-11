@@ -54,10 +54,15 @@ jobs:
           done
           echo "sunucu 30 sn içinde açılmadı"; cat "$RUNNER_TEMP/sunucu.log"; exit 1
 
+      - name: Teşhis, EPDK sayfasına tek istek
+        run: |
+          curl -sS -o /dev/null --max-time 60 -w "epdk tek istek: http %{http_code}, %{time_total} sn\n" \
+            "https://www.epdk.gov.tr/Detay/Icerik/3-0-101-1002/son-kurul-kararlari/lpg" || echo "epdk tek istek: BAŞARISIZ"
+
       - name: Duman testi
         run: |
           set +e
-          python duman_testi.py --url http://127.0.0.1:8000/mcp --json "$RUNNER_TEMP/sonuc.json"
+          python duman_testi.py --kaynak epdk --url http://127.0.0.1:8000/mcp --json "$RUNNER_TEMP/sonuc.json"
           kod=$?
           {
             echo "## Duman testi"

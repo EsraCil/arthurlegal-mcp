@@ -94,7 +94,7 @@ KONTROLLER: List[Kontrol] = [
      "kurum_karari_getir", (lambda a, i, k=k, alan=alan: {"kurum": k, "id": a.get(alan) if alan == "issue" else i[alan]}))
     for k, q, alan in (
         ("rekabet", {"query": "birleşme"}, "karar_id"),
-        ("epdk", {"query": "lisans"}, "id"),
+        ("epdk", {"market": "lpg", "params": {"max_categories": 3}}, "id"),  # teşhis: dar arama
         ("spk", {"query": "bülten"}, "bulten"),
         ("bddk", {"query": "karar"}, "id"),
         ("kvkk", {"query": "veri sorumlusu"}, "id"),
