@@ -6,7 +6,10 @@
 # (ADRES sınıfı → ilgili kaynağın allowed_domains listesine tek satır).
 # Çıkış kodu: 0 hepsi TAMAM; 2 yalnız ERISIM (kurum o an erişilemez, iş sarı değil yeşil sayılır,
 #   özet yine yazılır); 1 ADRES, BOS ya da HATA (iş kırmızı).
-# Fly'a ya da canlı uygulamaya dokunmaz; sır, API anahtarı ya da yazma yetkisi istemez.
+# Issue (duman_nobetci.py, tarife nöbetçisiyle aynı kalıp): ADRES, BOS ya da HATA veren kaynak için tek issue;
+# aynı kaynağa üç farklı günde üst üste erişilemezse tek issue. Aynı başlıklı açık issue varsa yenisi açılmaz.
+# Sayaç Actions önbelleğinde durur (.nobet/durum.json). Dallarda yalnız dener: issue açmaz, sayaca yazmaz.
+# Fly'a ya da canlı uygulamaya dokunmaz; sır ya da API anahtarı istemez. master'a commit atmaz.
 # Not: GitHub'ın makineleri yurt dışında; bazı kurumlar yurt dışı IP'yi geri çevirebilir (ERISIM).
 
 name: Duman testi
@@ -20,6 +23,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: duman-testi
@@ -40,6 +44,13 @@ jobs:
         with:
           python-version: "3.11" # Dockerfile: python:3.11-slim
 
+      - name: Erişim sayacı (önceki günler)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nobet
+          key: duman-testi-${{ github.run_id }}
+          restore-keys: duman-testi-
+
       - name: Paketler
         run: pip install "pypdf==6.21.4" # testler.yml ile aynı sürüm
 
@@ -54,15 +65,10 @@ jobs:
           done
           echo "sunucu 30 sn içinde açılmadı"; cat "$RUNNER_TEMP/sunucu.log"; exit 1
 
-      - name: Teşhis, EPDK sayfasına tek istek
-        run: |
-          curl -sS -o /dev/null --max-time 60 -w "epdk tek istek: http %{http_code}, %{time_total} sn\n" \
-            "https://www.epdk.gov.tr/Detay/Icerik/3-0-101-1002/son-kurul-kararlari/lpg" || echo "epdk tek istek: BAŞARISIZ"
-
       - name: Duman testi
         run: |
           set +e
-          python duman_testi.py --kaynak epdk --url http://127.0.0.1:8000/mcp --json "$RUNNER_TEMP/sonuc.json"
+          python duman_testi.py --url http://127.0.0.1:8000/mcp --json "$RUNNER_TEMP/sonuc.json"
           kod=$?
           {
             echo "## Duman testi"
@@ -76,6 +82,23 @@ jobs:
             exit 0
           fi
           exit $kod
+
+      - name: Issue
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          KURU: ${{ github.ref != 'refs/heads/master' && '--kuru' || '' }}
+        run: |
+          python duman_nobetci.py --sonuc "$RUNNER_TEMP/sonuc.json" \
+            --durum "$GITHUB_WORKSPACE/.nobet/durum.json" $KURU
+
+      - name: Erişim sayacını sakla
+        if: ${{ !cancelled() && github.ref == 'refs/heads/master' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nobet
+          key: duman-testi-${{ github.run_id }}
 
       - name: Sunucu günlüğü (hata olursa)
         if: failure()
