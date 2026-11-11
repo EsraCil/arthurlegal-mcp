@@ -27,7 +27,7 @@ PREFIX_LABELS = {
     "tr": "Türkiye", "nl": "Netherlands", "pl": "Poland", "at": "Austria",
     "ie": "Ireland", "fi": "Finland", "es": "Spain", "uk": "UK", "eu": "EU",
     "jp": "Japan", "gleif": "LEI", "tkgm": "Land registry", "az": "Azerbaijan",
-    "scholar": "Scholarship", "contracts": "Contracts", "de": "Germany",
+    "scholar": "Scholarship", "contracts": "Contracts", "de": "Germany", "hesap": "Türkiye fees",
 }
 
 TITLES: Dict[str, str] = {
@@ -47,6 +47,7 @@ TITLES: Dict[str, str] = {
     "tr_mevzuat_icinde_ara": "Türkiye: search within one piece of legislation",
     "tr_resmi_gazete_fihrist": "Türkiye: Official Gazette daily index",
     "tr_resmi_gazete_getir": "Türkiye: get an Official Gazette document",
+    "tr_resmi_gazete_ek_sayfa": "Türkiye: read one page of an Official Gazette annex",
     "tr_resmi_gazete_tara": "Türkiye: scan Official Gazette indexes by date range",
     "tr_kurum_karari_ara": "Türkiye: search regulator decisions",
     "tr_kurum_karari_getir": "Türkiye: get a regulator decision",
@@ -179,6 +180,12 @@ TITLES: Dict[str, str] = {
     "al_masasi": "ArthurLegal desk (interactive view)",
     "al_masaya_yaz": "Show the answer on the ArthurLegal desk",
     "al_masada_basla": "Put the question on the ArthurLegal desk",
+    # Fee calculator cards (Türkiye)
+    "hesap_kalemleri": "Türkiye: fee calculator menu",
+    "hesap_vekalet_ucreti": "Türkiye: attorney minimum fee (tariff calculation)",
+    "hesap_yargi_harci": "Türkiye: court fees and cost advance (tariff calculation)",
+    "hesap_faiz": "Türkiye: statutory and commercial default interest (period breakdown)",
+    "hesap_iscilik_alacagi": "Türkiye: severance and notice pay (gross, employment claims)",
 }
 
 # Tools that can change something (locally: write a file or the UI answer).

@@ -1,0 +1,68 @@
+# Tarife nöbetçisi.
+#
+# Hesap kartlarının verisi (hesap-mcp/veri/tarife_2026.json) Resmî Gazete eklerinden teyit edilmiş tarifedir. Bu iş
+# her gün Resmî Gazete'nin son 3 günlük fihristini (mükerrer sayılar dahil) sunucunun kendi tarama koduyla
+# (hesap-mcp/tazelik.py) tarar. Kartları etkileyebilecek ve veride bilinmeyen bir yayım bulursa o yayım için bir kez
+# issue açar (hesap-mcp/nobetci.py). master'a commit atmaz.
+#
+# GitHub'ın makinelerinden resmigazete.gov.tr'ye erişim engelli olabilir (yurt dışı adres). İş bunu "kontrol
+# edilemedi" diye yazar ve kırmızıya düşmez; üç farklı günde üst üste erişilemezse issue açar. Sayaç Actions
+# önbelleğinde durur (.nobet/durum.json). Dallarda yalnız dener: issue açmaz, sayaca yazmaz.
+# İstekler nazik: istek arası en az 1 sn, koşu başına en çok 20 istek.
+
+name: Tarife nöbetçisi
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # her gün 06.00 UTC (09.00 TSİ)
+  workflow_dispatch:
+  push:
+    branches-ignore: [master]
+    paths:
+      - ".github/workflows/tarife-nobetcisi.yml"
+      - "hesap-mcp/tazelik.py"
+      - "hesap-mcp/nobetci.py"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tarife-nobetcisi-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  nobet:
+    name: Resmî Gazete taraması
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11" # Dockerfile: python:3.11-slim
+
+      - name: Erişim sayacı (önceki günler)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nobet
+          key: tarife-nobetcisi-${{ github.run_id }}
+          restore-keys: tarife-nobetcisi-
+
+      - name: Son 3 günü tara
+        run: python hesap-mcp/tazelik.py --gun 3 --cikti .nobet/sonuc.json
+
+      - name: Issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          KURU: ${{ github.ref != 'refs/heads/master' && '--kuru' || '' }}
+        run: python hesap-mcp/nobetci.py --sonuc .nobet/sonuc.json --durum .nobet/durum.json $KURU
+
+      - name: Erişim sayacını sakla
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nobet
+          key: tarife-nobetcisi-${{ github.run_id }}

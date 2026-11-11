@@ -79,6 +79,8 @@ body { background: var(--zemin); }
 /* Üç simgeli seçenek 252 px'lik panele sığsın; daha geniş bir yazı tipinde yazı taşmaz, kısalır. */
 .tema-secimi button { flex: 1 1 auto; min-width: 0; padding: 0 4px; gap: 4px; font-size: 12.5px; }
 .tema-secimi button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.segment.sar { flex-wrap: wrap; }
+.segment.sar button { flex: 1 1 auto; }
 .segment button[aria-pressed="true"] { background: var(--yuzey); box-shadow: var(--golge); font-weight: 600; }
 .surum { font-size: 12px; color: var(--soluk); padding: 0 6px; }
 
@@ -259,6 +261,30 @@ body { background: var(--zemin); }
 }
 /* Mevzuat: kapsam notu, madde ağacı, seçili mevzuat, aday listesi */
 .kapsam-notu { margin: 0 0 12px; font-size: 13.5px; line-height: 1.45; color: var(--ikincil); }
+/* Hesap kartları: tutar büyük, her kalemin dayanağı altında; açıklama ve teyit notları katlanır. */
+.hesap-kutular { display: flex; flex-direction: column; gap: 12px; }
+.hesap-kutular > .alan { flex: none; }
+.hesap-sonuc { display: flex; flex-direction: column; gap: 12px; }
+.hesap-toplam { display: flex; flex-direction: column; gap: 2px; }
+.hesap-tutar { font-family: var(--yazi-baslik); font-size: 28px; font-weight: 700; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums; }
+.hesap-kalemler { display: flex; flex-direction: column; border-top: 0.5px solid var(--cizgi); }
+.hesap-satir { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0;
+  border-bottom: 0.5px solid var(--cizgi); font-size: 14px; }
+.hesap-satir .tutar { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hesap-satir .dayanak { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.4; color: var(--ikincil); }
+.hesap-adimlar { margin: 0; padding-left: 20px; font-size: 13.5px; line-height: 1.5; color: var(--ikincil); }
+.kucuk-not { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--ikincil); }
+.hesap-katlanir summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ikincil); }
+.hesap-katlanir ul { margin: 8px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.5; color: var(--ikincil); }
+/* Tazelik: kaynak ve son kontrol küçük satırda; yeni düzenleme kırmızı kutu (toplam gizli), denetlenemedi sarı kutu. */
+.hesap-tazelik { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--ikincil); font-variant-numeric: tabular-nums; }
+.uyari.kirmizi { background: var(--kirmizi-zemin); color: var(--kirmizi-metin); }
+.tazelik-kutu { display: flex; flex-direction: column; gap: 8px; }
+.tazelik-kutu p { margin: 0; }
+.tazelik-kutu .eylemler { margin: 0; }
+.onay-kutusu { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; min-height: 34px; }
+.onay-kutusu input { width: 18px; height: 18px; margin: 0; accent-color: var(--birincil); }
 .ornekler { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
 .ornekler .zaman { margin-right: 2px; }
 @media (max-width: 520px) { .ornekler button:nth-of-type(n+3) { display: none; } }
@@ -387,6 +413,9 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     hazir: false,
     acilis: "sohbet",
     tamEkranIste: true,
+    yonlendir: null,     // uzak uç masayı bu bilgisayardaki kuruluma devrettiyse { sunucu, arac }
+    uzaktaKal: false,    // kullanıcı devir ekranında "bu masayla devam et" dedi
+    devirOlmadi: false,  // devir bu sohbette denendi, Claude yerel masayı açamadı: ikinci kez devredilmez
   };
   const GECMIS = [];
 
@@ -397,14 +426,16 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
       baslik: "Mevzuat ve kurul kararları", alt: "İsteğinizi yazın: mevzuatın tamamı ve EPDK, SPK, Rekabet gibi kurumların kararları gelir. Maddeyi resmî metinden getirin, taslağınızdaki atıfları teyit edin." },
     { id: "ictihat", ad: "İçtihat", simge: "terazi", bolum: "Çalışma",
       baslik: "İçtihat", alt: "Yargıtay ve Danıştay kararlarını künyeleriyle bulun, metni kartın içinde açın." },
+    { id: "hesap", ad: "Hesap kartları", simge: "hesap", bolum: "Çalışma",
+      baslik: "Hesap kartları", alt: "Vekâlet ücreti, yargı harcı ve gider avansı, faiz dökümü, kıdem ve ihbar tazminatı. Hesabı kod yapar; her kalem dayanağı ve resmî kaynağıyla gelir." },
     { id: "gecmis", ad: "Geçmiş", simge: "saat", bolum: "Çalışma",
       baslik: "Geçmiş", alt: "Masada yaptığınız aramalar, getirdiğiniz maddeler ve kararlar, o günkü sonuçlarıyla. Yeniden çalıştırınca güncel hali gelir." },
     { id: "tapu", ad: "ArthurTapu", simge: "harita", bolum: "Modüller",
       baslik: "ArthurTapu", alt: "Parseli il, ilçe, mahalle ve ada/parselle ya da yer adıyla sorgulayın; rapor ve kroki Claude'da gelir." },
     { id: "beyin", ad: "Beyin", simge: "beyin", bolum: "Modüller",
       baslik: "Beyin", alt: "ArthurLegal Hafıza: tercihleriniz, düzeltmeleriniz ve son oturum kartlarınız bu bilgisayarda." },
-    { id: "mask", ad: "Arthur Mask", simge: "maske", bolum: "Modüller",
-      baslik: "Arthur Mask", alt: "Müvekkil belgesi Claude'a gitmeden önce bu bilgisayarda maskelenir." },
+    { id: "mask", ad: "ArthurMask", simge: "maske", bolum: "Modüller",
+      baslik: "ArthurMask", alt: "Müvekkil belgesi Claude'a gitmeden önce bu bilgisayarda maskelenir." },
     { id: "uyap", ad: "UYAP Dashboard", simge: "bina", bolum: "Modüller",
       baslik: "UYAP Dashboard", alt: "Tebligat ve duruşmalarınız, UYAP'ta açtığınız listelerden; salt okunur, gerçek değerler kendi penceresinde." },
     { id: "donna", ad: "Donna", donna: true, bolum: "Modüller",
@@ -434,7 +465,29 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
   const MASA_ACIK = "ArthurLegal Masası: ekranda açık.";
   const TESLIM_NOTU = " Her soruda: önce al_masada_basla ile soruyu masaya yazın, araştırın, cevabı al_masaya_yaz ile " +
     "teslim edin; sohbete yalnız 'Cevap masada.' yazın.";
+  // Devir aynı sohbette bir kez denenir. Kayıt bu sohbetin pencereleri arasında ortaktır (tarayıcı deposu); depo
+  // kapalıysa kayıt tutulamaz ve kart her çağrıda çizilir, kullanıcı "Bu masayla devam et" ile çıkar.
+  const DEVIR_KAYDI = "al.masa.devir";
+  const DEVIR_OMRU = 10 * 60 * 1000;
+  function devirDenendi() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DEVIR_KAYDI) || "null");
+      return !!d && Date.now() - d.zaman < DEVIR_OMRU;
+    } catch { return false; }
+  }
+  function devriYaz() {
+    try { localStorage.setItem(DEVIR_KAYDI, JSON.stringify({ zaman: Date.now() })); } catch { /* depo kapalı */ }
+  }
+
+  // Devirde masa açık değildir: not, masanın açık olduğunu söyleyen önceki notun yerini alır.
+  async function yonlendirmeyiBildir() {
+    const not = "ArthurLegal Masası bu bağlantıdan açılmadı: bu bilgisayarda ArthurLegal kurulu. arthurlegal-yerel " +
+      "sunucusunun al_masasi aracını çağırın ve bu sohbette masa araçlarını o sunucudan kullanın. O araç araç " +
+      "listenizde yoksa uzak al_masasi aracını uzakta_kal=true ile çağırın.";
+    try { await app.updateModelContext({ content: [{ type: "text", text: not }] }); } catch { /* ev sahibi desteklemiyor */ }
+  }
   async function bildir(metin) {
+    if (DURUM.yonlendir) return;
     const not = MASA_ACIK + (DURUM.yetenekler.has("al_masaya_yaz") ? TESLIM_NOTU : "") + (metin ? " Şu an: " + metin : "");
     try { await app.updateModelContext({ content: [{ type: "text", text: not }] }); } catch { /* ev sahibi desteklemiyor */ }
   }
@@ -451,11 +504,13 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     }
   }
 
-  // Geçmiş oturumdan ve ArthurLegal sürümünden bağımsızdır, 90 gün durur ve hiçbir sunucuya yazılmaz. Kalıcı depo:
-  //  - disk: yerel AL sunucusu al_gecmis veriyorsa bu bilgisayarın diski (veri/masa-gecmisi, sürüm klasörünün dışında);
-  //  - cihaz: yoksa (uzak bağlantı: Claude Desktop'taki uzak bağlayıcı, web, telefon) masanın bu cihazdaki tarayıcı
-  //    deposu. Ev sahibi masa pencerelerine bağlantı başına sabit bir köken verir: depo yeni sohbette, Claude yeniden
-  //    açılınca ve masa güncellenince de durur; başka cihazda görünmez;
+  // Geçmişin kalıcı olduğu tek yer bilgisayardaki kurulumun diskidir; hiçbir sunucuya yazılmaz. Depolar:
+  //  - disk: yerel AL sunucusu al_gecmis veriyorsa bu bilgisayarın diski (veri/masa-gecmisi, sürüm klasörünün dışında):
+  //    oturumdan ve ArthurLegal sürümünden bağımsız, 90 gün;
+  //  - cihaz: yoksa (uzak bağlantı: Claude Desktop'taki uzak bağlayıcı, web, telefon) masanın tarayıcı deposu. KALICI
+  //    DEĞİLDİR: Claude masa pencerelerine her sohbette yeni bir köken verir (10.11.2026 ölçümü: 14 günde 29 köken),
+  //    depo yalnız aynı sohbetin pencereleri arasında ortaktır. Ekran bunu "bu sohbetin geçmişi" diye söyler ve
+  //    bilgisayardaki masayı gösterir; uzak uç da arthurlegal-yerel bağlıysa masayı baştan oraya devreder;
   //  - pencere: depo kapalıysa (gizli pencere, yalıtılmış çerçeve) liste yalnız bu pencere açıkken (GECMIS).
   // Kayıt biçimi ikisinde aynıdır: { id, zaman, ekran, kategori, tur, baslik, adimlar, sorgu, anlik }.
   // kayit: { kategori, tur, sorgu, anlik, ekran? }. UYAP işleri hiçbir depoya yazılmaz.
@@ -605,7 +660,7 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     document.querySelector(".icerik-ust h1").textContent = e.baslik;
     document.querySelector(".icerik-ust .alt-yazi").textContent = e.alt;
     const gb = document.querySelector(".gecmis-bag");
-    if (gb) gb.hidden = ["gecmis", "uyap", "mcp"].includes(id);
+    if (gb) gb.hidden = ["gecmis", "uyap", "mcp", "hesap"].includes(id);
     if (id !== "gecmis") gecmisAcik = null;
     const ekran = $("ekran");
     ekran.replaceChildren();
@@ -639,8 +694,86 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     return g;
   }
 
-  function masaustuGerekli(ekran, ne) {
-    ekran.append(bilgi(`${ne} bu bilgisayarda çalışır; telefonda ve web'de masaüstündeki ArthurLegal'den açılır. Müvekkil verisi bu yüzden buluta çıkmaz.`));
+  // Uzak masada (web, telefon ya da Claude Desktop'taki uzak bağlayıcı) bilgisayardaki modüller boş kalmaz: ne işe
+  // yaradığı ve nereden açıldığı. Uzak masa bu modüllerin aracını çağıramaz (görünüm yalnız kendi sunucusunu çağırır);
+  // Claude bu sohbette yerel kurulumu (arthurlegal-yerel) bildirdiyse masayı oradan yeniden açtırır.
+  const INDIR = "https://github.com/beerbottle90/ArthurLegal#indir";
+  const MODUL_TANITIMI = {
+    beyin: { ad: "Beyin (ArthurLegal Hafıza)", maddeler: [
+      ["kitap", "Tercihlerinizi hatırlar", "Üslubunuz ve düzeltmeleriniz her sohbette geçerli olur."],
+      ["saat", "Nerede kaldığınızı bilir", "Son oturum kartı: ne yapıldı, ne kaldı, sonraki adım."],
+      ["beyin", "Bu bilgisayarda durur", "Hafıza kasası bilgisayarınızda; Claude'a yalnız istediğiniz not gider."]] },
+    mask: { ad: "ArthurMask", maddeler: [
+      ["maske", "Adları ve numaraları etiketler", "Belgedeki kişi, kimlik ve dosya numaraları {{KİŞİ-01}} gibi etiketlenir."],
+      ["sohbet", "Claude maskeli metni görür", "Gerçek değerler bilgisayarınızdan çıkmaz."],
+      ["onay", "Word çıktısı gerçek değerlerle", "Düzeltilen ya da yeni yazılan belge bilgisayarınızda gerçek değerlerle oluşur."]] },
+    uyap: { ad: "UYAP Dashboard", maddeler: [
+      ["bina", "Tebligat ve duruşmalar tek yerde", "UYAP'ta açtığınız listeleri okur ve özetler."],
+      ["onay", "Salt okunur", "UYAP'a hiçbir şey yazılmaz."],
+      ["maske", "Gerçek değerler kendi penceresinde", "Claude ad ve numaraların etiketli hâlini görür."]] },
+  };
+  const YEREL_SUNUCU = /arthur\s*legal[\s_()-]*yerel/;
+
+  // Bu sohbette bilgisayardaki kurulum bağlı mı: true / false, Claude listeyi bildirmediyse null (bilinmiyor).
+  function yerelBagli() {
+    const b = DURUM.baglayicilar;
+    if (!b) return null;
+    return b.liste.some((x) => x.durum === "bagli" && YEREL_SUNUCU.test(x.ad.toLowerCase()));
+  }
+
+  // Yerelde masa aracı Claude'a kapalı olabilir (araç menüsü) ya da hiç olmayabilir (klasik arayüz): istek çıkmaza
+  // girmez, Claude o durumda uzak masayı açar ve nedenini söyler.
+  const ARAC_MENUSU = "Claude'un araç menüsünde arthurlegal-yerel'in araçları kapalı olabilir; açınca masa bu bilgisayardan açılır ve geçmiş kalıcı olur";
+  function yerelMasaIstegi(id) {
+    return `ArthurLegal Masası'nı bu bilgisayardaki kurulumdan açın: arthurlegal-yerel sunucusunun al_masasi aracını bolum=${id} ` +
+      "ile çağırın. O araç araç listenizde yoksa (sunucu bağlı olsa da araçları kapalı olabilir) uzak masayı " +
+      `uzakta_kal=true ve bolum=${id} ile açın ve tek cümleyle şunu söyleyin: ${ARAC_MENUSU}.`;
+  }
+
+  // Uzak masa, sohbette bilgisayardaki kurulum bağlıyken açıksa bunu ve çıkış yolunu söyler. devirOlmadi: devir bu
+  // sohbette denendi ve Claude yerel masayı açamadı.
+  function yerelMasaNotu(id) {
+    if (DURUM.ortam !== "uzak" || yerelBagli() !== true) return null;
+    const kesit = ogesi("div", "kesit");
+    const satir = ogesi("div", "satir");
+    const ac = dugme("Masayı bu bilgisayarda aç", { sinif: DURUM.devirOlmadi ? "" : "birincil", simge: "dis" });
+    ac.onclick = () => claudeaSor(yerelMasaIstegi(id), null);
+    satir.append(ac);
+    kesit.append(bilgi(DURUM.devirOlmadi
+      ? "Masa bu bilgisayardaki kurulumdan açılamadı: Claude, arthurlegal-yerel'in masa aracını göremiyor. Claude'un araç menüsünde arthurlegal-yerel'in araçlarını açın, sonra masayı yeniden açın. Şimdilik uzak masadasınız: geçmiş yalnız bu sohbet boyunca durur."
+      : "Bu masa uzak bağlantıdan açık: geçmiş yalnız bu sohbet boyunca durur. Sorgu geçmişi, Beyin, ArthurMask ve UYAP Dashboard bu bilgisayardaki kurulumun masasında çalışır. Düğme işe yaramazsa Claude'un araç menüsünde arthurlegal-yerel'in araçlarını açın."),
+      satir);
+    return kesit;
+  }
+
+  function masaustuTanitimi(ekran, id) {
+    const t = MODUL_TANITIMI[id];
+    const izgara = ogesi("div", "izgara");
+    for (const [s, b, n] of t.maddeler) {
+      const k = ogesi("div", "eylem-karti");
+      const sim = ogesi("span", "simge");
+      sim.append(ikon(s));
+      k.append(sim, ogesi("b", null, b), ogesi("span", "ne", n));
+      izgara.append(k);
+    }
+    const yerel = yerelBagli();
+    const kesit = ogesi("div", "kesit");
+    kesit.append(ogesi("h3", null, yerel ? "Bu bilgisayarda kurulu" : "Bilgisayarınızda çalışır"));
+    const satir = ogesi("div", "satir");
+    const ac = dugme("Masayı bu bilgisayarda aç", { sinif: "birincil", simge: "dis" });
+    ac.onclick = () => claudeaSor(yerelMasaIstegi(id), null);
+    const indir = dugme("ArthurLegal'i indir", { sinif: yerel === false ? "birincil" : "", simge: "dis" });
+    indir.onclick = () => baglantiAc(app, INDIR, ortam.duyuru);
+    if (yerel) satir.append(ac);
+    else if (yerel === false) satir.append(indir);
+    else satir.append(ac, indir);
+    const not = yerel
+      ? `${t.ad} bu bilgisayardaki ArthurLegal kurulumunda çalışıyor. Bu masa uzak bağlantıdan açıldı; düğme masayı kurulumun kendi bağlantısıyla (arthurlegal-yerel) yeniden açar.`
+      : `${t.ad} yalnız ArthurLegal'in kurulu olduğu bilgisayarda çalışır; müvekkil verisi bu yüzden buluta çıkmaz. ` +
+        (yerel === false ? "Web'de ve telefonda mevzuat, içtihat ve kurul kararları ekranları çalışır."
+          : "Bilgisayardaysanız masayı kurulumun kendi bağlantısıyla açın; kurulu değilse indirin.");
+    kesit.append(satir, bilgi(not));
+    ekran.append(izgara, kesit);
   }
 
   function kuruluDegil(ekran, ne) {
@@ -666,6 +799,8 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
 
   // Sohbet: Claude'un cevabı (varsa) en üstte, altında devam sorusu, işe başlama önerileri ve bu oturumda yapılanlar.
   CIZIM.sohbet = (ekran) => {
+    const yerelNot = yerelMasaNotu("sohbet");
+    if (yerelNot) ekran.append(yerelNot);
     const c = gosterilenCevap();
     if (c) {
       const kok = ogesi("div", "cevap-kok");
@@ -700,7 +835,8 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     const kesit = ogesi("div", "kesit");
     kesit.append(ogesi("h3", null, "Son işler"));
     const liste = ogesi("div");
-    const tum = dugme(gecmisDeposu() === "pencere" ? "Bu pencerenin geçmişi" : "Bütün geçmiş", { sinif: "kucuk", simge: "saat" });
+    const tum = dugme({ disk: "Bütün geçmiş", cihaz: "Bu sohbetin geçmişi", pencere: "Bu pencerenin geçmişi" }[gecmisDeposu()],
+      { sinif: "kucuk", simge: "saat" });
     tum.onclick = () => { gecmisSifirla(); git("gecmis"); };
     const ey = ogesi("div", "eylemler sol");
     ey.append(tum);
@@ -709,8 +845,9 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     sonIsler(liste, c);
   };
 
-  // Son 6 iş, kalıcı geçmişten: yeni sohbette ve Claude yeniden açıldığında da görünür. Yukarıda açık olan cevap
-  // yinelenmez. Diskteki kayıtların listesi özettir; cevabı açmak için kayıt getirilir.
+  // Son 6 iş. Diskteyse kalıcı geçmişten: yeni sohbette ve Claude yeniden açıldığında da görünür; uzak bağlantıda
+  // yalnız bu sohbetin işleri. Yukarıda açık olan cevap yinelenmez. Diskteki kayıtların listesi özettir; cevabı açmak
+  // için kayıt getirilir.
   async function sonIsler(kap, c) {
     const depo = gecmisDeposu();
     let kayitlar;
@@ -817,7 +954,9 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
       araclar: Array.isArray(a.araclar) ? a.araclar : [],
       kaynaklar: Array.isArray(a.kaynaklar) ? a.kaynaklar : [], tamam: true, kesildi: false,
       zaman: k.zaman || (k.saat && k.saat.toISOString()),
-      teyit: { durum: t.toplam ? "bitti" : "yok", satirlar: t.satirlar || [], dogru: t.dogru || 0, toplam: t.toplam || 0 } };
+      // teyit null: kaydı teslim anında sunucu yazmış, masanın penceresi teyidi bitiremeden kapanmış.
+      teyit: { durum: a.teyit === null ? "yapilmadi" : t.toplam ? "bitti" : "yok", satirlar: t.satirlar || [],
+        dogru: t.dogru || 0, toplam: t.toplam || 0 } };
   }
 
   function gosterilenCevap() {
@@ -876,7 +1015,9 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     const satirlar = araclar.map((a) => [a.durum === "suruyor" ? "tamam" : a.durum, [a.baslik, a.ozet].filter(Boolean).join(" · ")]);
     const adimlar = [...satirlar, ...c.adimlar].slice(0, t.toplam ? 9 : 10);
     if (t.toplam) adimlar.push([t.dogru === t.toplam ? "tamam" : "uyar", `Atıf teyidi: ${t.toplam} atıftan ${sayiEki(t.dogru)} doğrulandı`]);
+    // gecmisId: yerel sunucu cevabı teslim anında diske yazdıysa aynı kayıt tamamlanır, ikincisi açılmaz.
     gecmiseEkle(c.soru || "Claude'un cevabı", adimlar.length ? adimlar : [["tamam", "Cevap masaya geldi"]], {
+      ...(c.gecmisId ? { id: c.gecmisId } : {}),
       ekran: "sohbet", kategori: "claude", tur: "cevap", sorgu: c.soru ? { metin: c.soru } : null,
       anlik: { cevap: c.cevap, adimlar: c.adimlar, araclar, kaynaklar: c.kaynaklar,
         teyit: { satirlar: t.satirlar, dogru: t.dogru, toplam: t.toplam } } });
@@ -921,6 +1062,8 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
       const ad = ogesi("div", "adimlar");
       ad.append(adimSatiri("suruyor", t ? `${t.toplam} madde atfı resmî metinden kontrol ediliyor…` : "Atıflar aranıyor…"));
       teyit.append(ad);
+    } else if (t.durum === "yapilmadi") {
+      teyit.append(ogesi("div", "bos", "Bu cevabın atıf teyidi kaydedilmedi: pencere teyit bitmeden kapandı. Atıfları Mevzuat ve kararlar ekranından denetleyebilirsiniz."));
     } else if (!t.toplam) {
       teyit.append(ogesi("div", "bos", "Cevapta tanınan bir madde atfı yok. “TBK m. 344” ya da “6098 sayılı … 344. maddesi” biçimleri tanınır."));
     } else {
@@ -1088,7 +1231,8 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
   // Adımın Türkçe adı ve aranan şey: "İçtihat aranıyor: “yeni malik …”".
   const ULKE = { tr: "Türkiye", eu: "AB", de: "Almanya", az: "Azerbaycan", uk: "Birleşik Krallık", nl: "Hollanda",
     pl: "Polonya", at: "Avusturya", ie: "İrlanda", fi: "Finlandiya", es: "İspanya", jp: "Japonya", gleif: "Tüzel kişi (LEI)",
-    scholar: "Doktrin", contracts: "Sözleşme emsali", tkgm: "Tapu", hafiza: "Hafıza", arthurlegal: "ArthurLegal" };
+    scholar: "Doktrin", contracts: "Sözleşme emsali", tkgm: "Tapu", hafiza: "Hafıza", arthurlegal: "ArthurLegal",
+    hesap: "Hesap" };
   const ADIM_ADI = {
     tr_hukuk_arastirma_rehberi: "Araştırma yolu belirleniyor", tr_kurum_listesi: "Kurumlar listeleniyor",
     tr_mevzuat_ara: "Mevzuatta aranıyor", tr_mevzuat_getir: "Mevzuat getiriliyor",
@@ -1105,7 +1249,12 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     arthurlegal_bilgi_ara: "Bilgi dosyalarında aranıyor", arthurlegal_bilgi_getir: "Bilgi dosyası okunuyor",
     arthurlegal_durum: "Kurulum durumu okunuyor", hafiza_baslangic: "Hafıza yükleniyor", hafiza_ara: "Hafızada aranıyor",
     hafiza_getir: "Hafıza notu okunuyor", hafiza_yaz: "Hafızaya yazılıyor", hafiza_oturum_karti: "Oturum kartı yazılıyor",
+    hesap_kalemleri: "Hesap kartı açılıyor", hesap_vekalet_ucreti: "Asgari avukatlık ücreti hesaplanıyor",
+    hesap_yargi_harci: "Yargı harcı hesaplanıyor", hesap_faiz: "Faiz dökümü hesaplanıyor",
+    hesap_iscilik_alacagi: "Kıdem ve ihbar tazminatı hesaplanıyor",
   };
+  // Tutar yazımı (hesap kartları): sunucunun verdiği sayı, Türkçe biçimde; masa yuvarlamaz.
+  const tlYaz = (x) => `${Number(x).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`;
   const ARANAN = ["query", "q", "sorgu", "ara", "search_term", "term", "keyword", "text", "metin", "konu", "title",
     "baslik", "kurum", "name", "ad", "id", "doc_id", "madde_id", "mevzuat_id", "yol", "il", "ilce"];
   function adimMetni(arac, g) {
@@ -1131,6 +1280,16 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     if (sonuc && sonuc.isError) return ["hata", kisalt(hata || "araç hata döndürdü", 120)];
     if (!veri || typeof veri !== "object") return ["tamam", "tamamlandı"];
     if (veri.unavailable || veri.upstream_blocked) return ["uyar", "kaynağa ulaşılamadı"];
+    if (arac.startsWith("hesap_")) {
+      const tz = veri.tazelik || {};
+      if (tz.durum === "yeni_duzenleme") return ["uyar", "Resmî Gazete'de yeni düzenleme var: toplam verilmedi"];
+      const teyitsiz = tz.durum === "kontrol_edilemedi" ? " (teyit edilmedi)" : "";
+      const durum = teyitsiz ? "uyar" : "tamam";
+      if (typeof veri.asgari_tl === "number") return [durum, `asgari ücret ${tlYaz(veri.asgari_tl)}${teyitsiz}`];
+      if (typeof veri.toplam_tl === "number") {
+        return [durum, `${String(veri.toplam_etiketi || "Toplam").toLocaleLowerCase("tr-TR")} ${tlYaz(veri.toplam_tl)}${teyitsiz}`];
+      }
+    }
     if (Array.isArray(veri.items) && veri.items.length && "ok" in (veri.items[0] || {})) {
       const ok = veri.items.filter((i) => i && i.ok).length;
       return [ok === veri.items.length ? "tamam" : "uyar", `${veri.items.length} maddeden ${sayiEki(ok)} getirildi`];
@@ -1842,7 +2001,7 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
         "Her maddeyi tr_mevzuat_madde_getir ile çek, atfı citation alanıyla birebir yaz, uyuşmayanı açıkça belirt.\n\n" +
         atiflar.map((a, i) => `${i + 1}. [${kanunAdi(a.kanun)} m. ${a.madde}] … ${a.cumle} …`).join("\n"),
         `Atıf teyidi: ${atiflar.length} atfın içerik uyumu Claude'a soruldu`, { metinSaklanmaz: true });
-      kap.append(ust, tablo, bilgi("Numaraların doğruluğu burada kontrol edildi. Maddeye yüklenen içeriğin (hakkın sahibi, şart, süre) metinle örtüşmesini Claude'a kontrol ettirebilirsiniz; bu, atıfların geçtiği cümleleri sohbete gönderir. Müvekkil bilgisi varsa önce Arthur Mask'ten geçirin."));
+      kap.append(ust, tablo, bilgi("Numaraların doğruluğu burada kontrol edildi. Maddeye yüklenen içeriğin (hakkın sahibi, şart, süre) metinle örtüşmesini Claude'a kontrol ettirebilirsiniz; bu, atıfların geçtiği cümleleri sohbete gönderir. Müvekkil bilgisi varsa önce ArthurMask'ten geçirin."));
       const alt = ogesi("div", "alt-satir");
       const ey = ogesi("div", "eylemler");
       ey.append(kontrol);
@@ -1931,6 +2090,371 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     }
   };
 
+  // ---- Hesap kartları ----
+  // Hesabı sunucudaki kod yapar (hesap_ araçları, Resmî Gazete'deki tarife verisiyle); masa işlem seçtirir, yalnız o
+  // işlemin istediği kutuları açar ve sonucu her kalemin dayanağıyla gösterir. Hangi işlemde hangi kutunun sorulduğu
+  // hesap_kalemleri'nden (veriden) gelir. Masa tutar hesaplamaz, toplamaz, yuvarlamaz. Faiz ve işçilik kartları, sunucu
+  // o araçları taşıyorsa görünür (eski sunucuda yalnız vekâlet ve harç).
+  const HESAP_ARACLARI = ["hesap_kalemleri", "hesap_vekalet_ucreti", "hesap_yargi_harci"];
+  const HESAP_KARTLARI = [["vekalet", "Vekâlet ücreti", "hesap_vekalet_ucreti"],
+    ["harc", "Harç ve gider avansı", "hesap_yargi_harci"], ["faiz", "Faiz", "hesap_faiz"],
+    ["iscilik", "İşçilik alacağı", "hesap_iscilik_alacagi"]];
+  const HESAP_ADIMI = { vekalet: "Asgari ücret tarifeden hesaplanıyor…", harc: "Harç tarifeden hesaplanıyor…",
+    faiz: "Faiz dönem dönem hesaplanıyor…", iscilik: "Kıdem ve ihbar tazminatı hesaplanıyor…" };
+  let hesapMenusu = null;      // hesap_kalemleri cevabı, oturum boyunca
+  let hesapKart = "vekalet";
+  const hesapSecili = {};      // kart -> son seçilen işlem
+
+  CIZIM.hesap = (ekran) => {
+    if (!HESAP_ARACLARI.every((a) => DURUM.yetenekler.has(a))) {
+      ekran.append(bilgi("Hesap kartları bu bağlantıda yok. Avukatlık asgari ücreti, yargı harcı ve gider avansı " +
+        "ArthurLegal'in kendi bağlantısında (arthurlegal-mcp) hesaplanır; Claude'a sorarsanız aynı araçlarla hesaplatır."));
+      return;
+    }
+    const kartlar = HESAP_KARTLARI.filter((k) => DURUM.yetenekler.has(k[2]));
+    if (!kartlar.some((k) => k[0] === hesapKart)) hesapKart = kartlar[0][0];
+    const seg = ogesi("div", "segment sar");
+    seg.style.maxWidth = "720px";
+    for (const [id, yazi] of kartlar) {
+      const b = dugme(yazi);
+      b.setAttribute("aria-pressed", String(hesapKart === id));
+      b.onclick = () => { hesapKart = id; const e = $("ekran"); e.replaceChildren(); CIZIM.hesap(e); };
+      seg.append(b);
+    }
+    const govde = ogesi("div", "kesit");
+    ekran.append(seg, govde);
+    if (hesapMenusu) { hesapFormu(govde); return; }
+    const a = AL.adimlar(govde).ekle("Hesap kartları açılıyor…");
+    cagir(app, "hesap_kalemleri", {}).then(({ veri, hata }) => {
+      if (!veri || !veri.vekalet || !veri.harc) throw new Error(hata || "menü gelmedi");
+      hesapMenusu = veri;
+      if (govde.isConnected) { govde.replaceChildren(); hesapFormu(govde); }
+    }).catch((e) => a.hata("Hesap kartları açılamadı: " + (e.message || "bilinmeyen hata")));
+  };
+
+  function hesapFormu(govde) {
+    if (!hesapMenusu[hesapKart]) hesapKart = "vekalet";
+    const kart = hesapMenusu[hesapKart];
+    const arac = HESAP_KARTLARI.find((k) => k[0] === hesapKart)[2];
+    const islemler = kart.islemler || [];
+    let islem = islemler.find((i) => i.kod === hesapSecili[hesapKart]) || islemler[0];
+    const form = ogesi("form", "form");
+    const secim = document.createElement("select");
+    for (const i of islemler) secim.append(new Option(i.ad, i.kod, false, i.kod === islem.kod));
+    const kutular = ogesi("div", "hesap-kutular");
+    const hesapla = dugme("Hesapla", { sinif: "birincil", simge: "hesap" });
+    hesapla.type = "submit";
+    const sonuc = ogesi("div", "kesit");
+    let alanlar = hesapKutulari(islem, kutular);
+    secim.onchange = () => {
+      islem = islemler.find((i) => i.kod === secim.value);
+      hesapSecili[hesapKart] = islem.kod;
+      sonuc.replaceChildren();
+      alanlar = hesapKutulari(islem, kutular);
+    };
+    const ey = ogesi("div", "eylemler sol");
+    ey.append(hesapla);
+    const kaynak = hesapKart === "vekalet" ? [kart.kaynak] : (kart.kaynaklar || []);
+    const not = kaynak.filter((k) => k && (k.rg || k.ad)).map((k) => (k.rg ? `${k.ad}, ${k.rg}` : k.ad)).join(" · ");
+    const ust = ogesi("div", "satir");
+    ust.append(alan("İşlem", secim));
+    form.append(ust, kutular, ey);
+    if (not) form.append(ogesi("p", "kucuk-not", "Kaynak: " + not));
+    // Menüde bu kartı etkileyen yeni düzenleme varsa formun üstünde kırmızı kutu; hesaptan sonra sonucun kendi kutusu kalır.
+    const mt = hesapMenusu.tazelik;
+    let ustKutu = [];
+    if (mt && mt.durum === "yeni_duzenleme" && (mt.yeni || []).some((y) => (y.kartlar || []).includes(hesapKart))) {
+      ustKutu = tazelikOgeleri(Object.assign({}, mt, { yeni: mt.yeni.filter((y) => (y.kartlar || []).includes(hesapKart)) }),
+        { satirsiz: true });
+      govde.append(...ustKutu);
+    }
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      sonuc.replaceChildren();
+      const adimlar = AL.adimlar(sonuc);
+      const girdi = { islem: islem.kod };
+      for (const [ad, a] of Object.entries(alanlar)) {
+        if (!a.gorunur()) continue;
+        const v = a.deger();
+        if (v === "" || v === false || v == null) {
+          if (a.tanim.zorunlu) { adimlar.ekle("").hata(`${a.tanim.etiket}: bu kutu gerekli.`); a.odak(); return; }
+          continue;
+        }
+        girdi[ad] = v;
+      }
+      const s = adimlar.ekle(HESAP_ADIMI[hesapKart] || "Hesaplanıyor…");
+      hesapla.disabled = true;
+      try {
+        const { veri, hata } = await cagir(app, arac, girdi);
+        if (!veri) throw new Error(hata || "Hesap yapılamadı.");
+        const tz = veri.tazelik || {};
+        const kilitli = tz.durum === "yeni_duzenleme";
+        const h = kilitli ? (veri.teyit_bekleyen_tutarlar || {}) : veri;
+        const teyitsiz = tz.durum === "kontrol_edilemedi" ? " (teyit edilmedi)" : "";
+        const ozet = kilitli ? "Resmî Gazete'de yeni düzenleme var; toplam gösterilmiyor"
+          : (hesapKart === "vekalet" ? `Asgari ücret: ${tlYaz(veri.asgari_tl)}`
+            : `${veri.toplam_etiketi || "Toplam"}: ${tlYaz(veri.toplam_tl)}`) + teyitsiz;
+        if (kilitli || teyitsiz) s.uyar(ozet); else s.tamam(ozet);
+        for (const o of ustKutu) o.remove();
+        sonuc.append(hesapSonucu(veri));
+        bildir(`hesap kartı, ${islem.ad}: ${ozet}. ${tz.uyari ? tz.uyari + " " : ""}${tz.satir ? tz.satir + ". " : ""}` +
+          `${kilitli ? "Teyit bekleyen kalemler" : "Kalemler"}: ${(h.kalemler || []).map((k) => `${k.kalem} ${tlYaz(k.tutar_tl)}`).join(" | ")}`);
+      } catch (e2) {
+        s.hata(e2.message || "Hesap yapılamadı.");
+      } finally {
+        hesapla.disabled = false;
+      }
+    };
+    govde.append(form, sonuc);
+  }
+
+  // İşlemin istediği kutular; `yalniz` olan kutu ancak öteki kutunun değeri o olunca görünür.
+  function hesapKutulari(islem, kap) {
+    kap.replaceChildren();
+    const alanlar = {};
+    let satir = null;         // yan yana duran kutular; seçim düğmeleri kendi satırında
+    const sonra = [];         // onay kutuları ve açıklamalar en altta
+    const guncelle = () => {
+      for (const a of Object.values(alanlar)) {
+        const g = a.gorunur();
+        a.yer.hidden = !g;
+        if (a.not) a.not.hidden = !g;
+      }
+    };
+    for (const g of islem.girdiler || []) {
+      let el;
+      let deger;
+      let kok;
+      const kisa = g.tur === "secim" && !g.gruplar && (g.secenekler || []).length <= 3 && g.secenekler.every((s) => s.ad.length <= 28);
+      if (kisa) {
+        el = ogesi("div", "segment");
+        let sec = g.secenekler[0].kod;
+        for (const s of g.secenekler) {
+          const b = dugme(s.ad);
+          b.setAttribute("aria-pressed", String(s.kod === sec));
+          b.onclick = () => {
+            sec = s.kod;
+            el.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+            guncelle();
+          };
+          el.append(b);
+        }
+        deger = () => sec;
+        kok = ogesi("div", "alan");
+        kok.append(ogesi("label", null, g.etiket), el);
+      } else if (g.tur === "secim") {
+        el = document.createElement("select");
+        // Uzun listede varsayılan seçim yok: kullanıcı kendi seçer, ilk satır sessizce hesaba girmez.
+        el.append(new Option("Seçin…", ""));
+        for (const gr of g.gruplar || [{ secenekler: g.secenekler }]) {
+          const hedef = gr.bolum ? document.createElement("optgroup") : el;
+          if (gr.bolum) hedef.label = gr.bolum;
+          for (const s of gr.secenekler) {
+            const ek = s.tutar_tl != null ? ` (${tlYaz(s.tutar_tl)}${s.ek_saat_tl ? ", ilk saat" : ""}${s.birim === "aylık" ? ", aylık" : ""})` : "";
+            const o = new Option(s.ad + ek, s.kod);
+            if (s.ek_saat_tl) o.dataset.ekSaat = "1";
+            hedef.append(o);
+          }
+          if (hedef !== el) el.append(hedef);
+        }
+        deger = () => el.value;
+        kok = alan(g.etiket, el);
+      } else if (g.tur === "onay") {
+        el = document.createElement("input");
+        el.type = "checkbox";
+        const l = ogesi("label", "onay-kutusu");
+        l.append(el, ogesi("span", null, g.etiket));
+        kok = ogesi("div", "alan");
+        kok.append(l);
+        deger = () => el.checked;
+      } else {
+        // tutar, sayi, oran (yüzde) ya da tarih (YYYY-AA-GG; sunucu GG.AA.YYYY de kabul eder).
+        const yer = g.tur === "oran" ? "örn. 36" : g.tur !== "tutar" ? "" : g.zorunlu || g.ad === "deger" ? "örn. 1.250.000" : "TL";
+        el = girdi(g.tur === "sayi" ? "number" : g.tur === "tarih" ? "date" : "text", yer,
+          g.varsayilan != null ? String(g.varsayilan) : "");
+        if (g.tur === "sayi") { el.min = "1"; el.step = "1"; } else if (g.tur !== "tarih") el.inputMode = "decimal";
+        deger = () => el.value.trim();
+        kok = alan(g.etiket + (g.zorunlu ? "" : " (isteğe bağlı)"), el, ["sayi", "oran"].includes(g.tur) ? "alan dar" : "alan");
+      }
+      el.addEventListener("input", guncelle);
+      el.addEventListener("change", guncelle);
+      const kosul = g.yalniz || {};
+      const gorunur = () => Object.entries(kosul).every(([k, v]) => {
+        const o = alanlar[k];
+        if (!o || !o.gorunur()) return false;
+        if (v === "dolu") return !!o.deger();
+        if (v === "ek_saat") { const s = o.el.selectedOptions && o.el.selectedOptions[0]; return !!(s && s.dataset.ekSaat); }
+        return o.deger() === v;
+      });
+      let yer = kok;
+      if (g.tur === "onay") sonra.push(kok);
+      else if (kisa) {
+        yer = ogesi("div", "satir");
+        yer.append(kok);
+        kap.append(yer);
+        satir = null;
+      } else {
+        if (!satir) { satir = ogesi("div", "satir"); kap.append(satir); }
+        satir.append(kok);
+      }
+      const not = g.aciklama ? ogesi("p", "kucuk-not", g.aciklama) : null;
+      if (not) sonra.push(not);
+      alanlar[g.ad] = { tanim: g, el, kok, yer, not, deger, gorunur, odak: () => (el.focus ? el.focus() : null) };
+    }
+    for (const x of sonra) kap.append(x);
+    guncelle();
+    return alanlar;
+  }
+
+  function hesapSatiri(kalem, tutar, dayanak, aciklama) {
+    const s = ogesi("div", "hesap-satir");
+    s.append(ogesi("span", null, kalem), ogesi("span", "tutar", tlYaz(tutar)));
+    if (aciklama) s.append(ogesi("span", "dayanak", aciklama));
+    if (dayanak) s.append(ogesi("span", "dayanak", dayanak));
+    return s;
+  }
+
+  function katlanir(baslik, maddeler) {
+    const d = document.createElement("details");
+    d.className = "hesap-katlanir";
+    const u = ogesi("ul");
+    for (const m of maddeler) u.append(ogesi("li", null, m));
+    d.append(ogesi("summary", null, baslik), u);
+    return d;
+  }
+
+  // Tazelik (hesap_ araçlarının `tazelik` alanı): kartın verisi Resmî Gazete'nin günlük denetiminden geçer. Küçük satır
+  // kaynağı ve son kontrolü söyler; yeni düzenleme varsa kırmızı kutu (toplam gösterilmez), denetim yapılamadıysa sarı kutu.
+  function tazelikOgeleri(t, { satirsiz = false } = {}) {
+    if (!t || typeof t !== "object") return [];
+    const out = [];
+    if (t.durum === "yeni_duzenleme") {
+      const kutu = ogesi("div", "uyari kirmizi tazelik-kutu");
+      kutu.setAttribute("role", "alert");
+      const yeni = Array.isArray(t.yeni) ? t.yeni : [];
+      kutu.append(ogesi("p", null, "Resmî Gazete'de bu hesabı etkileyebilecek yeni bir düzenleme yayımlandı. Tutarlar " +
+        "güncellenene kadar toplam gösterilmiyor; düzenlemeyi açıp kontrol edin."));
+      const ey = ogesi("div", "eylemler sol");
+      for (const y of yeni.slice(0, 3)) {
+        kutu.append(ogesi("p", null, `${y.rg}: ${y.baslik}`));
+        if (!y.url) continue;
+        const b = dugme(yeni.length > 1 ? `Aç: ${y.rg}` : "Düzenlemeyi aç", { sinif: "kucuk", simge: "dis", baslik: y.baslik });
+        b.onclick = () => baglantiAc(app, y.url, ortam.duyuru);
+        ey.append(b);
+      }
+      if (yeni.length > 3) kutu.append(ogesi("p", null, `ve ${yeni.length - 3} yayım daha`));
+      if (ey.childElementCount) kutu.append(ey);
+      out.push(kutu);
+    } else if (t.durum === "kontrol_edilemedi") {
+      const kutu = ogesi("div", "uyari tazelik-kutu");
+      kutu.setAttribute("role", "status");
+      const metin = String(t.uyari || "Resmî Gazete denetimi yapılamadı.")
+        .replace(/^UYARI:\s*/, "").replace(/,?\s*teyidiniz gerekli:\s*\S+\s*$/, "");
+      kutu.append(ogesi("p", null, `${metin}. Tutarları teyit edin.`));
+      const ey = ogesi("div", "eylemler sol");
+      const b = dugme("Resmî Gazete", { sinif: "kucuk", simge: "dis", baslik: "Resmî Gazete'yi aç" });
+      b.onclick = () => baglantiAc(app, "https://www.resmigazete.gov.tr/", ortam.duyuru);
+      ey.append(b);
+      kutu.append(ey);
+      out.push(kutu);
+    }
+    if (!satirsiz && t.satir) out.push(ogesi("p", "hesap-tazelik", t.satir));
+    return out;
+  }
+
+  function hesapSonucu(v) {
+    const kap = ogesi("div", "sonuc-kabi hesap-sonuc");
+    const t = v.tazelik && typeof v.tazelik === "object" ? v.tazelik : null;
+    const kilitli = !!t && t.durum === "yeni_duzenleme";
+    // Yeni düzenlemede toplam yoktur; hesabın ayrıntısı `teyit_bekleyen_tutarlar`da, katlanır bölümde durur.
+    const h = kilitli ? (v.teyit_bekleyen_tutarlar || {}) : v;
+    const vekalet = typeof h.asgari_tl === "number";
+    let yer = kap;
+    if (kilitli) {
+      kap.append(...tazelikOgeleri(t));
+      const d = document.createElement("details");
+      d.className = "hesap-katlanir";
+      yer = ogesi("div", "hesap-sonuc");
+      d.append(ogesi("summary", null, "Teyit bekleyen hesap (kesin değil)"), yer);
+      kap.append(d);
+    } else {
+      const ust = ogesi("div", "hesap-toplam");
+      const teyitsiz = !!t && t.durum === "kontrol_edilemedi";
+      ust.append(ogesi("span", "etiket", (vekalet ? "Asgari avukatlık ücreti" : (h.toplam_etiketi || "Toplam")) +
+        (teyitsiz ? " (teyit edilmedi)" : "")),
+        ogesi("b", "hesap-tutar", tlYaz(vekalet ? h.asgari_tl : h.toplam_tl)));
+      kap.append(ust, ...tazelikOgeleri(t));
+    }
+    if (vekalet && h.asgari_notu && h.asgari_notu.metin) {
+      yer.append(ogesi("p", "kucuk-not", `${h.asgari_notu.metin} ${(h.asgari_notu.dayanak || []).join("; ")}.`));
+    }
+    if (typeof h.ust_sinir_tl === "number") {
+      yer.append(ogesi("p", "kunye", `Mahkemece karşı tarafa yükletilecek ücret en çok ${tlYaz(h.ust_sinir_tl)} (${h.ust_sinir_dayanak}).`));
+    }
+    const tablo = ogesi("div", "hesap-kalemler");
+    for (const k of h.kalemler || []) tablo.append(hesapSatiri(k.kalem, k.tutar_tl, k.dayanak, k.hesap));
+    yer.append(tablo);
+    if (Array.isArray(h.hesap) && h.hesap.length) {
+      const ol = ogesi("ol", "hesap-adimlar");
+      for (const x of h.hesap) ol.append(ogesi("li", null, x));
+      yer.append(ol);
+    }
+    const dokum = (h.kalemler || []).flatMap((k) => k.dokum || []);
+    if (dokum.length > 1) {
+      yer.append(katlanir(`Dilim dökümü (${dokum.length} dilim)`, dokum.map((d) =>
+        `${d.sira}. dilim: ${tlYaz(d.dilim_tl)} × %${String(d.yuzde).replace(".", ",")} = ${tlYaz(d.ucret_tl)}`)));
+    }
+    const ga = h.gider_avansi;
+    if (ga && ga.eksik) {
+      yer.append(bilgi(`Gider avansı hesaplanmadı: ${ga.eksik === "tebligat_ucreti" ? "bir tebligatın ücretini girin" : "taraf sayısını girin"}. ` +
+        `Hesap: ${ga.formul} (${ga.dayanak}).`));
+    }
+    if (h.kalan_tl != null) {
+      yer.append(ogesi("p", "kunye", `Peşin ödenen ${tlYaz(h.pesin_odenen_tl)} düşülünce kalan: ${tlYaz(h.kalan_tl)} (${h.kalan_dayanak}).`));
+    }
+    if (Array.isArray(h.ayrica) && h.ayrica.length) {
+      const k = ogesi("div", "kesit");
+      k.append(ogesi("h3", null, "Toplama katılmayanlar"));
+      for (const a of h.ayrica) k.append(hesapSatiri(a.kalem, a.tutar_tl, a.dayanak, a.teyit));
+      yer.append(k);
+    }
+    for (const n of h.notlar || []) yer.append(ogesi("p", "kucuk-not", n));
+    if (Array.isArray(h.teyit_edin) && h.teyit_edin.length) yer.append(katlanir(`Teyit edin (${h.teyit_edin.length})`, h.teyit_edin));
+    const ey = ogesi("div", "eylemler sol");
+    for (const k of h.kaynak ? [h.kaynak] : (h.kaynaklar || [])) {
+      if (!k || !k.url) continue;
+      const b = dugme(k.rg || "Kaynak", { sinif: "kucuk", simge: "dis", baslik: `${k.ad} (${k.rg || "kaynak"})` });
+      b.onclick = () => baglantiAc(app, k.url, ortam.duyuru);
+      ey.append(b);
+    }
+    const kop = dugme("Kopyala", { sinif: "kucuk", simge: "kopya" });
+    kop.onclick = () => kopyala(hesapMetni(v), kop, null, ortam.duyuru);
+    ey.append(kop);
+    kap.append(ey);
+    return kap;
+  }
+
+  // Panoya giden düz metin: avukat yazışmasına yapıştırılabilir; tutar ve dayanak aracın verdiği gibi.
+  function hesapMetni(v) {
+    const t = v.tazelik && typeof v.tazelik === "object" ? v.tazelik : null;
+    const kilitli = !!t && t.durum === "yeni_duzenleme";
+    const h = kilitli ? (v.teyit_bekleyen_tutarlar || {}) : v;
+    const vekalet = typeof h.asgari_tl === "number";
+    const s = [];
+    if (t && t.uyari) s.push(t.uyari);
+    if (kilitli) s.push("Teyit bekleyen hesap (kesin değil):");
+    else s.push(`${vekalet ? "Asgari avukatlık ücreti" : (h.toplam_etiketi || "Toplam")}: ${tlYaz(vekalet ? h.asgari_tl : h.toplam_tl)}` +
+      (t && t.durum === "kontrol_edilemedi" ? " (teyit edilmedi)" : ""));
+    for (const k of h.kalemler || []) s.push(`- ${k.kalem}: ${tlYaz(k.tutar_tl)} (${k.dayanak})`);
+    for (const x of Array.isArray(h.hesap) ? h.hesap : []) s.push(`  ${x}`);
+    for (const n of h.notlar || []) s.push(n);
+    for (const a of h.ayrica || []) s.push(`Toplama katılmayan: ${a.kalem}: ${tlYaz(a.tutar_tl)}. ${a.teyit || ""}`.trim());
+    for (const k of h.kaynak ? [h.kaynak] : (h.kaynaklar || [])) if (k && k.url) s.push(`Kaynak: ${k.ad}, ${k.rg || ""} ${k.url}`);
+    if (vekalet && h.asgari_notu && h.asgari_notu.metin) s.push(h.asgari_notu.metin);
+    if (t && t.satir) s.push(t.satir);
+    return s.join("\n");
+  }
+
   // ---- Geçmiş ----
   // Liste kalıcı depodan (disk ya da cihaz, 90 gün; bkz. gecmiseEkle), depo kapalıysa bu pencereden (GECMIS). Ayrıntı
   // o günkü sonucu ekranların kendi çizicileriyle gösterir; "Yeniden çalıştır" işi kendi ekranında güncel kaynakla yeniden yapar.
@@ -1972,19 +2496,39 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     kategori: g.kategori || "claude", tur: g.tur || "claude", baslik: g.soru, adimlar: g.adimlar,
     sorgu: g.sorgu ?? null, anlik: g.anlik ?? null });
 
+  // Kalıcı geçmiş yalnız bilgisayardaki kurulumun masasındadır: uzak masada oraya giden yol her zaman görünür.
+  function kaliciGecmisYolu() {
+    const yerel = yerelBagli();
+    const kesit = ogesi("div", "kesit");
+    kesit.append(ogesi("h3", null, "Kalıcı geçmiş bilgisayardaki masada"));
+    const satir = ogesi("div", "satir");
+    const ac = dugme("Masayı bu bilgisayarda aç", { sinif: "birincil", simge: "dis" });
+    ac.onclick = () => claudeaSor(yerelMasaIstegi("gecmis"), null);
+    const indir = dugme("ArthurLegal'i indir", { sinif: yerel === false ? "birincil" : "", simge: "dis" });
+    indir.onclick = () => baglantiAc(app, INDIR, ortam.duyuru);
+    if (yerel) satir.append(ac);
+    else if (yerel === false) satir.append(indir);
+    else satir.append(ac, indir);
+    kesit.append(satir, bilgi(yerel
+      ? "Eski sorgularınız bu bilgisayardaki ArthurLegal kurulumunda, 90 gün boyunca durur. Düğme masayı kurulumun kendi bağlantısıyla (arthurlegal-yerel) açar; geçmişiniz orada. Düğme işe yaramazsa Claude'un araç menüsünde arthurlegal-yerel'in araçlarını açın."
+      : "Sorgu geçmişi, ArthurLegal'in kurulu olduğu bilgisayarda 90 gün tutulur ve oradaki masada her sohbette görünür; sorgularınız bu yüzden buluta çıkmaz. " +
+        (yerel === false ? "Web'de ve telefonda geçmiş yalnız açık sohbet boyunca durur."
+          : "Bilgisayardaysanız masayı kurulumun kendi bağlantısıyla açın; kurulu değilse indirin.")));
+    return kesit;
+  }
+
   CIZIM.gecmis = (ekran) => {
     if (gecmisAcik) { gecmisAyrinti(ekran, gecmisAcik); return; }
     const depo = gecmisDeposu();
-    const kalici = depo !== "pencere";
     const ORTAK = " Atıf teyidinde yapıştırdığınız metin değil, yalnız bulunan atıflar saklanır. UYAP işleri geçmişe yazılmaz.";
     ekran.append(ogesi("p", "kapsam-notu", {
       disk: "Bu bilgisayarda tutulur ve 90 gün sonra kendiliğinden silinir; hiçbir sunucuya gönderilmez. Yeni sohbette " +
         "ve ArthurLegal güncellendiğinde de durur." + ORTAK,
-      cihaz: "Bu cihazda, masanın kendi deposunda tutulur ve 90 gün sonra kendiliğinden silinir; hiçbir sunucuya " +
-        "gönderilmez. Yeni sohbette, Claude yeniden açıldığında ve ArthurLegal güncellendiğinde de durur; başka " +
-        "cihazda görünmez." + ORTAK,
+      cihaz: "Bu masa uzak bağlantıdan açıldı: burada yalnız bu sohbette yaptığınız işler görünür, yeni sohbette liste " +
+        "boş başlar. Hiçbir sunucuya gönderilmez." + ORTAK,
       pencere: "Bu pencerede tarayıcı deposu kapalı: geçmiş yalnız pencere açıkken durur ve hiçbir yere yazılmaz.",
     }[depo]));
+    if (depo !== "disk") ekran.append(kaliciGecmisYolu());
     const seg = ogesi("div", "segment");
     for (const [id, yazi] of Object.entries(KATEGORI_ADI)) {
       const b = dugme(yazi);
@@ -1993,14 +2537,14 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
       seg.append(b);
     }
     const ara = girdi("search", "Başlıkta ara: kira, 6098, EPDK …", gecmisSuzgec.ara);
-    const temizle = dugme(kalici ? "Geçmişi temizle" : "Listeyi temizle", { simge: "sil" });
+    const temizle = dugme(depo === "disk" ? "Geçmişi temizle" : "Listeyi temizle", { simge: "sil" });
     let emin = false;
     temizle.onclick = async () => {
       const yazi = temizle.querySelector("span");
       if (!emin) {
         emin = true;
         yazi.textContent = "Emin misiniz? Bir daha basın";
-        setTimeout(() => { emin = false; yazi.textContent = kalici ? "Geçmişi temizle" : "Listeyi temizle"; }, 4000);
+        setTimeout(() => { emin = false; yazi.textContent = depo === "disk" ? "Geçmişi temizle" : "Listeyi temizle"; }, 4000);
         return;
       }
       temizle.disabled = true;
@@ -2306,7 +2850,7 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
   // ---- Beyin ----
   CIZIM.beyin = (ekran) => {
     const d = modulDurumu("beyin");
-    if (d === "masaustu") return masaustuGerekli(ekran, "Beyin (ArthurLegal Hafıza)");
+    if (d === "masaustu") return masaustuTanitimi(ekran, "beyin");
     if (d === "kurulu-degil") return kuruluDegil(ekran, "ArthurLegal Hafıza");
     const form = ogesi("form", "form");
     const q = girdi("text", "kira tespiti davası tercihlerim");
@@ -2336,18 +2880,18 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     ekran.append(form, izgara, bilgi("Hafıza bu bilgisayardaki kasada durur; kişisel veri kapısı açıkken Claude'a yalnız istediğiniz not gider."));
   };
 
-  // ---- Arthur Mask ----
+  // ---- ArthurMask ----
   CIZIM.mask = (ekran) => {
     const d = modulDurumu("mask");
-    if (d === "masaustu") return masaustuGerekli(ekran, "Arthur Mask");
-    if (d === "kurulu-degil") return kuruluDegil(ekran, "Arthur Mask");
+    if (d === "masaustu") return masaustuTanitimi(ekran, "mask");
+    if (d === "kurulu-degil") return kuruluDegil(ekran, "ArthurMask");
     const satir = ogesi("div", "satir");
-    const ac = dugme("Arthur Mask'i aç", { sinif: "birincil", simge: "dis" });
+    const ac = dugme("ArthurMask'i aç", { sinif: "birincil", simge: "dis" });
     ac.onclick = () => modulAc("mask", ac);
     const liste = dugme("Hazır belgeleri getir", { simge: "sohbet" });
-    liste.onclick = () => claudeaSor("Arthur Mask'te incelemesi tamamlanmış maskeli belgeleri listele.", "Arthur Mask: hazır belgeler");
+    liste.onclick = () => claudeaSor("ArthurMask'te incelemesi tamamlanmış maskeli belgeleri listele.", "ArthurMask: hazır belgeler");
     satir.append(ac, liste);
-    ekran.append(satir, bilgi("Belgeyi Arthur Mask'e bırakın; adlar ve numaralar bu bilgisayarda etiketlenir ({{KİŞİ-01}} gibi). Claude yalnız maskeli metni görür, gerçek değerler bilgisayarınızda geri yazılır."));
+    ekran.append(satir, bilgi("Belgeyi ArthurMask'e bırakın; adlar ve numaralar bu bilgisayarda etiketlenir ({{KİŞİ-01}} gibi). Claude yalnız maskeli metni görür, gerçek değerler bilgisayarınızda geri yazılır."));
   };
 
   // ---- UYAP Dashboard ----
@@ -2385,9 +2929,9 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
 
   CIZIM.uyap = (ekran) => {
     const d = modulDurumu("uyap");
-    if (d === "masaustu") return masaustuGerekli(ekran, "UYAP Dashboard");
+    if (d === "masaustu") return masaustuTanitimi(ekran, "uyap");
     if (d === "kurulu-degil") {
-      ekran.append(bilgi("UYAP Dashboard bu kurulumda açık değil. Windows'ta Hukuk Bürosu ya da Kurumsal paketiyle birlikte Arthur Mask seçilince kendiliğinden gelir: ArthurLegal kurulumunu yeniden çalıştırıp modül ekranında işaretleyin."));
+      ekran.append(bilgi("UYAP Dashboard bu kurulumda açık değil. Windows'ta Hukuk Bürosu ya da Kurumsal paketiyle birlikte ArthurMask seçilince kendiliğinden gelir: ArthurLegal kurulumunu yeniden çalıştırıp modül ekranında işaretleyin."));
       return;
     }
     const satir = ogesi("div", "satir");
@@ -2465,26 +3009,31 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     };
     ekran.append(form);
 
+    // Bağlantılar: MCP'ler ekranıyla aynı liste (Claude'un bildirdiği bağlayıcılar). Bağlı olana düğme konmaz; durum
+    // bilinmiyorsa masa tahmin etmez, Claude'dan ister.
+    const b = DURUM.baglayicilar;
     const kesit = ogesi("div", "kesit");
     kesit.append(ogesi("h3", null, "Bağlantılar"));
     const liste = ogesi("div", "liste");
-    for (const [s, ad, acik] of [
-      ["sohbet", "Gmail", "Yanıt bekleyenler ve önemli yazışmalar"],
-      ["zil", "Google Takvim", "Toplantılar, duruşma ve randevu notları"],
-      ["sohbet", "Slack", "Ekipten gelen istekler"],
-      ["onay", "Görevler", "Todoist, Asana, Notion ya da kullandığınız uygulama"],
-    ]) {
-      const o = ogesi("div", "liste-ogesi");
-      const sim = ogesi("span", "simge");
-      sim.append(ikon(s));
-      const mt = ogesi("div", "metinler");
-      mt.append(ogesi("span", "ad", ad), ogesi("span", "ne", acik));
-      const b = dugme("Bağla", { simge: "bag", baslik: ad + " bağla" });
-      b.onclick = () => baglantiAc(app, BAGLAYICILAR, ortam.duyuru);
-      o.append(sim, mt, b);
-      liste.append(o);
+    for (const [simge, oneri, desen, acik] of DONNA_UYGULAMALARI) {
+      const eslesen = b ? b.liste.filter((x) => !AL_SUNUCUSU.test(x.ad.toLowerCase()) && desen.test(x.ad.toLowerCase())) : [];
+      const bagli = eslesen.filter((x) => x.durum === "bagli");
+      if (!b) liste.append(sunucuSatiri(simge, oneri, acik, ["Durum bilinmiyor", ""]));
+      else if (bagli.length) liste.append(sunucuSatiri(simge, bagli.map((x) => x.ad).join(", "), acik, BAGLAYICI_DURUMU.bagli));
+      else if (eslesen.length) {
+        const x = eslesen[0];
+        liste.append(sunucuSatiri(simge, x.ad, "Claude'un hesabında, bu sohbette çalışmıyor", BAGLAYICI_DURUMU[x.durum], baglaDugmesi(x.ad)));
+      } else liste.append(sunucuSatiri(simge, oneri, acik, ["Bağlı değil", ""], baglaDugmesi(oneri)));
     }
-    kesit.append(liste, bilgi("Bağlantıları Claude hesabınızda bir kez kurarsınız; telefonda da çalışır. Donna onları yalnız siz istediğinizde, sohbet üzerinden kullanır ve her değişiklikten önce onay ister."));
+    const iste = dugme(b ? "Listeyi Claude'dan yenile" : "Durumu Claude'dan öğren", { sinif: "kucuk", simge: "yenile" });
+    iste.onclick = () => claudeaSor(listeIstegi("donna"), null);
+    const mcp = dugme("MCP'ler ekranı", { sinif: "kucuk", simge: "fis" });
+    mcp.onclick = () => git("mcp");
+    const alt = ogesi("div", "alt-satir");
+    const ey = ogesi("div", "eylemler");
+    ey.append(iste, mcp);
+    alt.append(ogesi("span", "zaman", b ? `Claude'un bildirdiği liste · ${AL.zaman(b.zaman)}` : "Durum Claude'dan gelir"), ey);
+    kesit.append(liste, alt, bilgi("Bağlantıları Claude hesabınızda bir kez kurarsınız; telefonda da çalışır. Donna onları yalnız siz istediğinizde, sohbet üzerinden kullanır ve her değişiklikten önce onay ister."));
     ekran.append(kesit);
   };
 
@@ -2493,18 +3042,22 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
   // (Gmail, Slack ...) yalnız Claude'un bildirdiği listeden: ev sahibi bu listeyi masaya vermez, masa kendisi göremez.
   const BAGLAYICI_KAYDI = "al.masa.baglayicilar";
   const AL_SUNUCUSU = /arthur|^al[\s_-]/;   // ArthurLegal'in kendi sunucuları kendi bölümünde
-  const ONERILEN_BAGLAYICILAR = [
-    ["Gmail", "posta", /gmail/],
-    ["Google Takvim", "takvim", /calendar|takvim/],
-    ["Slack", "sohbet", /slack/],
-  ];
   const BAGLAYICI_SIMGESI = [[/mail|posta|outlook/, "posta"], [/calendar|takvim/, "takvim"], [/slack|teams|chat/, "sohbet"],
     [/drive|notion|docs|box|dropbox|sharepoint|confluence/, "kitap"]];
   const BAGLAYICI_DURUMU = { bagli: ["Bağlı", "nane"], "giris-gerekli": ["Giriş gerekli", "amber"], hata: ["Hata", "kirmizi"] };
   const MODUL_DURUMU = { hazir: ["Çalışıyor", "nane"], claude: ["Claude üzerinden", "mavi"], masaustu: ["Masaüstünde", ""],
     "kurulu-degil": ["Kurulu değil", ""] };
-  const LISTE_ISTEGI = "ArthurLegal Masası: bu sohbette bağlı MCP sunucularımı ve Claude bağlayıcılarımı masada göster. " +
-    "al_masasi'yi bolum=mcp ile yeniden açın ve baglayicilar'a sunucu adlarını durumlarıyla yazın.";
+  // Donna'nın kullandığı uygulamalar: önerilen ad, Claude'un bildirdiği adla eşleşme, ne için.
+  const DONNA_UYGULAMALARI = [
+    ["posta", "Gmail", /gmail|outlook|e-?posta|mail/, "Yanıt bekleyenler ve önemli yazışmalar"],
+    ["takvim", "Google Takvim", /calendar|takvim/, "Toplantılar, duruşma ve randevu notları"],
+    ["sohbet", "Slack", /slack|teams/, "Ekipten gelen istekler"],
+    ["onay", "Görev uygulaması", /notion|todoist|asana|trello|clickup|linear|tasks|görev/, "Todoist, Asana, Notion ya da kullandığınız uygulama"],
+  ];
+  function listeIstegi(bolum) {
+    return "ArthurLegal Masası: bu sohbette bağlı MCP sunucularımı ve Claude bağlayıcılarımı masada göster. " +
+      `al_masasi'yi bolum=${bolum} ile yeniden açın ve baglayicilar'a sunucu adlarını durumlarıyla yazın.`;
+  }
 
   // Claude'un bildirdiği liste (al_masasi girdisi ya da sonucu). Aynı sunucunun bütün masa pencerelerinde ortaktır.
   function baglayicilariAl(liste) {
@@ -2558,8 +3111,11 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     let arastirma = sunucuSatiri("arma", "ArthurLegal araştırma", alNe, ["Yoklanıyor", ""]);
     alListe.append(arastirma);
     for (const [id, ad, ne] of [["tapu", "ArthurTapu", "Tapu ve kadastro"], ["uyap", "UYAP Dashboard", "Tebligat ve duruşmalar, salt okunur"],
-      ["mask", "Arthur Mask", "Belgeyi Claude'a gitmeden maskeler"], ["beyin", "Beyin", "ArthurLegal Hafıza"]]) {
-      alListe.append(sunucuSatiri(ekranSimgesi(id), ad, ne, MODUL_DURUMU[modulDurumu(id)] || MODUL_DURUMU.hazir));
+      ["mask", "ArthurMask", "Belgeyi Claude'a gitmeden maskeler"], ["beyin", "Beyin", "ArthurLegal Hafıza"]]) {
+      const d = modulDurumu(id);
+      // Uzak masa yerel modülü çalıştıramaz, ama Claude bu sohbette kurulumu bildirdiyse modül bu bilgisayarda bağlıdır.
+      const durum = d === "masaustu" && id !== "tapu" && yerelBagli() ? ["Bilgisayarda bağlı", "mavi"] : MODUL_DURUMU[d];
+      alListe.append(sunucuSatiri(ekranSimgesi(id), ad, ne, durum || MODUL_DURUMU.hazir));
     }
     const alNot = ogesi("div");
     al.append(alListe, alNot);
@@ -2569,7 +3125,7 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     cb.append(ogesi("h3", null, "Claude bağlayıcılarınız"));
     const b = DURUM.baglayicilar;
     const iste = dugme(b ? "Listeyi Claude'dan yenile" : "Listeyi Claude'dan iste", { sinif: "kucuk", simge: "yenile" });
-    iste.onclick = () => claudeaSor(LISTE_ISTEGI, null);
+    iste.onclick = () => claudeaSor(listeIstegi("mcp"), null);
     if (!b) {
       cb.append(ogesi("div", "bos", "Claude, bu sohbette hangi bağlayıcıların açık olduğunu masaya henüz bildirmedi. Masa bunu kendi başına göremez; listeyi Claude'dan isteyin."));
     } else {
@@ -2581,7 +3137,7 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
         liste.append(sunucuSatiri(simge, x.ad, x.durum === "bagli" ? "Bu sohbette açık" : "Claude'un hesabında, bu sohbette çalışmıyor",
           BAGLAYICI_DURUMU[x.durum], ...(x.durum === "bagli" ? [] : [baglaDugmesi(x.ad)])));
       }
-      for (const [ad, simge, desen] of ONERILEN_BAGLAYICILAR) {
+      for (const [simge, ad, desen] of DONNA_UYGULAMALARI) {
         if (!disari.some((x) => desen.test(x.ad.toLowerCase()))) {
           liste.append(sunucuSatiri(simge, ad, "Donna için önerilir", ["Bağlı değil", ""], baglaDugmesi(ad)));
         }
@@ -2656,6 +3212,40 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
     $("kok").replaceChildren(kap);
   }
 
+  // Devir: uzak uç, sohbette arthurlegal-yerel bağlıyken masayı açmaz (geçmiş, Beyin, ArthurMask ve UYAP yalnız
+  // bilgisayardaki masada çalışır) ve Claude'a oradaki al_masasi'yi çağırmasını söyler. Claude çağırınca bu pencerenin
+  // yerini bilgisayardaki masa alır; çağırmazsa kullanıcı iki düğmeden biriyle yoluna devam eder.
+  function yonlendirmeCiz() {
+    document.body.classList.remove("kart-modu");
+    masaKuruldu = false;
+    const kap = ogesi("div", "onizleme");
+    const ust = ogesi("header", "kimlik");
+    const marka = ogesi("span", "marka", "Arthur");
+    marka.append(ogesi("span", null, "Legal"));
+    ust.append(sablon("t-arma"), marka, Object.assign(ogesi("span", "ayrac"), { ariaHidden: "true" }), ogesi("span", "bolum", "Masa"));
+    const ad = ogesi("div", "adimlar");
+    ad.append(adimSatiri("suruyor", "Claude masayı bu bilgisayardaki kurulumdan (arthurlegal-yerel) açıyor…"));
+    const ac = dugme("Masayı bu bilgisayarda aç", { sinif: "birincil", simge: "dis" });
+    ac.onclick = () => claudeaSor(yerelMasaIstegi(DURUM.acilis), null);
+    const kal = dugme("Bu masayla devam et");
+    kal.onclick = () => {
+      DURUM.yonlendir = null;
+      DURUM.uzaktaKal = true;
+      durumuSakla();
+      ciz();
+      bildir("masa uzak bağlantıdan açıldı (kullanıcı böyle istedi).");
+      if (DURUM.tamEkranIste && (app.getHostContext() || {}).displayMode !== "fullscreen") tamEkran();
+    };
+    const ey = ogesi("div", "eylemler sol");
+    ey.append(ac, kal);
+    const sat = ogesi("div", "alt-satir");
+    sat.append(ey, ogesi("span", "zaman", `ArthurLegal ${DURUM.surum}`));
+    kap.append(ust, ogesi("h2", null, "Masa bu bilgisayardaki ArthurLegal'den açılıyor"), ad,
+      bilgi("Sorgu geçmişiniz, Beyin, ArthurMask ve UYAP Dashboard bu bilgisayardaki kurulumun masasında çalışır. Masa birkaç saniyede açılmazsa ilk düğmeye basın; yine açılmazsa Claude'un araç menüsünde arthurlegal-yerel'in araçları kapalıdır, açıp yeniden deneyin. İkinci düğme uzak masayı açar: orada geçmiş yalnız bu sohbet boyunca durur."),
+      sat);
+    $("kok").replaceChildren(kap);
+  }
+
   // Açılış ekranı: araç girdisi ya da sunucu bir bölüm istediyse o, istemediyse Sohbet. Son ekran hatırlanmaz:
   // kullanıcı masayı açınca doğrudan sohbete gelir (kullanıcı kararı, 02.11.2026).
   function acilisEkrani() {
@@ -2665,6 +3255,7 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
   let masaKuruldu = false;
   let acilisUygulandi = false;
   function ciz() {
+    if (DURUM.yonlendir) { yonlendirmeCiz(); return; }
     if (ROL === "adim" && !masaModu()) { kartModuCiz(); return; }
     document.body.classList.remove("kart-modu");
     const ctx = app.getHostContext() || {};
@@ -2723,6 +3314,23 @@ body.kart-modu #kok { padding: calc(var(--guvenli-ust) + 4px) calc(var(--guvenli
       DURUM.moduller = veri.moduller || {};
       if (veri.bolum && EKRANLAR.some((e) => e.id === veri.bolum)) DURUM.acilis = veri.bolum;
       if (Array.isArray(veri.baglayicilar)) baglayicilariAl(veri.baglayicilar);
+      if (CEVAP && veri.teslim && typeof veri.teslim.gecmis_id === "string") CEVAP.gecmisId = veri.teslim.gecmis_id;
+      if (ROL === "masa" && veri.yonlendir && !DURUM.uzaktaKal) {
+        if (devirDenendi()) {
+          // Bu sohbette az önce devredildi ve yine buraya dönüldü: Claude yerel masayı açamıyor (aracı kapalı ya
+          // da yok). İkinci kez devir kartı çizilmez; uzak masa açılır ve çıkış yolunu söyler.
+          DURUM.devirOlmadi = true;
+          DURUM.uzaktaKal = true;
+        } else {
+          // Masa burada açılmadı: durum saklanmaz (bu sohbetin öteki pencereleri uzak masayı açık sanmasın).
+          devriYaz();
+          DURUM.yonlendir = veri.yonlendir;
+          DURUM.hazir = true;
+          yonlendirmeCiz();
+          yonlendirmeyiBildir();
+          return;
+        }
+      }
       durumuSakla();
     }
     DURUM.hazir = true;

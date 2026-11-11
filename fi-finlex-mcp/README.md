@@ -127,6 +127,7 @@ Optional configuration, all of it safe to leave empty:
 | `EMBEDDINGS_URL` | Turns the semantic channel on |
 | `EMBEDDINGS_MODEL` | Must be multilingual for cross-language search |
 | `EMBEDDINGS_API_KEY` | Bearer token, if the endpoint needs one |
+| `FI_SEMANTIC_MIN_Z` | How far (standard deviations, default 3.4) a meaning-only match must stand above the query's similarity to the whole index; below it the result is marked `likely_unrelated`, never removed |
 
 > Container filesystems are usually ephemeral. The index rebuilds on a cold
 > start, which is why the crawl runs in the background and the server answers

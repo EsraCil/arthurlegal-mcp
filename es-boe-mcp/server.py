@@ -12,8 +12,10 @@ Build the search index first (~20 requests, under a minute):
 
 from __future__ import annotations
 
+import json
 import os
-from typing import Any, Dict
+import re
+from typing import Any, Dict, List
 
 from boe import BoeClient, BoeError
 from mcpcore import McpError, Tool, run
@@ -52,7 +54,8 @@ SEARCH SCOPE. The index holds titles, official numbers, issuing departments and
 dates, and (when built with crawl.py --backfill-text) the first 8,000 characters
 of each act's text in force: the preamble and the opening articles. Not the rest
 of the text: a phrase inside article 348 bis will not be found by searching for
-it; find the act, then read its text. `index_scope` in each response says which."""
+it; find the act, then read its text. `scope_note` in each search response (and
+`index_scope` in status) says which."""
 
 
 def _scope() -> str:
@@ -62,6 +65,43 @@ def _scope() -> str:
         return ("act metadata (title, number, department, dates) and the first 8,000 "
                 "characters of each act's text in force, not the rest of the text")
     return "act metadata (title, number, department, dates), not article text"
+
+
+# BOE's own repeal note opens the consolidated text ("Norma derogada, ..."). A partial or conditional
+# one ("sin perjuicio de ...", "salvo ...", a later date) leaves the act 'vigente' (crawl.act_status),
+# as for LO 15/1999; the note then travels with the result as `status_note` (F-197). The index is
+# not changed: the note is read from the head of the text the index already holds. The marker is
+# crawl.TEXT_MARK, copied rather than imported (another backend's crawl.py shares the module name);
+# tests/test_status.py keeps the two equal.
+_TEXT_MARK = "\n\n[texto consolidado, inicio]\n"
+_REPEAL_NOTE = re.compile(r"norma\s+(?:derogada|anulada)\b", re.I)
+
+
+def _status_note(body: str) -> str:
+    """BOE's repeal or annulment note at the top of the act's text, else ''.
+
+    Usually one line; some acts carry several in a row (Ley 30/1983: "Norma derogada para las
+    Comunidades Autónomas que ..." then "Norma derogada, excepto respecto de ..."), so every leading
+    note line is kept.
+    """
+    head = (body or "").split(_TEXT_MARK, 1)[1] if _TEXT_MARK in (body or "") else ""
+    lines = []
+    for line in head.strip().split("\n"):
+        if not _REPEAL_NOTE.match(line.strip()):
+            break
+        lines.append(line.strip())
+    return "\n".join(lines)[:1000]
+
+
+def _add_status_notes(results: List[Dict[str, Any]]) -> None:
+    refs = [r["ref"] for r in results if r.get("status") == "vigente"]
+    if not refs:
+        return
+    rows = _index.db.execute("SELECT ref, body FROM docs WHERE ref IN (%s)" % ",".join("?" * len(refs)), refs)
+    notes = {row["ref"]: _status_note(row["body"]) for row in rows}
+    for r in results:
+        if notes.get(r["ref"]):
+            r["status_note"] = notes[r["ref"]]
 
 
 def _t_search(args: Dict[str, Any]) -> Any:
@@ -85,6 +125,7 @@ def _t_search(args: Dict[str, Any]) -> Any:
         limit=int(args.get("limit", 20)),
         filters=filters,
     )
+    _add_status_notes(result.get("results") or [])
     result["scope_note"] = (
         "Searches %s. Use get_act_text once you have identified the act." % _scope()
     )
@@ -124,6 +165,15 @@ def _t_daily(args: Dict[str, Any]) -> Any:
         raise McpError(str(exc)) from exc
 
 
+def _index_updates() -> Dict[str, Any]:
+    """Updates applied at boot on top of the baked index (indeks_ek.py at the repository root)."""
+    try:
+        value = json.loads(_index.get_state("ek") or "null")
+    except ValueError:
+        return {}
+    return {"index_updates": value} if isinstance(value, dict) else {}
+
+
 def _t_status(args: Dict[str, Any]) -> Any:
     return {
         "server": "es-boe-mcp",
@@ -132,6 +182,7 @@ def _t_status(args: Dict[str, Any]) -> Any:
         "indexed_documents": _index.count(),
         "last_crawl": _index.get_state("last_crawl") or "never — run crawl.py",
         "index_scope": "consolidated legislation: " + _scope(),
+        **_index_updates(),
         **embeddings_status(),
     }
 
@@ -145,13 +196,16 @@ TOOLS = [
         "Search Spanish consolidated legislation by title, official number, "
         "issuing department or subject. Hybrid retrieval (BM25 + fuzzy, plus "
         "dense vectors when an embeddings backend is configured). IMPORTANT: the "
-        "index covers act METADATA, not article text — use this to identify the "
-        "act, then get_act_text to read it. Set only_in_force=true to keep only "
+        "index covers act metadata and, when built with text, the first 8,000 "
+        "characters of each act's text in force, not the rest (`scope_note` in "
+        "the response says which). Use this to identify the act, then "
+        "get_act_text to read it. Set only_in_force=true to keep only "
         "status 'vigente': it excludes acts BOE marks as spent (vigencia agotada) "
         "and acts whose consolidated text opens with an unqualified repeal or "
         "annulment already in effect (status 'derogada' / 'anulada'). A partial "
-        "repeal ('Norma derogada, salvo …') stays 'vigente' — check the text "
-        "before relying on a provision. Each result carries a "
+        "or conditional repeal ('Norma derogada, salvo …', '… sin perjuicio de …') "
+        "stays 'vigente' — check the text before relying on a provision. Such a result carries "
+        "`status_note`: BOE's repeal note from the top of the act's text. Each result carries a "
         "verbatim `citation` — copy it, never build a BOE id yourself.",
         {
             "type": "object",

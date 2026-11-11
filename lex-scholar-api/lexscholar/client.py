@@ -1,4 +1,4 @@
-"""LexScholarClient — one search surface over nine sources.
+"""LexScholarClient — one search surface over ten sources.
 
 Ties the three pieces together: the :mod:`router` decides *where* to go, the
 adapters in :mod:`lexscholar.sources` know *how* to talk to each upstream, and

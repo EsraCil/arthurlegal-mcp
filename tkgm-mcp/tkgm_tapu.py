@@ -13,7 +13,7 @@ Katkısı şema, maskeleme, çapraz kontrol ve işarettir:
   tespiti için NLP gerekmez — ad {{MALİK-nn}} olur ve kayıdın HER yerinde, şerh ve rehin
   satırları dâhil, aynı etiketi alır. Eşleştirme döndürülmez, diske yazılmaz.
   Maskelenmeyenler çıktının `kvkk` alanında ADIYLA sayılır: şerhteki üçüncü kişi ve şirket
-  adları, adres, doğum tarihi. Tam takma adlandırma Arthur Mask'in işidir; bu sunucu
+  adları, adres, doğum tarihi. Tam takma adlandırma ArthurMask'in işidir; bu sunucu
   yalnız standart kütüphane kullandığı için onu içe almaz.
 - Paylaşılan sunucuda bu araç hiç çalışmaz (kişisel veri: KVKK).
 - Ada/parsel/yüzölçümü, okunmuş parsel geometrisiyle karşılaştırılır.
@@ -264,7 +264,7 @@ def _adlari_maskele(metin: str, degerler: List[str], korunan: set) -> Tuple[str,
     return metin, {"kisi": len(kisiler), "tuzel": tuzel, "cozulemeyen": cozulemeyen, "kalan": kalan}
 
 
-# Arthur Mask kancası: kuruluysa şerh/beyan/irtifak/rehin satırlarındaki ÜÇÜNCÜ kişi ve kurum
+# ArthurMask kancası: kuruluysa şerh/beyan/irtifak/rehin satırlarındaki ÜÇÜNCÜ kişi ve kurum
 # adlarını da maskeler (alacaklı banka, kiracı, mahkeme). Bu sunucu standart kütüphaneyle
 # çalışmaya devam eder: içe aktarma tembeldir, yoksa kvkk bunu açıkça yazar. Kasa kullanılmaz
 # (diske eşleştirme yazılmaz); yalnız motorun bulguları okunur. TKGM_ARTHUR_MASK=0 kapatır.
@@ -428,14 +428,14 @@ def ayristir(metin: str, maskele: bool = True, ad_maskele: bool = True,
                    "telefon (cep ve sabit hat)", "e-posta"] if maskele else [])
     if ucuncu is not None:
         maskelenen.append("şerh/beyan/rehin satırlarındaki üçüncü kişi ve kurum adları → {{KİŞİ-nn}}/"
-                          "{{KURUM-nn}} (Arthur Mask, %d ad)" % ucuncu)
+                          "{{KURUM-nn}} (ArthurMask, %d ad)" % ucuncu)
     maskelenmeyen = [
         None if maskele else "kimlik numaraları (maskele=false)",
         None if ad_maskele else "malik adları (ad_maskele=false)",
-        ("Arthur Mask bir NLP tahminidir: tanımadığı üçüncü kişi adı açık kalabilir; dosya no ve "
+        ("ArthurMask bir NLP tahminidir: tanımadığı üçüncü kişi adı açık kalabilir; dosya no ve "
          "tarih maskelenmez") if ucuncu is not None else
         ("şerh/beyan/rehin satırlarındaki ÜÇÜNCÜ kişi ve şirket adları (alacaklı banka, kiracı, "
-         "mahkeme ve dosya no) — bunlar ayrıştırıcının ad olarak bilmediği dizgelerdir; Arthur Mask "
+         "mahkeme ve dosya no) — bunlar ayrıştırıcının ad olarak bilmediği dizgelerdir; ArthurMask "
          "%s" % ("kapalı (ucuncu_kisi_maskele=false)" if not ucuncu_kisi else
                  "devrede değil (%s)" % (_MOTOR_HATA or "içe aktarılamadı"))),
         "adres, doğum tarihi",
@@ -457,9 +457,9 @@ def ayristir(metin: str, maskele: bool = True, ad_maskele: bool = True,
         "maskelenen": maskelenen,
         "maskelenmeyen": [x for x in maskelenmeyen if x],
         "saklama": "Eşleştirme döndürülmez ve diske yazılmaz; hiçbir şey bellekte tutulmaz.",
-        "daha_fazlasi": "Arthur Mask kuruluysa üçüncü kişi adları da maskelenir (isteğe bağlı kanca; "
+        "daha_fazlasi": "ArthurMask kuruluysa üçüncü kişi adları da maskelenir (isteğe bağlı kanca; "
                         "bu sunucu onsuz da standart kütüphaneyle çalışır). Adres ve belge bütünü için "
-                        "tam takma adlandırma Arthur Mask arayüzünün işidir.",
+                        "tam takma adlandırma ArthurMask arayüzünün işidir.",
     }
     return kayit
 

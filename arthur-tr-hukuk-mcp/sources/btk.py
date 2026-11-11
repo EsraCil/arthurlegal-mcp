@@ -7,13 +7,14 @@
 Each item carries ``data.file_url.url`` (PDF on btk.gov.tr S3), ``decision_no``
 (e.g. ``2026/İK-THD/186``), ``decision_date`` and ``relevant_unit``.
 
-Citation contract: ``BTK, 03.08.2026 tarih ve 2026/İK-THD/186 sayılı Kurul Kararı``.
+Citation contract: ``BTK, 04.08.2026 tarih ve 2026/İK-THD/186 sayılı Kurul Kararı``.
 
 Endpoint from saidsurucu/yargi-mcp (MIT).
 """
 
 from __future__ import annotations
 
+import datetime
 from typing import Any, Dict, List
 
 from net import Http, HttpError
@@ -27,15 +28,34 @@ _http = Http(BASE, {"Accept": "application/json"}, allowed_domains=["btk.gov.tr"
 def _item(it: Dict[str, Any]) -> Dict[str, Any]:
     d = it.get("data") or {}
     f = d.get("file_url") if isinstance(d.get("file_url"), dict) else {}
-    date = (d.get("decision_date") or "")[:10]
+    date = _gun(d.get("decision_date"))
     no = d.get("decision_no") or ""
     return {
         "id": it.get("id"), "title": it.get("title"), "decision_no": no, "decision_date": date,
-        "relevant_unit": d.get("relevant_unit"), "published_at": (it.get("publishedAt") or "")[:10],
+        "relevant_unit": d.get("relevant_unit"), "published_at": _gun(it.get("publishedAt")),
         "pdf_url": f.get("url") or f.get("storageUrl"),
         "citation": "BTK, %s tarih ve %s sayılı Kurul Kararı" % (_tr(date), no),
         "source_url": "%s/kurul-kararlari/%s" % (BASE, it.get("slug") or ""),
     }
+
+
+def _gun(deger: Any) -> str:
+    """API zaman damgasının Türkiye'deki günü (YYYY-MM-DD).
+
+    btk.tr karar tarihini o günün Türkiye saatiyle gece yarısı olarak, UTC ile verir:
+    15.09.2026 tarihli karar ``2026-09-14T21:00:00.000Z`` gelir. İlk on karakter bir gün
+    erkeni gösterir; atıf (``BTK, 15.09.2026 tarih ve ... sayılı Kurul Kararı``) yanlış
+    çıkar. Damgaya üç saat eklenir: yaz saati uygulanan yıllarda kış damgası 22:00Z'dir
+    ve o da doğru güne düşer. Saat taşımayan değer olduğu gibi kalır.
+    """
+    s = str(deger or "").strip()
+    if len(s) < 19 or s[10] != "T":
+        return s[:10]
+    try:
+        t = datetime.datetime.strptime(s[:19], "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return s[:10]
+    return (t + datetime.timedelta(hours=3)).strftime("%Y-%m-%d")
 
 
 def _tr(iso: str) -> str:

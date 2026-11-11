@@ -121,7 +121,7 @@ class KimlikKaliplari(unittest.TestCase):
 
 
 class ArthurMaskKancasi(unittest.TestCase):
-    """Arthur Mask kuruluysa üçüncü kişi adları da maskelenir; değilse kvkk bunu söyler.
+    """ArthurMask kuruluysa üçüncü kişi adları da maskelenir; değilse kvkk bunu söyler.
     Gerçek paket (presidio) ağırdır; motorun sözleşmesi (analiz → bas/son/varlik/kanonik) sahteyle sınanır."""
 
     METIN = ("Malik: AHMET ÖRNEK\nREHİNLER\nGARANTİ BANKASI A.Ş. lehine 1. derece ipotek\n"
@@ -165,7 +165,7 @@ class ArthurMaskKancasi(unittest.TestCase):
             self.assertNotIn(gizli, g)
         self.assertIn("{{KURUM-01}}", g)
         self.assertIn("{{KİŞİ-01}}", g)
-        self.assertTrue(any("Arthur Mask" in x for x in k["kvkk"]["maskelenen"]))
+        self.assertTrue(any("ArthurMask" in x for x in k["kvkk"]["maskelenen"]))
 
     def test_kapatilabilir_ve_bunu_soyler(self):
         os.environ["TKGM_ARTHUR_MASK"] = "0"

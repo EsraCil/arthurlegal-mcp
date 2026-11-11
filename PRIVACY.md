@@ -22,7 +22,7 @@ The service is operated by DATS Web3 Solutions, Inc. Contact details are at the 
   fetched public documents in memory under their official identifiers (such as a law and article
   number) until they expire or the server restarts.
 - Do not put client names or other confidential facts into a request. Mask documents on your
-  own computer first (for example with [Arthur Mask](https://github.com/beerbottle90/arthur-mask)).
+  own computer first (for example with [ArthurMask](https://github.com/beerbottle90/arthur-mask)).
 
 ## What the service receives
 

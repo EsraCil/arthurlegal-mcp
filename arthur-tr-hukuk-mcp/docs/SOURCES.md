@@ -26,8 +26,10 @@ indexed from their listings, so their body was the title and `semantik_ara` sear
 `crawl.py --backfill-text` added full text for BDDK (964/964) and BTK (1,897/1,904; seven are scanned PDFs).
 "idari para cezası" occurs in the text of 419 BTK decisions and in the title of only 9 — for the other 411 the question
 could not be asked before, because BTK's live search is title-only too. (Counted with Turkish-aware case folding:
-SQLite's `lower()` leaves "İ" alone and reports no title at all.) EPDK has text for about half of its decisions (the
-rest have no extractable document); KVKK, SPK and Sigorta Tahkim always had full text.
+SQLite's `lower()` leaves "İ" alone and reports no title at all.) EPDK has text for 3,733 of its 3,745 decisions since
+2026-10-12 (old Word files read directly, scans by OCR on the crawl workstation; twelve have no extractable document).
+SPK and Sigorta Tahkim always had full text; KVKK has had it since 2026-10-10 (before that every KVKK body was the
+site's menu page, fetched from a wrong address).
 
 **Rekabet has full text since 2026-09-30.** It was left title-only at first (its live search already matches inside the
 PDFs, and ten thousand long PDFs bloat the baked image). But the live search is word-based (an unquoted multi-word query
@@ -44,8 +46,9 @@ Measured on a stratified sample of 101 decisions (period × decision type):
 | first six words of the title | 96 (first: 79) | 92 (first: 62) |
 
 The last row is the price: other decisions now name the same undertakings. Six of the nine misses are generic openings
-("Rekabet Kurulunun … tarihli … sayılı kararı uyarınca") that mostly missed before too. Rekabet vectors are still title
-vectors, restored after the backfill (the workstation has no Voyage key).
+("Rekabet Kurulunun … tarihli … sayılı kararı uyarınca") that mostly missed before too. Rekabet vectors were title
+vectors at first, restored after the backfill (the workstation has no Voyage key); since 2026-10-10 they are built from
+the title and the first 8,000 characters of the text, like the other regulators'.
 
 Quoted phrases are searched in both ı/i spellings of each word. The dissent heading "KARŞI OY GEREKÇESİ" folds to
 "karsi" under unicode61, running text to "karsı": "karşı oy gerekçesi" matched 52 decisions as typed and 733 with the

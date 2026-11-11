@@ -55,13 +55,28 @@ class Annotations(unittest.TestCase):
 class DirectoryProfile(unittest.TestCase):
     def test_land_registry_tools_stay_on_main_only(self):
         names = {t.name for t in DIRECTORY_TOOLS}
-        self.assertFalse([n for n in names if n.startswith("tkgm_")])
+        self.assertFalse([n for n in names if n.startswith(("tkgm_", "hesap_"))])
         self.assertIn("status", names)
         self.assertIn("tr_mevzuat_madde_getir", names)
         main = {t.name for t in server._tools}
         # al_masaya_yaz and al_masada_basla tell Claude where to write; the directory takes no instructions.
-        self.assertEqual(names, {n for n in main if not n.startswith("tkgm_")
-                                 and n not in ("al_masaya_yaz", "al_masada_basla")})
+        # tr_resmi_gazete_ek_sayfa answers with a page image and stays on /mcp.
+        self.assertIn("tr_resmi_gazete_ek_sayfa", main)
+        self.assertEqual(names, {n for n in main if not n.startswith(("tkgm_", "hesap_"))
+                                 and n not in ("al_masaya_yaz", "al_masada_basla", "tr_resmi_gazete_ek_sayfa")})
+
+    def test_fee_cards_on_main_and_on_its_desk(self):
+        main = {t.name: t for t in server._tools}
+        for name in ("hesap_kalemleri", "hesap_vekalet_ucreti", "hesap_yargi_harci", "hesap_faiz",
+                     "hesap_iscilik_alacagi"):
+            self.assertIn(name, main)
+            self.assertTrue(main[name].annotations.get("readOnlyHint"), name)
+        if server.al_arayuz is None:
+            self.skipTest("arayuz/ missing")
+        desk = next(t for t in server._tools if t.name == "al_masasi")
+        self.assertIn("hesap_vekalet_ucreti", desk.handler({})["yetenekler"])
+        directory_desk = next(t for t in DIRECTORY_TOOLS if t.name == "al_masasi")
+        self.assertFalse([n for n in directory_desk.handler({})["yetenekler"] if n.startswith("hesap_")])
 
     def test_directory_tools_keep_their_cards(self):
         if server.al_arayuz is None:
@@ -112,6 +127,7 @@ class DirectoryProfile(unittest.TestCase):
         self.assertTrue(DIRECTORY_TEXT.startswith("ArthurLegal MCP: read-only"))
         self.assertNotIn("MADDE ATFI KURALI", DIRECTORY_TEXT)
         self.assertNotIn("tkgm", DIRECTORY_TEXT.lower())
+        self.assertNotIn("hesap_", DIRECTORY_TEXT)
 
     def test_main_endpoint_keeps_its_rules(self):
         self.assertTrue(MAIN_TEXT.startswith("MADDE ATFI KURALI"))
@@ -131,6 +147,20 @@ class DirectoryProfile(unittest.TestCase):
         self.assertNotIn("al_masaya_yaz", directory.handler({})["not"])
         self.assertNotIn("al_masaya_yaz", directory.handler({})["yetenekler"])
         self.assertEqual(directory.handler({"baglayicilar": ["Gmail"]})["baglayicilar"], [{"ad": "Gmail", "durum": "bagli"}])
+        # The main desk hands over to the lawyer's install when it is connected; the directory desk never sends
+        # Claude to another server and keeps its plain schema.
+        yerel = {"baglayicilar": [{"ad": "arthurlegal-yerel"}]}
+        self.assertIn("yonlendir", main.handler(yerel))
+        self.assertNotIn("yonlendir", directory.handler(yerel))
+        self.assertNotIn("arthurlegal-yerel", directory.handler(yerel)["not"])
+        self.assertNotIn("required", directory.input_schema)
+        self.assertNotIn("uzakta_kal", directory.input_schema["properties"])
+        self.assertEqual(main.input_schema["required"], ["baglayicilar"])
+        # Only the main endpoint points Claude at the lawyer's local install; the directory names no other server
+        # and no hand-over tool it does not have.
+        self.assertIn("arthurlegal-yerel", main.description)
+        self.assertNotIn("arthurlegal-yerel", directory.description)
+        self.assertNotIn("al_masada_basla", directory.description)
 
     def test_directory_serves_the_same_views(self):
         if server.al_arayuz is None:

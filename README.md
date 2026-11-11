@@ -1,17 +1,20 @@
 # ArthurLegal MCP
 
-**Fifteen jurisdictions of legal research behind one MCP endpoint.**
+**Twelve jurisdictions of legal research, plus five other sources, behind one MCP endpoint.**
 
 Türkiye - Netherlands - Poland - Austria - Ireland - Finland - Spain - United
 Kingdom - European Union - Japan - Azerbaijan - Germany - legal scholarship -
-signed resource contracts - GLEIF entity identity.
+signed resource contracts - GLEIF entity identity - Turkish land registry (TKGM) -
+Turkish fee calculator cards.
 
-126 tools, one hosted endpoint, no authentication:
+132 tools, one hosted endpoint, no authentication:
 
     https://arthurlegal-mcp.fly.dev/mcp
 
 The same server also answers at `/directory/mcp` with the 107 read-only tools listed in the
-Claude connector directory: everything except the land-registry `tkgm_` tools. See
+Claude connector directory: everything except the land-registry `tkgm_` and fee calculator `hesap_` tools, the
+Official Gazette annex page reader `tr_resmi_gazete_ek_sayfa` and the desk hand-over tools `al_masada_basla` /
+`al_masaya_yaz`. See
 [Claude connector directory](#claude-connector-directory).
 
 Anyone with the URL can call every tool. Self-hosting? Deploy your own copy (see
@@ -49,7 +52,7 @@ The hosted endpoint is provided as is, without an uptime guarantee. Your search
 queries reach this server and the official upstream sources it queries, and are
 sent to the embeddings provider when semantic search runs. Do not put client names
 or other confidential facts into queries; mask documents locally first (for
-example with [Arthur Mask](https://github.com/beerbottle90/arthur-mask)).
+example with [ArthurMask](https://github.com/beerbottle90/arthur-mask)).
 
 Türkiye (`tr_`) is the largest backend: Yargıtay/Danıştay/BAM case law, AYM,
 Uyuşmazlık, all legislation types, Resmî Gazete, and eight regulators (EPDK,
@@ -75,6 +78,14 @@ out-of-fold sensitivity 92-100% per topic; on 60 unseen legislation titles vergi
 enerji 0/3. Every response says how many items it dropped, `esik=0` disables it, and `status`
 reports the model and both measurements. Do not use it for publication verification.
 
+Official Gazette annexes (tariffs, schedules, forms) are often a separate PDF of scanned pages.
+`tr_resmi_gazete_getir` lists a page's annex links as `ekler` and, for a PDF, the pages without a
+text layer as `taranmis_sayfalar`. `tr_resmi_gazete_ek_sayfa(url, sayfa)` returns one page: its
+text, or the page as an MCP image block that the model reads itself. A JPEG scan goes out as the
+PDF's own bytes with no extra package; other scans (JBIG2, CCITT) are rendered with `pypdfium2`,
+which the hosted image installs (both `Dockerfile` and `Dockerfile.code`); a local run without it
+answers those pages with an UYARI line. The tool is on `/mcp` only, not in the directory profile.
+
 ## Claude connector directory
 
 The directory listing points at a narrower profile of the same server:
@@ -84,12 +95,14 @@ The directory listing points at a narrower profile of the same server:
 - **107 tools, all read-only.** Every tool carries a `title` and `readOnlyHint: true`
   (`tool_titles.py`), so Claude can run them without asking each time. Nothing on this
   endpoint writes, deletes or sends anything on your behalf.
-- **No land-registry tools.** The `tkgm_` tools stay on `/mcp` only; the desk shows
+- **No land-registry or fee calculator tools.** The `tkgm_` and `hesap_` tools stay on `/mcp` only; the desk shows
   ArthurTapu as available in the ArthurLegal install.
 - **The same interactive views** as `/mcp`: the article card, the decision list and the desk
   (see [Interactive views](#interactive-views-mcp-apps)).
-- **Instructions describe the tools** (in English) instead of directing Claude; the facts
-  are the same as on `/mcp`.
+- **Instructions open with an English description of the tools** instead of the citation rule
+  that opens `/mcp`'s; each jurisdiction's own notes then follow as on `/mcp`, in their own
+  language and with their own usage rules (the Turkish notes without that citation rule). The
+  facts are the same as on `/mcp`.
 - **No account and no authentication.** Add it from the directory, or as a custom connector
   with the URL above.
 
@@ -125,10 +138,28 @@ discrepancy. On this hosted endpoint file paths are refused (parcel text is pass
 and the tools that write files, fetch elevation data or read title records are disabled; run
 `tkgm-mcp/server.py` locally over stdio for those. Source: the `tkgm-mcp/` folder.
 
+## Turkish fee calculator cards (`hesap_`)
+
+On `/mcp` only, five tools compute Turkish legal costs in code rather than in the model: the
+attorney minimum fee under the 2026 Attorney Minimum Fee Tariff (Official Gazette 03.11.2026, No.
+33419), court fees under Law No. 492 tariff (1) with the 2026 amounts (Official Gazette 31.12.2025,
+No. 33124), the civil procedure cost advance (Official Gazette 28.10.2025, No. 33061), an interest
+breakdown period by period (statutory interest and commercial default interest under Law No. 3095, with
+the 32 central bank rate communiques since 2005 each read from its Official Gazette issue), and gross
+severance and notice pay (Law No. 1475 art. 14, Law No. 4857 art. 17; the severance ceiling comes from
+the labour ministry's table, since the Official Gazette does not publish it). Every
+amount sits in `hesap-mcp/veri/` with a verbatim source quote; every result line carries its legal
+basis. Rules the official text does not settle are shown outside the total, marked for checking.
+No files. The only network access is a freshness check: about once a day the tools read the Official
+Gazette's daily index pages (at most 20 page requests a day; no request data is sent). If a new tariff publication appears, the total is
+withheld and the result points to it; if the index cannot be read, the total is marked as unverified. A daily
+GitHub job runs the same check and opens an issue for each new publication. Source: the `hesap-mcp/` folder.
+
 ## Tool naming
 
-Every tool carries its jurisdiction as a prefix -- `tr_` `nl_` `pl_` `at_` `ie_` `fi_`
-`es_` `uk_` `eu_` `jp_` `gleif_` `tkgm_` `az_` `de_` `scholar_` `contracts_`. Across the underlying servers
+Every research tool carries its jurisdiction or source as a prefix -- `tr_` `nl_` `pl_` `at_` `ie_` `fi_`
+`es_` `uk_` `eu_` `jp_` `gleif_` `tkgm_` `hesap_` `az_` `de_` `scholar_` `contracts_`. `status` and the desk
+tools (`al_masasi`, `al_masada_basla`, `al_masaya_yaz`) belong to the endpoint itself. Across the underlying servers
 `get_act` means six different things and `search_legislation` four, so the
 prefix is what keeps a Spanish question from being answered with Finnish law.
 
@@ -142,8 +173,9 @@ search is live. A backend that fails to load is announced there rather than
 quietly returning nothing -- "no results" and "not searched" are different
 answers. The German backend runs as a separate process, so `status` also probes
 it live (`de_live`); Azerbaijan's probe reports whether e-qanun.az answers now.
-On the hosted endpoint it also names the image that answered (`build`) and the
-memory in use (`memory`).
+On the hosted endpoint it also names the build that answered (`build`: image tag and
+region); the machine id and memory are left out of the public answer (`STATUS_DETAIL=1`
+brings them back for an operator).
 
 ## Interactive views (MCP Apps)
 
@@ -206,14 +238,78 @@ rest are queried upstream and reranked in memory. The indexes are built on a
 workstation and baked into the image at `baked/<jurisdiction>.db`:
 
     python crawl.py --embed          # in each jurisdiction directory
-    python build_bundle.py --target fly --out fly-app
-    flyctl deploy
+    # copy each finished index to baked/<directory>.db, e.g. baked/es-boe-mcp.db
+    flyctl deploy                    # full image (Dockerfile); start.sh seeds from baked/
 
 Crawling is a maintenance task, not something a booting container does. Baking
 the databases in means a machine is never healthy-but-empty, and the corpus can
 never drift away from the code that was tested against it. `start.sh` still
 falls back to crawling when no baked index is present, and says which it used:
 `indexes present: N/6`.
+
+What the baked indexes hold and when they were last crawled, from the live `status` of
+2026-11-10. These rows go stale: the current values are in `status` (`last_crawl`,
+`index_coverage`, `local_index`), and this table is updated with every refresh. The exact
+command line of a past run was not recorded; the command below is the `crawl.py` call that
+gives the scope `status` reports, for the Turkish index the refresh that adds new decisions
+(run in the index's directory; add `--embed` to compute vectors where a key is set, the
+Turkish index is vectorised on the machine at boot).
+
+| Index | Command | Scope | Documents | Last crawl |
+|---|---|---|---|---|
+| `arthur-tr-hukuk-mcp` | `sh tazele.sh` (new decisions per regulator, Rekabet text, `--pack`) | Rekabet, EPDK, BTK, SPK, BDDK, KVKK, Sigorta Tahkim; ranges per regulator in `local_index.by_kurum` | 19,498 | 2026-10-10 |
+| `nl-rechtspraak-mcp` | `python crawl.py --from 2026-10-05 --to 2026-10-25` | decisions 2026-10-05..2026-10-25, summaries | 7,050 | 2026-10-26 |
+| `pl-sejm-mcp` | `python crawl.py --publisher DU --from 2015 --to 2026` | Dziennik Ustaw 2015-2026: titles, type, issuer, keywords | 28,150 | 2026-10-10 |
+| `ie-statutebook-mcp` | `python crawl.py --from 2015 --to 2026` | Acts 2015-2026, as enacted, full text | 503 | 2026-10-10 |
+| `fi-finlex-mcp` | `python crawl.py --type statute-consolidated --from 2025 --to 2026` | consolidated statutes 2025-2026, Finnish and Swedish | 250 | 2026-10-26 |
+| `es-boe-mcp` | `python crawl.py --max 0`, then `python crawl.py --backfill-text` | consolidated legislation: metadata and the first 8,000 characters of the text in force | 12,439 | 2026-10-26 |
+
+### Index updates
+
+Regulator decisions are append-only: a decision is unique by its `ref`, does not change once
+published, and new ones are added. The one exception is Rekabet, which lists a decision by its
+title first and publishes the reasoned text later (the body is updated once). So the Turkish
+index is refreshed without a full image:
+
+- [`.github/workflows/kurum-taramasi.yml`](.github/workflows/kurum-taramasi.yml) runs on Mondays
+  and Thursdays at 03:30 UTC (most boards meet on Thursdays; Monday leaves about four days for
+  publication and finishes before the weekly audit at 06:00 UTC), or by hand (`kuru`: report
+  only). There is no baked index on GitHub's machines; a small registry on the `veri/ek` branch
+  (`arthur-tr-hukuk-mcp/ek/kayit.json.gz`: every known ref, and the Rekabet decisions still
+  without text) stands in for it. [`arthur-tr-hukuk-mcp/ek_tarama.py`](arthur-tr-hukuk-mcp/ek_tarama.py)
+  runs the same `crawl.py --only-new` path (a ref it does not know is new, whatever its decision
+  date: the lists are in publication order) and the Rekabet text backfill, with page limits sized
+  for two runs a week and at least one second between two requests to the same host. A regulator
+  that fails does not stop the others. The new and corrected documents go into one file, e.g.
+  `arthur-tr-hukuk-mcp/ek/2026-11-13.jsonl.gz` (gzipped JSON lines, written once); the job
+  commits it and the registry to `veri/ek` (never to `master`) and starts the deploy. The job
+  that parses the regulators' pages and PDFs has read-only permissions; writing and deploying
+  are separate jobs.
+- The deploy ([`fly-dagitim.yml`](.github/workflows/fly-dagitim.yml)) brings only
+  `<backend>/ek/*.jsonl.gz` and the registry from `veri/ek` into the build, as regular files,
+  checked by format ([`.github/dagitim/ek_getir.py`](.github/dagitim/ek_getir.py)), and labels
+  the image `gh-<commit>-ek-<data commit>`. No branch: it deploys without updates. A branch it
+  cannot read, or a file that fails the check: the deploy stops, so the index never silently
+  falls back. The live check then also requires that no local index lost documents.
+- At boot `start.sh` applies the files on top of the copied index with [`indeks_ek.py`](indeks_ek.py),
+  in the background, before filling missing vectors. Applying is idempotent and incremental (103
+  Turkish documents: 0.5 s; rebuilding the search tables instead took 72 s and a 932 MB WAL). A
+  document whose title or body changed loses its vector and gets a new one in the same pass; one
+  whose date, citation or other metadata alone was corrected keeps it. A broken, truncated or
+  foreign file is skipped and logged. `status` shows `index_updates` (files, documents, latest).
+- The run's summary and an annotation titled `kurum-tarama-ozet` carry it as JSON: new decisions,
+  newest decision date, requests and errors per regulator.
+
+The format fits every local index (they share `retrieval.Index`):
+`python indeks_ek.py uret --taban <live base> --yeni <refreshed copy> --ad pl-sejm-mcp --cikti <dir>`
+turns a workstation refresh of Poland, Ireland or another index into an update file, and
+`python indeks_ek.py karsilastir <base + updates> <refreshed copy>` checks that the two are the
+same. Only the Turkish regulators are crawled on a schedule.
+
+A full image is needed only when the base is rebuilt (or the Python base image changes): apply
+the branch's updates to a copy of the base, refresh it (`tazele.sh`), bake it, regenerate the
+registry from it (`python ek_tarama.py kayit`), and reset `veri/ek` to the registry alone.
+Updates accumulate until then (Turkish decisions: a few MB of text a month).
 
 ### Code-only deploys
 
@@ -228,11 +324,32 @@ upload is a few megabytes and a deploy takes minutes:
 
 Run it from a clean checkout: `*.db` files are ignored by git, so a fresh worktree has
 no `baked/` and nothing large is sent. `--depot=false` uses Fly's own builder, which
-pulls the base image from the app's registry. Build a full image (`Dockerfile`) when
-the indexes, the Python packages or the base Python image change, then use its tag
-from then on: `--build-arg BASE=registry.fly.io/arthurlegal-mcp:<full-image-tag>`.
+pulls the base image from the app's registry. `Dockerfile.code` also runs the same
+pinned `pip install` line as `Dockerfile` (`tests/test_paketler.py` keeps them equal):
+a new or changed Python package is fetched by the builder, so it ships with a
+code-only deploy too. Build a full image (`Dockerfile`) only when the indexes or the
+base Python image change, then use its tag from then on:
+`--build-arg BASE=registry.fly.io/arthurlegal-mcp:<full-image-tag>`.
 Files deleted from the code since the base image stay in the image until the next
 full build.
+
+### Automatic deploys
+
+[`.github/workflows/fly-dagitim.yml`](.github/workflows/fly-dagitim.yml) runs the
+code-only deploy above on GitHub's machines: when the tests pass on a push to
+`master`, it deploys that commit (only if it is still the tip of `master`, so an
+older commit never lands over a newer one), then checks the live server with
+[`.github/dagitim/canli_denetim.py`](.github/dagitim/canli_denetim.py): every running
+machine is on the new image, the tool counts did not drop, the desk page matches the
+commit, the calculation cards answer. If a check fails it redeploys the previous
+image and opens an issue. If Fly's builder does not start, the build is tried once
+more and then made on the GitHub machine itself
+([`.github/dagitim/dagit.sh`](.github/dagitim/dagit.sh)); a failure after the build
+is not retried. It needs the repository secret `FLY_API_TOKEN`, a deploy
+token scoped to this app (`flyctl tokens create deploy -a arthurlegal-mcp`). A
+manual run (Actions, "Fly dağıtımı", Run workflow) redeploys `master`; tick
+"Araç sayısı bilerek azaldı" when a release removes tools on purpose. Full images
+are still built by hand.
 
 `hybrid`, the default search mode, ranks keyword and meaning matches together,
 but not blindly. When the keyword channel found every word of the query, both
@@ -256,6 +373,7 @@ times faster; without it the ranking is the same.
 | `DE_ELI_URL` | env | German backend; `off` to disable |
 | `EQANUN_PROXY` | env | Azerbaijan: e-qanun.az is reached through `az-relay` (Frankfurt, private network only), because it does not answer from Amsterdam |
 | `SEMANTIC_RESIDENT_MB` | env | memory budget for vectors kept as float16 (all indexes together; `0` or unset = read from SQLite per query). Hosted: `160` on 1 GB machines (meaning searches ~30-50% faster); at 512 MB keep `0`, the SQLite page cache needs that memory more (with 141 MB of vectors, Turkish and Polish searches slowed from ~1.2 s to 7-8 s) |
+| `EPDK_ISITMA` | env | EPDK decision lists fetched once in the background after boot, one request every 4 s (~131 per machine, at most 30 a minute for two machines), so the first `tr_kurum_karari_ara(kurum="epdk")` does not wait ~40 s; a list past its 6 h lifetime is served while it is refreshed the same way. Unset: on only under `MCP_TRANSPORT=http` (the hosted image); `0` off, `1` on |
 
 A document holds exactly one vector (`vecs.doc_id` is the primary key), so
 changing `EMBEDDINGS_MODEL` does not add a second vector -- the next embedding

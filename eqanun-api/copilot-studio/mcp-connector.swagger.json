@@ -5,7 +5,7 @@
     "description": "No-auth MCP server over Azerbaijan's official legal-acts database (api.e-qanun.az). Tools: search_acts (type filter supported), count_acts, get_act, get_act_fulltext (full text, paginated), list_types, list_sections. Use as a Copilot Studio custom MCP connector. NOTE: `host` below is a placeholder — replace it with your own public HTTPS host (the machine running `server.py --transport http`) before importing.",
     "version": "1.0.0"
   },
-  "host": "thou-brand-musicians-many.trycloudflare.com",
+  "host": "REPLACE-ME.example.com",
   "basePath": "/",
   "schemes": [
     "https"

@@ -8,7 +8,7 @@ a stock Python 3.9+ with nothing to install.
 
 ## Why this server exists
 
-RIS searches its corpus correctly but **does not rank**: `Suchworte=Aktiengesetz` returns 1,423 genuine hits in alphabetical order, so the Aktiengesetz is not on the first page. This server reranks by BM25 before answering. No crawl needed.
+RIS searches its corpus correctly but **does not rank**: `Suchworte=Aktiengesetz` returns 1,423 genuine hits in alphabetical order, so the Aktiengesetz is not on the first page. This server reranks each page by meaning before answering (BM25 when no embeddings endpoint is configured). No crawl needed.
 
 ## Tools
 
@@ -17,22 +17,22 @@ RIS searches its corpus correctly but **does not rank**: `Suchworte=Aktiengesetz
 - `fetch_document`
 - `server_status`
 
-Every search response carries a `retrieval` block reporting which channels ran,
-how many documents are indexed, and whether semantic search is actually on — so
-a thin result set is never mistaken for a settled question.
+Every search response carries `total_upstream` (RIS's own hit count), `returned`
+and a `ranking` block whose `method` says how the page was ordered — so a thin
+result set is never mistaken for a settled question.
 
 ## Search
 
-Three retrieval channels, fused with Reciprocal Rank Fusion:
+There is no local index and no crawl: every search goes to RIS, and the page it
+returns is reranked here.
 
-| Channel | What it is | Always available |
+| `ranking.method` | What it is | When |
 |---|---|---|
-| `lexical` | SQLite FTS5 + BM25, diacritic-insensitive, with a strict-AND → prefix → OR ladder | yes |
-| `fuzzy` | FTS5 trigram, for substrings and misspellings | yes |
-| `semantic` | Dense vectors over an OpenAI-compatible embeddings endpoint | **only if configured** |
+| `semantic` | Cosine similarity over an OpenAI-compatible embeddings endpoint | an endpoint is configured |
+| `lexical` | BM25 over the page's candidates | no endpoint, or the endpoint failed (`ranking.note` says which) |
 
-**Semantic search is opt-in and honest about it.** The standard library cannot
-run a transformer, so dense retrieval needs an external endpoint.
+**Semantic ranking is opt-in and honest about it.** The standard library cannot
+run a transformer, so it needs an external endpoint.
 
 The verified local setup — free, no API key (tested 2026-08-30):
 
@@ -40,7 +40,6 @@ The verified local setup — free, no API key (tested 2026-08-30):
 ollama pull bge-m3                    # 1.2 GB, 100+ languages, 1024 dims
 export EMBEDDINGS_URL=http://127.0.0.1:11434/v1/embeddings
 export EMBEDDINGS_MODEL=bge-m3
-python crawl.py ... --embed           # vectorise the index
 ```
 
 Ollama's `/v1/embeddings` is OpenAI-compatible, so the server talks to it
@@ -52,14 +51,7 @@ EMBEDDINGS_MODEL=...                         # optional
 EMBEDDINGS_API_KEY=...                       # optional
 ```
 
-Measured cross-language separation with `bge-m3` (Turkish query, multilingual
-candidate pool): conceptually related documents averaged **0.70** cosine,
-unrelated ones **0.41** — a 0.29 gap. A Turkish query for climate and carbon
-targets returned the Strategic Gas Reserve, Air Pollution and Environment Acts
-under `semantic`, and pure noise under `lexical`, because no Turkish word
-appears in an English statute.
-
-With nothing configured, `mode="hybrid"` degrades to lexical + fuzzy and **says
+With nothing configured, the page is ranked by BM25 and `ranking.method` **says
 so** in every response. It never presents a keyword match as a conceptual one.
 For cross-language work — a Turkish question against a Austria corpus — the
 configured model must itself be multilingual; that is the operator's choice and

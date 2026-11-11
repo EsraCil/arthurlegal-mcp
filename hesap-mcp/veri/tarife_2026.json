@@ -1,0 +1,655 @@
+{
+  "surum": "2026-11",
+  "derlenme_tarihi": "2026-11-07",
+  "ikinci_okuma": {
+    "tarih": "2026-11-07",
+    "yontem": "Resmî Gazete ekleri ve mevzuat.gov.tr kayıtları yeniden indirildi (SHA-256 kaynaklardaki değerlerle aynı); taranmış tarife sayfaları görüntüden bağımsız olarak ikinci kez okundu ve verideki her değerle karşılaştırıldı.",
+    "sonuc": {
+      "AAUT2026": "62 değerin 62'si aynı (58 maktu kalem, 3 ek saat ücreti, hakem heyeti) ve 10 nispi dilimin 10'u aynı.",
+      "HKGT98": "(1) sayılı tarifeden verideki 27 kalemin 27'si aynı (18 maktu tutar, 9 oran). Nispi karar ve ilam harçlarının alt sınırı (732 TL) tebliğ ekinde III-1 bentlerinin hemen ardından tek satırdır; mevzuat.gov.tr'deki 492 metnindeki eski tutarlar yıllık artışın kanun metnine değil mükerrer 138. madde uyarınca çıkarılan tebliğe işlenmesindendir.",
+      "HMKGAT": "Madde 4 (taraf sayısının beş katı tebligat ücreti + 530 TL) aynı. 15.09-07.11.2026 Resmî Gazete taramasında ve mevzuat.gov.tr'de bundan yeni HMK gider avansı tarifesi yok.",
+      "TCMB": "Faiz oranları: 32 TCMB tebliğinin (20.12.2005-20.12.2025) her biri RG'deki belgesinden okundu (17'si metin, 15'i taranmış görüntü) ve TCMB'nin kendi tarihçe tablosuyla (TCMBTABLO) karşılaştırıldı: 32 reeskont ve 32 avans oranının hepsi aynı. 31.12.2021 oranı RG'de 02.01.2022'de 'yayımı tarihinde yürürlüğe girer' diye yayımlandı; 03.01.2022 tarihli düzeltmeyle 31.12.2021'den geçerli kılındı, tablo da bu tarihi verir.",
+      "CSGBKT": "Kıdem tavanı: ÇSGB tablosunun iki sürümü (01.01.2026 ve 01.07.2026 dönemlerini taşıyan sürümler) metin katmanından karşılaştırıldı; 2016-2026 arasındaki 22 dönemin 21'i iki sürümde aynı, 01.07.2026 dönemi yalnız yeni sürümde. 2026'nın iki dönemi ayrıca ÇSGB hesap sayfalarındaki katsayılardan yeniden hesaplandı ve tuttu.",
+      "K3095": "Kanuni faiz zinciri: BKK 2005/9831 (RG 30.12.2005, %9, 01.01.2006), CB Kararı 8485 (RG 21.05.2024, %24, 01.06.2024; taranmış, görüntüden okundu), 7589 s. K. m. 10 (RG 31.07.2026). mevzuat.gov.tr'de başlıkta '3095 sayılı' ve 'Kanuni Faiz' geçen tek Cumhurbaşkanı kararı 8485'tir."
+    },
+    "kapsam_disi": "Tebliğ ekindeki A-III-1-f, A-III-1-g (ihalenin feshi) ile B-I-3-d, B-I-3-e (maaş haczi, İİK 125) veride yok; hesapta kullanılmıyor."
+  },
+  "kaynaklar": [
+    {
+      "kod": "AAUT2026",
+      "ad": "Avukatlık Asgari Ücret Tarifesi (Türkiye Barolar Birliği Başkanlığından)",
+      "rg_tarih": "2026-11-03",
+      "rg_sayi": "33419",
+      "mukerrer": null,
+      "yururluk": "2026-11-03",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2026/11/20261103-3.htm",
+      "ek_url": "https://www.resmigazete.gov.tr/eskiler/2026/11/20261103-3-1.pdf",
+      "ek_sha256": "3174780916f869e2344edb86a5b50294eaab22bd66b0d6b6487c0192248cbce4",
+      "not": "Genel hükümler (m. 1-24) RG sayfasındaki metinden alındı. Tutar tabloları RG ekindeki 4 sayfalık PDF'tedir; PDF taranmış görüntüdür (metin katmanı yok). Satırlar görüntüden aktarıldı, tutarlar ayrıca OCR ile karşılaştırıldı. Üçüncü kısım dilimlerinin toplamı (24.800.000 TL) onuncu sıradaki eşikle tutar. Yürürlük: m. 24, yayımı tarihinde."
+    },
+    {
+      "kod": "HKGT98",
+      "ad": "Harçlar Kanunu Genel Tebliği (Seri No: 98) ve eki tarifeler (Hazine ve Maliye Bakanlığı, Gelir İdaresi Başkanlığı)",
+      "rg_tarih": "2025-12-31",
+      "rg_sayi": "33124",
+      "mukerrer": "5",
+      "yururluk": "2026-01-01",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231M5-28.pdf",
+      "sha256": "5af3d63bb41b4203c959df066d7687e1cbab72c0bc1f7fdd06e8100a0eba77a7",
+      "not": "Tebliğ m. 3/4: 2026'da uygulanacak maktu harçlar ve hadler tebliğ ekindeki tarifelerde. (1) sayılı tarife (Yargı Harçları) ekin 2. sayfasındadır (taranmış görüntü). Her tutar 492 sayılı Kanunun mevzuat.gov.tr'deki güncel metninde parantez içinde işlenen 'Uygulanan Miktar' ile karşılaştırıldı; tek fark (nispi harç alt sınırı) ikinci_okuma kaydında açıklandı."
+    },
+    {
+      "kod": "K492",
+      "ad": "492 sayılı Harçlar Kanunu, güncel metin (mevzuat.gov.tr)",
+      "rg_tarih": null,
+      "rg_sayi": "11756",
+      "mukerrer": null,
+      "yururluk": null,
+      "url": "https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=492&MevzuatTur=1&MevzuatTertip=5",
+      "not": "Madde metinleri (m. 16, 27, 28, 32) ArthurLegal tr_mevzuat_madde_getir ile çekildi; atıflar aracın citation alanıdır. Tarife tutarları bu kaynaktan değil HKGT98'den alınır; bu kaynak yalnız karşılaştırma içindir."
+    },
+    {
+      "kod": "HMKGAT",
+      "ad": "Hukuk Muhakemeleri Kanunu Gider Avansı Tarifesi (Adalet Bakanlığından)",
+      "rg_tarih": "2025-10-28",
+      "rg_sayi": "33061",
+      "mukerrer": null,
+      "yururluk": "2025-10-28",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2025/10/20251028-2.htm",
+      "sha256": "f9acc605fc8c4bf6529e8251e5aec4a9fab2713af6526951f1ec6e1f499677c6",
+      "not": "07.11.2026 itibarıyla bundan yeni bir HMK gider avansı tarifesi bulunamadı: mevzuat.gov.tr kaydı 17.09.2026'ya kadar, Resmî Gazete fihristi 18.09.2026-07.11.2026 arası tarandı. Tarife tebligat ücretinin tutarını belirtmez."
+    },
+    {
+      "kod": "K3095",
+      "ad": "3095 sayılı Kanuni Faiz ve Temerrüt Faizine İlişkin Kanun, güncel metin (mevzuat.gov.tr)",
+      "rg_tarih": "1984-12-19",
+      "rg_sayi": "18610",
+      "mukerrer": null,
+      "yururluk": null,
+      "url": "https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=3095&MevzuatTur=1&MevzuatTertip=5",
+      "not": "m. 1, 2 ve 3 ArthurLegal tr_mevzuat_madde_getir ile 07.11.2026'da çekildi; atıflar aracın citation alanıdır. Değişiklik listesi: 5335 (m. 1, 01.05.2005), KHK/700 (m. 1, 09.07.2018), 7589 (m. 1, 31.07.2026)."
+    },
+    {
+      "kod": "K7589",
+      "ad": "7589 sayılı Yargının Etkin ve Verimli İşlemesine Yönelik Bazı Kanunlarda Değişiklik Yapılmasına Dair Kanun",
+      "rg_tarih": "2026-07-31",
+      "rg_sayi": "33326",
+      "mukerrer": null,
+      "yururluk": "2026-07-31",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2026/07/20260731-1.htm",
+      "sha256": "b9ee9b03725d2d3426f4ac24efed01874f6032dc0b3d9f293bcb94b257e7e16a",
+      "not": "m. 10 3095 sayılı Kanunun 1 inci maddesini değiştirir. m. 26/1-c: diğer maddeleri yayımı tarihinde yürürlüğe girer. Kanunda 3095 için geçiş hükmü yok (geçici madde 1 başka kanunlara ilişkin)."
+    },
+    {
+      "kod": "BKK2005_9831",
+      "ad": "Bakanlar Kurulu Kararı 2005/9831: kanuni faiz 01.01.2006'dan geçerli olmak üzere yıllık %12'den %9'a",
+      "rg_tarih": "2005-12-30",
+      "rg_sayi": "26039",
+      "mukerrer": null,
+      "yururluk": "2006-01-01",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2005/12/20051230-3.htm",
+      "sha256": "5a47a39c9d5e1db1a4e76edf1035faaa2deba70941a4d6b8e9499474673405ac"
+    },
+    {
+      "kod": "CBK8485",
+      "ad": "Cumhurbaşkanı Kararı 8485: kanuni faiz 01.06.2024'ten geçerli olmak üzere yıllık %24",
+      "rg_tarih": "2024-05-21",
+      "rg_sayi": "32552",
+      "mukerrer": null,
+      "yururluk": "2024-06-01",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2024/05/20240521-23.pdf",
+      "sha256": "92ab134101e1398b2091c9d80bc8d4fbb0c0e6edcbf602b453464f1d6e2453a2",
+      "not": "PDF taranmış görüntüdür; metin pypdfium2 ile görüntüye çevrilip okundu."
+    },
+    {
+      "kod": "TCMB20251220",
+      "ad": "TCMB tebliği: reeskont %38,75, avans %39,75 (kayıttaki son oran değişikliği)",
+      "rg_tarih": "2025-12-20",
+      "rg_sayi": "33113",
+      "mukerrer": null,
+      "yururluk": "2025-12-20",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251220-12.pdf",
+      "sha256": "07c4b98c7f30aba2a99f65f9fb7c3e9f0342e1b191541e788a5032d012e16414",
+      "not": "Bütün tebliğler faiz.tcmb tablosunda, her biri kendi RG künyesi ve SHA-256'sıyla."
+    },
+    {
+      "kod": "TCMBTABLO",
+      "ad": "TCMB, Reeskont ve Avans Faiz Oranları tarihçesi (tcmb.gov.tr)",
+      "rg_tarih": null,
+      "rg_sayi": null,
+      "mukerrer": null,
+      "yururluk": null,
+      "url": "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Temel+Faaliyetler/Para+Politikasi/Reeskont+ve+Avans+Faiz+Oranlari",
+      "sha256": "bf647f3cd80826dd42bb32b735cb78755a3118624061f0d1ca571c6cd0256e57",
+      "not": "07.11.2026'da indirildi. Yalnız tamlık dizini olarak kullanıldı: hangi tarihlerde oran değiştiğini söyler (son satır 20.12.2025). Oranların kendisi RG tebliğlerinden okundu ve bu tabloyla 32/32 aynı çıktı."
+    },
+    {
+      "kod": "K1475",
+      "ad": "1475 sayılı İş Kanunu m. 14, güncel metin (mevzuat.gov.tr)",
+      "rg_tarih": "1971-09-01",
+      "rg_sayi": "13943",
+      "mukerrer": null,
+      "yururluk": null,
+      "url": "https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=1475&MevzuatTur=1&MevzuatTertip=5",
+      "not": "m. 14 tr_mevzuat_madde_getir ile 07.11.2026'da çekildi (mevzuat_id 104983)."
+    },
+    {
+      "kod": "K4857",
+      "ad": "4857 sayılı İş Kanunu m. 17, güncel metin (mevzuat.gov.tr)",
+      "rg_tarih": null,
+      "rg_sayi": "25134",
+      "mukerrer": null,
+      "yururluk": null,
+      "url": "https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=4857&MevzuatTur=1&MevzuatTertip=5",
+      "not": "m. 17 ve m. 32 tr_mevzuat_madde_getir ile 07.11.2026'da çekildi."
+    },
+    {
+      "kod": "CSGBKT",
+      "ad": "Kıdem tazminatı tavan miktarları 1980-2026 (Çalışma ve Sosyal Güvenlik Bakanlığı)",
+      "rg_tarih": null,
+      "rg_sayi": null,
+      "mukerrer": null,
+      "yururluk": null,
+      "kunye": "ÇSGB kıdem tazminatı tavan tablosu (01.07.2026-31.12.2026 dahil)",
+      "url": "https://csgb.gov.tr/Media/ydelgoxf/kidem-tazminati-yillar-1980-2026.pdf",
+      "sha256": "9c56669d9b73bbfecb1095feac7cfe31dd57bf1660d78de6a2e3be49b164546c",
+      "not": "Kıdem tazminatı tavanı Resmî Gazete'de yayımlanmaz: en yüksek Devlet memuruna bir hizmet yılı için ödenecek azami emeklilik ikramiyesidir ve Hazine ve Maliye Bakanlığının yılda iki kez çıkan Mali ve Sosyal Haklar genelgesindeki katsayılardan hesaplanır. ÇSGB bu tabloyu tavan sayfasında yayımlar (https://www.csgb.gov.tr/%C4%B1statistikler/calisma-hayati-%C4%B1statistikleri/kidem-tazminati-tavan-miktari/, 07.11.2026, SHA-256 9a5bf0fef0571fb650edadcb415b26a957114861ccf513292f7b9407a2245d1d). PDF'in metin katmanı var; değerler metinden alındı."
+    },
+    {
+      "kod": "CSGBKT2026A",
+      "ad": "ÇSGB, kıdem tazminatı tavanı hesabı 01.01.2026",
+      "rg_tarih": null,
+      "rg_sayi": null,
+      "mukerrer": null,
+      "yururluk": "2026-01-01",
+      "url": "https://www.csgb.gov.tr/Media/zbzj0lwz/k%C4%B1dem-tazminat%C4%B1-2026.pdf",
+      "sha256": "34a77bb81d377f95d4ea8ae693607179ba98125971ccbac0a8c693e73a8f2790",
+      "not": "Aylık katsayı 1,387871, taban aylık katsayı 22,722793; (1500+8000+500) × 1,387871 + 1000 × 22,722793 + 9500 × 1,387871 × 2,15 = 64.948,77 TL. Toplam bu çalışmada yeniden hesaplandı ve tuttu."
+    },
+    {
+      "kod": "CSGBKT2026B",
+      "ad": "ÇSGB, kıdem tazminatı tavanı hesabı 01.07.2026",
+      "rg_tarih": null,
+      "rg_sayi": null,
+      "mukerrer": null,
+      "yururluk": "2026-07-01",
+      "url": "https://www.csgb.gov.tr/Media/5vuhphpb/k%C4%B1dem-tazminat%C4%B1-2026_temmuz-d%C3%B6nem.pdf",
+      "sha256": "89ed749f447f81f09c0803dfc38492d140d4916e36c3fe57683b3f9b50e27704",
+      "not": "Aylık katsayı 1,575512, taban aylık katsayı 25,794915; (1500+8000+500) × 1,575512 + 1000 × 25,794915 + 9500 × 1,575512 × 2,15 = 73.729,87 TL. Toplam bu çalışmada yeniden hesaplandı ve tuttu."
+    }
+  ],
+  "aaut": {
+    "kaynak": "AAUT2026",
+    "kademeler": [
+      {"sira": 1, "dilim_tl": 800000.0, "yuzde": 16.0, "alinti": "İlk 800.000,00 TL için | 16,00%"},
+      {"sira": 2, "dilim_tl": 800000.0, "yuzde": 15.0, "alinti": "Sonra gelen 800.000,00 TL için | 15,00%"},
+      {"sira": 3, "dilim_tl": 1600000.0, "yuzde": 14.0, "alinti": "Sonra gelen 1.600.000,00 TL için | 14,00%"},
+      {"sira": 4, "dilim_tl": 1600000.0, "yuzde": 13.0, "alinti": "Sonra gelen 1.600.000,00 TL için | 13,00%"},
+      {"sira": 5, "dilim_tl": 2400000.0, "yuzde": 11.0, "alinti": "Sonra gelen 2.400.000,00 TL için | 11,00%"},
+      {"sira": 6, "dilim_tl": 3200000.0, "yuzde": 8.0, "alinti": "Sonra gelen 3.200.000,00 TL için | 8,00%"},
+      {"sira": 7, "dilim_tl": 4000000.0, "yuzde": 5.0, "alinti": "Sonra gelen 4.000.000,00 TL için | 5,00%"},
+      {"sira": 8, "dilim_tl": 4800000.0, "yuzde": 3.0, "alinti": "Sonra gelen 4.800.000,00 TL için | 3,00%"},
+      {"sira": 9, "dilim_tl": 5600000.0, "yuzde": 2.0, "alinti": "Sonra gelen 5.600.000,00 TL için | 2,00%"},
+      {"sira": 10, "dilim_tl": null, "esik_tl": 24800000.0, "yuzde": 1.0, "alinti": "24.800.000,00 TL'dan yukarısı için | 1,00%"}
+    ],
+    "bolumler": {
+      "1.1": "Birinci Kısım, Birinci Bölüm: Dava ve Takiplerin Dışındaki Hukuki Yardımlarda Ödenecek Ücret",
+      "1.2": "Birinci Kısım, İkinci Bölüm: İş Takibi Konusundaki Hukuki Yardımlarda Ödenecek Ücret",
+      "1.3": "Birinci Kısım, Üçüncü Bölüm: 1136 Sayılı Kanununun 35 inci Maddesi Gereğince Bulundurulması Zorunlu Sözleşmeli Avukatlara Aylık Ödenecek Ücret",
+      "1.4": "Birinci Kısım, Dördüncü Bölüm",
+      "2.1": "İkinci Kısım, Birinci Bölüm: Yargı Yerlerinde, İcra ve İflas Dairelerinde Yapılan ve Konusu Para Olsa veya Para ile Değerlendirilebilse Bile Maktu Ücrete Bağlı Hukuki Yardımlara Ödenecek Ücret",
+      "2.2": "İkinci Kısım, İkinci Bölüm: Yargı Yerleri ile İcra ve İflas Dairelerinde Yapılan ve Konusu Para Olmayan veya Para ile Değerlendirilemeyen Hukuki Yardımlara Ödenecek Ücret"
+    },
+    "maktu": [
+      {"kod": "1.1.1", "is": "Büroda sözlü danışma", "tutar_tl": 5500.0, "ek_saat_tl": 2400.0, "alinti": "Büroda sözlü danışma (ilk bir saate kadar) | 5.500,00 TL · Takip eden her saat için | 2.400,00 TL"},
+      {"kod": "1.1.2", "is": "Çağrı üzerine gidilen yerde sözlü danışma", "tutar_tl": 9000.0, "ek_saat_tl": 4500.0, "alinti": "Çağrı üzerine gidilen yerde sözlü danışma (ilk bir saate kadar) | 9.000,00 TL · Takip eden her saat için | 4.500,00 TL"},
+      {"kod": "1.1.3", "is": "Yazılı danışma", "tutar_tl": 9000.0, "ek_saat_tl": 4500.0, "alinti": "Yazılı danışma için (ilk bir saate kadar) | 9.000,00 TL · Takip eden her saat için | 4.500,00 TL"},
+      {"kod": "1.1.4", "is": "Dilekçe yazılması, ihbarname, ihtarname, protesto düzenlenmesi", "tutar_tl": 7500.0, "alinti": "Her türlü dilekçe yazılması, ihbarname, ihtarname, protesto düzenlenmesinde | 7.500,00 TL"},
+      {"kod": "1.1.5a", "is": "Kira sözleşmesi ve benzeri hazırlanması", "tutar_tl": 10000.0, "alinti": "Sözleşmeler ve benzeri belgelerin hazırlanması: a) Kira sözleşmesi ve benzeri | 10.000,00 TL"},
+      {"kod": "1.1.5b", "is": "Tüzük, yönetmelik, miras sözleşmesi, vasiyetname, vakıf senedi ve benzeri belgelerin hazırlanması", "tutar_tl": 40000.0, "alinti": "b) Tüzük, yönetmelik, miras sözleşmesi, vasiyetname, vakıf senedi ve benzeri belgelerin hazırlanması | 40.000,00 TL"},
+      {"kod": "1.1.5c", "is": "Şirket ana sözleşmesi, şirket devir ve birleşmesi gibi ticari sözleşmeler", "tutar_tl": 27000.0, "alinti": "c) Şirket ana sözleşmesi, şirketlerin devir ve birleşmesi vb. ticari işlerle ilgili sözleşmeler | 27.000,00 TL"},
+      {"kod": "1.1.6", "is": "Arabuluculuk anlaşmazlıkla sonuçlandığında taraf vekili", "tutar_tl": 10000.0, "alinti": "Arabuluculuk faaliyetinin anlaşmazlık ile sonuçlanması halinde, taraf vekilleri için | 10.000,00 TL"},
+      {"kod": "1.2.1", "is": "Belgelendirme, ödeme aşamasındaki paranın tahsili, belge örneği çıkarılması gibi işlerin takibi", "tutar_tl": 7500.0, "alinti": "Bir durumun belgelendirilmesi, ödeme aşamasındaki paranın tahsili veya bir belgenin örneğinin çıkarılması gibi işlerin takibi için | 7.500,00 TL"},
+      {"kod": "1.2.2a", "is": "Bir hakkın doğumu, tespiti, tescili, nakli, değiştirilmesi, sona erdirilmesi ya da korunması amaçlı işler", "tutar_tl": 15000.0, "alinti": "a) Bir hakkın doğumu, tespiti, tescili, nakli, değiştirilmesi, sona erdirilmesi veya korunması gibi amaçlarla yapılan işler için | 15.000,00 TL"},
+      {"kod": "1.2.2b", "is": "Sürekli sözleşmeyle çalışılan banka ve finans kuruluşlarına her bir hukuki yardım (ipotek tesisi ve fekki dahil)", "tutar_tl": 4000.0, "alinti": "b) İpotek tesisi ve fekki gibi işlemler de dahil olmak üzere bir hakkın doğumu ve sona erdirilmesi olarak nitelenen işlemler nedeni ile sürekli sözleşme ile çalışılan bankalar, finans kuruluşları ve benzerlerine verilen her bir hukuki yardım için | 4.000,00 TL"},
+      {"kod": "1.2.3", "is": "Tüzel kişi tacirlerin kuruluş sözleşmesi, ruhsat ve imtiyaz, vatandaşlığa kabul gibi işlerin takibi", "tutar_tl": 78000.0, "alinti": "Tüzel kişi tacirlerin şirket kuruluş sözleşmelerinin imzalanması, bu tacirlerin çalışma konuları ile ilgili ruhsat ve imtiyazların alınması, devri ve Türk vatandaşlığına kabul edilme gibi işlerin takibi için | 78.000,00 TL"},
+      {"kod": "1.2.4", "is": "Vergi komisyonlarında takip edilen işler", "tutar_tl": 30000.0, "alinti": "Vergi komisyonlarında takip edilen işler için | 30.000,00 TL"},
+      {"kod": "1.2.5a", "is": "Uluslararası yargı yerlerinde takip edilen işler (duruşmasız)", "tutar_tl": 140000.0, "alinti": "Uluslararası yargı yerlerinde takip edilen işlerde: a) Duruşmasız ise | 140.000,00 TL"},
+      {"kod": "1.2.5b", "is": "Uluslararası yargı yerlerinde takip edilen işler (duruşmalı)", "tutar_tl": 250000.0, "alinti": "b) Duruşmalı ise | 250.000,00 TL", "not": "Konusu para olan işlerde ücret tarifenin üçüncü kısmına göre belirlenir (5/c)."},
+      {"kod": "1.3.1", "is": "Yapı kooperatiflerinde sözleşmeli avukat (aylık)", "tutar_tl": 35000.0, "birim": "aylık", "alinti": "Yapı kooperatiflerinde | 35.000,00 TL"},
+      {"kod": "1.3.2", "is": "Anonim şirketlerde sözleşmeli avukat (aylık)", "tutar_tl": 58000.0, "birim": "aylık", "alinti": "Anonim şirketlerde | 58.000,00 TL"},
+      {"kod": "1.4.1", "is": "Özel kişi ve tüzel kişilerin sözleşmeli avukatına (aylık)", "tutar_tl": 43000.0, "birim": "aylık", "alinti": "Özel Kişi ve Tüzel Kişilerin Sözleşmeli Avukatlarına Ödeyecekleri Aylık Avukatlık Ücreti | 43.000,00 TL"},
+      {"kod": "1.4.2", "is": "Kamu kurum ve kuruluşlarının sözleşmeli avukatına (aylık)", "tutar_tl": 43000.0, "birim": "aylık", "alinti": "Kamu Kurum ve Kuruluşlarının Sözleşmeli Avukatlarına Ödeyecekleri Aylık Avukatlık Ücreti | 43.000,00 TL"},
+      {"kod": "2.1.1a", "is": "Dava dışında ihtiyati haciz, ihtiyati tedbir, delil tespiti, icranın geri bırakılması, ödeme ve tevdi yeri belirlenmesi (duruşmasız)", "tutar_tl": 13000.0, "alinti": "Görülmekte olan bir dava içinde olmamak koşulu ile ihtiyati haciz, ihtiyati tedbir, delillerin tespiti, icranın geri bırakılması, ödeme ve tevdi yeri belirlenmesi işleri için: a) Duruşmasız ise | 13.000,00 TL"},
+      {"kod": "2.1.1b", "is": "Dava dışında ihtiyati haciz, ihtiyati tedbir, delil tespiti, icranın geri bırakılması, ödeme ve tevdi yeri belirlenmesi (duruşmalı)", "tutar_tl": 16000.0, "alinti": "b) Duruşmalı ise | 16.000,00 TL"},
+      {"kod": "2.1.2", "is": "Ortaklığın giderilmesi için satış memurluğundaki işlerin takibi", "tutar_tl": 25000.0, "alinti": "Ortaklığın giderilmesi için satış memurluğunda yapılacak işlerin takibi için | 25.000,00 TL"},
+      {"kod": "2.1.3", "is": "Ortaklığın giderilmesi ve taksim davaları", "tutar_tl": 52000.0, "alinti": "Ortaklığın giderilmesi ve taksim davaları için | 52.000,00 TL"},
+      {"kod": "2.1.4a", "is": "Vergi mahkemelerinde dava ve işler (duruşmasız)", "tutar_tl": 40000.0, "alinti": "Vergi Mahkemelerinde takip edilen dava ve işler için: a) Duruşmasız ise | 40.000,00 TL"},
+      {"kod": "2.1.4b", "is": "Vergi mahkemelerinde dava ve işler (duruşmalı)", "tutar_tl": 52000.0, "alinti": "b) Duruşmalı ise | 52.000,00 TL"},
+      {"kod": "2.1.5", "is": "Tüketici mahkemelerinde kredi taksiti ya da faizinin uyarlanması davaları", "tutar_tl": 26000.0, "alinti": "Tüketici Mahkemelerinde görülen kredi taksitlerinin veya faizinin uyarlanması davaları için | 26.000,00 TL"},
+      {"kod": "2.2.1", "is": "İcra dairelerinde yapılan takipler", "tutar_tl": 12500.0, "alinti": "İcra Dairelerinde yapılan takipler için | 12.500,00 TL"},
+      {"kod": "2.2.2", "is": "İcra mahkemelerinde takip edilen işler", "tutar_tl": 15000.0, "alinti": "İcra Mahkemelerinde takip edilen işler için | 15.000,00 TL"},
+      {"kod": "2.2.3", "is": "İcra mahkemelerinde dava ve duruşmalı işler", "tutar_tl": 23000.0, "alinti": "İcra Mahkemelerinde takip edilen dava ve duruşmalı işler için | 23.000,00 TL"},
+      {"kod": "2.2.4", "is": "Tahliyeye ilişkin icra takipleri", "tutar_tl": 26000.0, "alinti": "Tahliyeye ilişkin icra takipleri için | 26.000,00 TL"},
+      {"kod": "2.2.5", "is": "İcra mahkemelerinde ceza işleri", "tutar_tl": 20000.0, "alinti": "İcra Mahkemelerinde takip edilen ceza işleri için | 20.000,00 TL"},
+      {"kod": "2.2.6", "is": "Çocuk teslimi ve kişisel ilişki kararlarına muhalefetten doğan işler", "tutar_tl": 21000.0, "alinti": "Çocuk teslimi ve çocukla kişisel ilişki kurulmasına dair ilam ve tedbir kararlarının yerine getirilmesine muhalefetten kaynaklanan işler | 21.000,00 TL"},
+      {"kod": "2.2.7", "is": "Ceza soruşturma evresinde takip edilen işler", "tutar_tl": 15000.0, "alinti": "Ceza soruşturma evresinde takip edilen işler için | 15.000,00 TL"},
+      {"kod": "2.2.8", "is": "Sulh hukuk mahkemelerinde davalar", "mahkeme": "Sulh hukuk mahkemesi", "tutar_tl": 40000.0, "alinti": "Sulh Hukuk Mahkemelerinde takip edilen davalar için | 40.000,00 TL"},
+      {"kod": "2.2.9", "is": "Sulh ceza hakimlikleri ve infaz hakimliklerinde davalar", "tutar_tl": 23000.0, "alinti": "Sulh Ceza Hakimlikleri ve İnfaz Hakimliklerinde takip edilen davalar için | 23.000,00 TL"},
+      {"kod": "2.2.10", "is": "Asliye mahkemelerinde davalar", "mahkeme": "Asliye mahkemesi", "tutar_tl": 62000.0, "alinti": "Asliye Mahkemelerinde takip edilen davalar için | 62.000,00 TL"},
+      {"kod": "2.2.11", "is": "Tüketici mahkemelerinde davalar", "mahkeme": "Tüketici mahkemesi", "tutar_tl": 30000.0, "alinti": "Tüketici Mahkemelerinde takip edilen davalar için | 30.000,00 TL"},
+      {"kod": "2.2.12", "is": "Fikri ve sınai haklar mahkemelerinde davalar", "mahkeme": "Fikri ve sınai haklar mahkemesi", "tutar_tl": 70000.0, "alinti": "Fikri ve Sınai Haklar Mahkemelerinde takip edilen davalar için | 70.000,00 TL"},
+      {"kod": "2.2.13", "is": "Ağır ceza mahkemelerinde davalar", "tutar_tl": 86000.0, "alinti": "Ağır Ceza Mahkemelerinde takip edilen davalar için | 86.000,00 TL"},
+      {"kod": "2.2.14", "is": "Çocuk mahkemelerinde davalar", "tutar_tl": 62000.0, "alinti": "Çocuk Mahkemelerinde takip edilen davalar için | 62.000,00 TL"},
+      {"kod": "2.2.15", "is": "Çocuk ağır ceza mahkemelerinde davalar", "tutar_tl": 86000.0, "alinti": "Çocuk Ağır Ceza Mahkemelerinde takip edilen davalar için | 86.000,00 TL"},
+      {"kod": "2.2.16", "is": "Askerlik Kanunu uyarınca disiplin kurullarında davalar", "tutar_tl": 34000.0, "alinti": "Askerlik Kanunu uyarınca Disiplin Kurullarında takip edilen davalar için | 34.000,00 TL"},
+      {"kod": "2.2.17a", "is": "İdare ve vergi mahkemelerinde davalar (duruşmasız)", "mahkeme": "İdare ya da vergi mahkemesi, duruşmasız", "tutar_tl": 40000.0, "alinti": "İdare ve Vergi Mahkemelerinde takip edilen davalar için: a) Duruşmasız ise | 40.000,00 TL"},
+      {"kod": "2.2.17b", "is": "İdare ve vergi mahkemelerinde davalar (duruşmalı)", "mahkeme": "İdare ya da vergi mahkemesi, duruşmalı", "tutar_tl": 52000.0, "alinti": "b) Duruşmalı ise | 52.000,00 TL"},
+      {"kod": "2.2.18a", "is": "Bölge adliye ve bölge idare mahkemelerinde ilk derecede davalar", "mahkeme": "Bölge adliye ya da bölge idare mahkemesi, ilk derece", "tutar_tl": 45000.0, "alinti": "Bölge Adliye Mahkemeleri ile Bölge İdare Mahkemelerinde görülen işlerin takipleri için: a) İlk derecede görülen davalar için | 45.000,00 TL"},
+      {"kod": "2.2.18b", "is": "İstinafta bir duruşması olan işler", "tutar_tl": 28000.0, "alinti": "b) İstinaf yolu ile görülen bir duruşması olan işler için | 28.000,00 TL"},
+      {"kod": "2.2.18c", "is": "İstinafta birden fazla duruşması ya da keşif gibi işlemi olan işler", "tutar_tl": 55000.0, "alinti": "c) İstinaf yolu ile görülen birden fazla duruşması veya keşif gibi avukatın da bulunması gereken sair işlemleri olan işler için | 55.000,00 TL"},
+      {"kod": "2.2.19a", "is": "Sayıştay hesap yargılamaları (duruşmasız)", "tutar_tl": 44000.0, "alinti": "Sayıştay'da görülen hesap yargılamaları için: a) Duruşmasız ise | 44.000,00 TL"},
+      {"kod": "2.2.19b", "is": "Sayıştay hesap yargılamaları (duruşmalı)", "tutar_tl": 84000.0, "alinti": "b) Duruşmalı ise | 84.000,00 TL"},
+      {"kod": "2.2.20", "is": "Yargıtay'da ilk derecede davalar", "mahkeme": "Yargıtay, ilk derece", "tutar_tl": 85000.0, "alinti": "Yargıtay'da ilk derecede görülen davalar için | 85.000,00 TL"},
+      {"kod": "2.2.21a", "is": "Danıştay'da ilk derecede davalar (duruşmasız)", "mahkeme": "Danıştay, ilk derece, duruşmasız", "tutar_tl": 50000.0, "alinti": "Danıştay'da ilk derecede görülen davalar için: a) Duruşmasız ise | 50.000,00 TL"},
+      {"kod": "2.2.21b", "is": "Danıştay'da ilk derecede davalar (duruşmalı)", "mahkeme": "Danıştay, ilk derece, duruşmalı", "tutar_tl": 80000.0, "alinti": "b) Duruşmalı ise | 80.000,00 TL"},
+      {"kod": "2.2.22", "is": "Yargıtay, Danıştay ve Sayıştay'da temyiz duruşması", "tutar_tl": 50000.0, "alinti": "Yargıtay, Danıştay ve Sayıştay'da temyiz yolu ile görülen işlerin duruşması için | 50.000,00 TL"},
+      {"kod": "2.2.23", "is": "Uyuşmazlık Mahkemesindeki davalar", "tutar_tl": 50000.0, "alinti": "Uyuşmazlık Mahkemesindeki davalar için | 50.000,00 TL"},
+      {"kod": "2.2.24a", "is": "Anayasa Mahkemesi, Yüce Divan sıfatıyla bakılan davalar", "tutar_tl": 150000.0, "alinti": "Anayasa Mahkemesinde görülen dava ve işler için: a) Yüce Divan sıfatı ile bakılan davalar | 150.000,00 TL"},
+      {"kod": "2.2.24b1", "is": "Anayasa Mahkemesi bireysel başvuru (duruşmasız)", "tutar_tl": 55000.0, "alinti": "b) Bireysel başvuru: Duruşmasız işlerde | 55.000,00 TL"},
+      {"kod": "2.2.24b2", "is": "Anayasa Mahkemesi bireysel başvuru (duruşmalı)", "tutar_tl": 100000.0, "alinti": "Duruşmalı işlerde | 100.000,00 TL"},
+      {"kod": "2.2.24c", "is": "Anayasa Mahkemesinde diğer dava ve işler", "tutar_tl": 115000.0, "alinti": "c) Diğer dava ve işler | 115.000,00 TL"}
+    ],
+    "kurallar": {
+      "asgari_ucret": {"citation": "AVUKATLIK KANUNU (Kanun No. 1136, RG sayı 13168) m. 168", "alinti": "Baronun yönetim kurulları, her yıl Eylül ayı içerisinde, yargı yerlerindeki işlemler ile diğer işlemlerden alınacak avukatlık ücretinin asgarî hadlerini gösteren birer tarife hazırlayarak Türkiye Barolar Birliğine gönderirler."},
+      "altinda_kararlastirilamaz": {"citation": "AVUKATLIK KANUNU (Kanun No. 1136, RG sayı 13168) m. 164", "alinti": "Avukatlık asgarî ücret tarifesi altında vekâlet ücreti kararlaştırılamaz."},
+      "uc_kat": {"dayanak": "AAÜT m. 3/1", "carpan": 3, "alinti": "Yargı yerlerince avukata ait olmak üzere karşı tarafa yükletilecek avukatlık ücreti, bu Tarifede yazılı miktardan az ve üç katından çok olamaz."},
+      "yari": {"dayanak": "AAÜT m. 6/1", "alinti": "Anlaşmazlık, davanın konusuz kalması, feragat, kabul, sulh veya herhangi bir nedenle; ön inceleme tutanağı imzalanıncaya kadar giderilirse, bu Tarife hükümleriyle belirlenen ücretlerin yarısına, ön inceleme tutanağı imzalandıktan sonra giderilirse tamamına hükmolunur."},
+      "icra_nispi": {"dayanak": "AAÜT m. 11/1", "esik_tl": 78125.0, "maktu_kod": "2.2.1", "alinti": "Konusu para veya para ile değerlendirilebiliyor ise avukatlık ücreti, bu Tarifenin üçüncü kısmına göre belirlenir. Şu kadar ki takip miktarı 78.125,00 TL'ye kadar olan icra takiplerinde avukatlık ücreti, bu Tarifenin ikinci kısmının ikinci bölümünde, icra dairelerindeki takipler için öngörülen maktu ücrettir. Ancak, bu ücret takipte kesinleşen miktarı geçemez."},
+      "icra_odeme": {"dayanak": "AAÜT m. 11/4", "carpan": 0.75, "alinti": "Borçlu ödeme süresi içerisinde borcunu öderse bu Tarifeye göre belirlenecek ücretin dörtte üçü takdir edilir. Maktu ücreti gerektiren işlerde de bu hüküm uygulanır."},
+      "tahliye_takibi": {"dayanak": "AAÜT m. 11/5", "maktu_kod": "2.2.4", "alinti": "Tahliyeye ilişkin icra takiplerinde bu Tarifenin ikinci kısmının ikinci bölümünde belirtilen maktu ücrete hükmedilir. Borçlu ödeme süresi içerisinde borcunu öderse bu Tarifeye göre belirlenecek ücretin dörtte üçü takdir edilir."},
+      "nispi_taban": {"dayanak": "AAÜT m. 13/1", "alinti": "Bu Tarifenin ikinci kısmının ikinci bölümünde gösterilen hukuki yardımların konusu para veya para ile değerlendirilebiliyor ise avukatlık ücreti, davanın görüldüğü mahkeme için bu Tarifenin ikinci kısmında belirtilen maktu ücretlerin altında kalmamak kaydıyla (7 nci maddenin ikinci fıkrası, 10 uncu maddenin ikinci fıkrası ile 12 nci maddenin birinci fıkrası, 16 ncı maddenin ikinci fıkrası hükümleri saklı kalmak kaydıyla) bu Tarifenin üçüncü kısmına göre belirlenir."},
+      "nispi_tavan": {"dayanak": "AAÜT m. 13/2", "alinti": "Ancak, hükmedilen ücret kabul veya reddedilen miktarı geçemez."},
+      "kismi_red": {"dayanak": "AAÜT m. 13/3", "alinti": "Maddi tazminat istemli davanın kısmen reddi durumunda, karşı taraf vekili yararına bu Tarifenin üçüncü kısmına göre hükmedilecek ücret, davacı vekili lehine belirlenen ücreti geçemez."},
+      "arabuluculuk_anlasma": {"dayanak": "AAÜT m. 16/2-a", "carpan": 1.25, "esik_tl": 62500.0, "maktu_kod": "1.1.6", "alinti": "Konusu para olan veya para ile değerlendirilebilen işlerde avukatlık ücreti; arabuluculuk sonucunda arabuluculuk anlaşma belgesinin imzalanması halinde, bu Tarifenin üçüncü kısmına göre hesaplanan ücretin dörtte bir fazlası olarak belirlenir. Şu kadar ki miktarı 62.500,00 TL'ye kadar olan arabuluculuk faaliyetlerinde avukatlık ücreti, bu maddenin (c) bendinde yer alan maktu ücretin dörtte bir fazlası olarak belirlenir. Ancak, bu ücret asıl alacağı geçemez."},
+      "arabuluculuk_para_disi": {"dayanak": "AAÜT m. 16/2-b", "carpan": 1.25, "alinti": "Konusu para olmayan veya para ile değerlendirilemeyen işlerde avukatlık ücreti; arabuluculuk sonucunda arabuluculuk anlaşma belgesinin imzalanması halinde, bu Tarifenin ikinci kısmının ikinci bölümünde davanın görüldüğü mahkemeye göre öngörülen maktu ücretin dörtte bir fazlası olarak belirlenir."},
+      "arabuluculuk_anlasmazlik": {"dayanak": "AAÜT m. 16/2-c", "maktu_kod": "1.1.6", "alinti": "Arabuluculuk faaliyetinin anlaşmazlık ile sonuçlanması halinde, avukat, Tarifenin birinci kısım birinci bölüm altıncı sırasında belirlenen ücrete hak kazanır. Ancak, bu ücret asıl alacağı geçemez."},
+      "hakem_heyeti": {"dayanak": "AAÜT Birinci Kısım İkinci Bölüm 6. sıra", "maktu_tl": 9000.0, "alinti": "6502 sayılı Kanunun 70. inci maddesinin birinci fıkrası saklı kalmak kaydıyla il ve ilçe tüketici hakem heyetleri, sebze ve meyve hal hakem heyetleri nezdinde sunulacak hukuki yardımlar bu Tarifenin üçüncü kısmına göre belirlenir. Ancak üçüncü kısmına göre belirlenecek hizmete konu işin ücreti, maktu ücretin altında ise asıl alacağı geçmemek kaydıyla | 9.000,00 TL"},
+      "uygulanacak_tarife": {"dayanak": "AAÜT m. 21", "alinti": "Avukatlık ücretinin takdirinde, hukuki yardımın tamamlandığı veya dava sonunda hüküm verildiği tarihte yürürlükte olan Tarife esas alınır."}
+    }
+  },
+  "harc": {
+    "kaynak": "HKGT98",
+    "kalemler": [
+      {"kod": "A-I-1", "baslik": "Başvurma harcı", "kalem": "Sulh mahkemelerinde, icra tetkik mercilerinde", "tutar_tl": 335.2, "alinti": "1.Sulh mahkemelerinde, icra tetkik mercilerinde 335,20"},
+      {"kod": "A-I-2", "baslik": "Başvurma harcı", "kalem": "Asliye mahkemelerinde, idare mahkemelerinde", "tutar_tl": 732.0, "alinti": "2.Asliye mahkemelerinde, idare mahkemelerinde 732,00"},
+      {"kod": "A-I-3", "baslik": "Başvurma harcı", "kalem": "Bölge adliye ve bölge idare mahkemeleri, Yargıtay, Danıştay ve Askeri Yüksek İdare Mahkemesinde", "tutar_tl": 1124.5, "alinti": "3. Bölge Adliye Mahkemeleri, Bölge İdare Mahkemeleri, Yargıtay, Danıştay ve Askeri Yüksek İdare Mahkemesinde 1.124,50 (Mahkemenin yetkisizlik veya görevsizlik kararı vermesi sebebiyle yetkili veya görevli mahkemeye yeniden başvurulması halinde bu harç alınmaz.)"},
+      {"kod": "A-I-4", "baslik": "Başvurma harcı", "kalem": "Anayasa Mahkemesinde", "tutar_tl": 6024.1, "alinti": "4. Anayasa Mahkemesinde 6.024,10"},
+      {"kod": "A-II-1-a", "baslik": "Celse harcı", "kalem": "Sulh mahkemeleri, konusu belli değerli davalar (411,60 TL'den aşağı olmamak üzere)", "oran_binde": 2.27, "asgari_tl": 411.6, "alinti": "a)Konusu belli bir değerle ilgili davalarda dava konusu miktardan (411,60 TL'den aşağı olmamak üzere) (Binde 2,27)"},
+      {"kod": "A-II-1-b", "baslik": "Celse harcı", "kalem": "Sulh mahkemeleri, belli değer bulunmayan davalar", "tutar_tl": 411.6, "alinti": "b)Belli bir değer bulunmayan davalarda 411,60"},
+      {"kod": "A-II-2", "baslik": "Celse harcı", "kalem": "Asliye mahkemelerinde, idari yargı mercilerinde (732 TL'den az olmamak üzere)", "oran_binde": 2.27, "asgari_tl": 732.0, "alinti": "2.Asliye mahkemelerinde, idari yargı mercilerinde (732 TL'den az olmamak üzere) (Binde 2,27)"},
+      {"kod": "A-III-1-a", "baslik": "Karar ve ilam harcı (nispi)", "kalem": "Konusu belli değerli davalarda hüküm altına alınan değer üzerinden", "oran_binde": 68.31, "alinti": "a)Konusu belli bir değerle ilgili bulunan davalarda esas hakkında karar verilmesi halinde hüküm altına alınan anlaşmazlık konusu değer üzerinden (Binde 68,31)"},
+      {"kod": "A-III-1-b", "baslik": "Karar ve ilam harcı (nispi)", "kalem": "Gayrimenkulün hissedarlar arasında satış suretiyle şuyuun izalesi (satış bedeli üzerinden)", "oran_binde": 11.38, "alinti": "b) Bir gayrimenkulün hissedarlar arasında satış suretiyle şuyuun izalesine dair olan hükümler (Gayrimenkulün satış bedeli üzerinden) (Binde 11,38)"},
+      {"kod": "A-III-1-c", "baslik": "Karar ve ilam harcı (nispi)", "kalem": "Gayrimenkulün hissedarlar arasında taksimi (taksim edilen değer üzerinden)", "oran_binde": 4.55, "alinti": "c) Gayrimenkulün hissedarlar arasında taksimine dair olan hükümler (Taksim edilen gayrimenkul değeri üzerinden) (Binde 4,55)"},
+      {"kod": "A-III-1-d", "baslik": "Karar ve ilam harcı (nispi)", "kalem": "Nafaka verilmesine dair hükümler (bir senelik nafaka üzerinden)", "oran_binde": 11.38, "alinti": "d) Nafaka verilmesine dair hükümler (Bir senelik nafaka bedeli üzerinden) (Binde 11,38)"},
+      {"kod": "A-III-1-asgari", "baslik": "Karar ve ilam harcı (nispi)", "kalem": "Nispi harçların alt sınırı", "tutar_tl": 732.0, "alinti": "Nispi harçlar (732 TL)'den aşağı olamaz."},
+      {"kod": "A-III-2-a", "baslik": "Karar ve ilam harcı (maktu)", "kalem": "1. fıkra dışındaki davalarda esas hakkındaki kararlar, davanın reddi kararı", "tutar_tl": 732.0, "alinti": "a) 1 inci fıkra dışında kalan davalarla, taraf teşkiline imkan bulunmayan davalarda verilen esas hakkındaki kararlarla, davanın reddi kararı ve icra tetkik mercilerinin 1 inci fıkra dışında kalan kararlarında 732,00"},
+      {"kod": "A-III-2-b", "baslik": "Karar ve ilam harcı (maktu)", "kalem": "Esasa ilişkin ya da tashihi karar taleplerinin reddine dair Yargıtay, Danıştay, AYİM kararları", "tutar_tl": 1526.2, "alinti": "b) (a) fıkrasında yazılı davalarda esasa taalluk eden veya tashihi karar taleplerinin reddine dair Yargıtay, Danıştay ve Askeri Yüksek İdare Mahkemesi kararlarında 1.526,20"},
+      {"kod": "A-III-2-c", "baslik": "Karar ve ilam harcı (maktu)", "kalem": "İcranın tehiri kararları", "tutar_tl": 1206.0, "alinti": "c) Bölge Adliye Mahkemeleri, İdare Mahkemeleri, Bölge İdare Mahkemeleri, Yargıtay, Danıştay ve Askeri Yüksek İdare Mahkemesinin icranın tehiri kararlarında 1.206,00"},
+      {"kod": "A-III-2-d", "baslik": "Karar ve ilam harcı (maktu)", "kalem": "Tespiti delail, ihtiyati haciz ve ihtiyati tedbir kararları", "tutar_tl": 1206.0, "alinti": "d)Tespiti delail, ihtiyati haciz ve ihtiyati tedbir kararlarında 1.206,00"},
+      {"kod": "A-III-2-e", "baslik": "Karar ve ilam harcı (maktu)", "kalem": "Açılmış davada arabuluculuk son tutanağına dayalı kararlar", "tutar_tl": 732.0, "alinti": "e) Açılmış davalarda uyuşmazlıkların arabuluculuk yoluyla çözümlenmesi halinde, arabuluculuk son tutanağına dayalı olarak verilen kararlarda 732,00"},
+      {"kod": "A-IV-a", "baslik": "Temyiz, istinaf ve itiraz harçları", "kalem": "Yargıtay hukuk dairelerine temyiz başvurusu", "tutar_tl": 3608.5, "alinti": "a)Yargıtay hukuk dairelerine yapılacak temyiz başvurularında 3.608,50"},
+      {"kod": "A-IV-c", "baslik": "Temyiz, istinaf ve itiraz harçları", "kalem": "Danıştaya temyiz başvurusu", "tutar_tl": 3608.5, "alinti": "c)Danıştaya yapılacak temyiz başvurularında 3.608,50"},
+      {"kod": "A-IV-d", "baslik": "Temyiz, istinaf ve itiraz harçları", "kalem": "Bölge idare mahkemelerine istinaf başvurusu (yürütmenin durdurulmasına itiraz dahil)", "tutar_tl": 2002.0, "alinti": "d)Yürütmenin durdurulmasına ilişkin itirazlar dahil olmak üzere bölge idare mahkemelerine yapılacak istinaf yolu başvurularında 2.002,00"},
+      {"kod": "A-IV-e", "baslik": "Temyiz, istinaf ve itiraz harçları", "kalem": "Bölge adliye mahkemeleri hukuk dairelerine istinaf başvurusu", "tutar_tl": 2002.0, "alinti": "e)Bölge adliye mahkemeleri hukuk dairelerine yapılacak istinaf yolu başvurularında 2.002,00"},
+      {"kod": "A-V", "baslik": "Keşif harcı", "kalem": "Mahkemelerce verilen keşif ya da tespit kararlarını yerine getirmek için", "tutar_tl": 5188.0, "alinti": "V- Keşif Harcı: 5.188,00 (Mahkemelerce re'sen veya istem üzerine verilen keşif ya da tespit kararlarını yerine getirmek için)"},
+      {"kod": "B-I-1", "baslik": "İcra harçları", "kalem": "İcraya başvurma harcı", "tutar_tl": 732.0, "alinti": "1.İcraya başvurma harcı 732,00"},
+      {"kod": "B-I-2", "baslik": "İcra harçları", "kalem": "Değeri belli olmayan icra takiplerinde icranın yerine getirilmesi harcı", "tutar_tl": 732.0, "alinti": "2.Değeri belli olmayan icra takiplerinde, icranın yerine getirilmesi harcı 732,00"},
+      {"kod": "B-I-3-a", "baslik": "İcra tahsil harcı", "kalem": "Ödeme ya da icra emrinin tebliği üzerine hacizden önce ödenen paralardan", "oran_yuzde": 4.55, "alinti": "a)Ödeme veya icra emrinin tebliği üzerine hacizden evvel ödenen paralardan (Yüzde 4,55)"},
+      {"kod": "B-I-3-b", "baslik": "İcra tahsil harcı", "kalem": "Hacizden sonra ve satıştan önce ödenen paralardan", "oran_yuzde": 9.1, "alinti": "b)Hacizden sonra ve satıştan önce ödenen paralardan (Yüzde 9,10)"},
+      {"kod": "B-I-3-c", "baslik": "İcra tahsil harcı", "kalem": "Haczedilen ya da rehinli malların satışıyla tahsil olunan paralardan", "oran_yuzde": 11.38, "alinti": "c)Haczedilen veya rehinli malların satılıp paraya çevrilmesi suretiyle tahsil olunan paralardan (Yüzde 11,38)"}
+    ],
+    "mahkemeler": [
+      {"kod": "sulh", "ad": "Sulh hukuk ya da icra mahkemesi", "basvurma": "A-I-1"},
+      {"kod": "asliye", "ad": "Asliye ya da idare mahkemesi", "basvurma": "A-I-2"},
+      {"kod": "bolge_yuksek", "ad": "BAM, BİM, Yargıtay ya da Danıştay (ilk derece)", "basvurma": "A-I-3"}
+    ],
+    "karar_turleri": [
+      {"kod": "genel", "ad": "Para alacağı ya da belli değerli dava", "kalem": "A-III-1-a"},
+      {"kod": "izale_satis", "ad": "Ortaklığın satış yoluyla giderilmesi", "kalem": "A-III-1-b"},
+      {"kod": "taksim", "ad": "Gayrimenkulün aynen taksimi", "kalem": "A-III-1-c"},
+      {"kod": "nafaka", "ad": "Nafaka (bir yıllık tutar)", "kalem": "A-III-1-d"}
+    ],
+    "kurallar": {
+      "pesin": {"citation": "HARÇLAR KANUNU (Kanun No. 492, RG sayı 11756) m. 28", "pay": 0.25, "olum_cismani_pay": 0.05, "alinti": "Karar ve ilam harçlarının dörtte biri peşin, geri kalanı kararın tebliğinden itibaren bir ay içinde ödenir. Şu kadar ki, ölüm ve cismani zarar sebebiyle açılan maddi ve manevi tazminat davalarında peşin alınan harcın oranı yirmide bir olarak uygulanır."},
+      "maktu_odeme": {"citation": "HARÇLAR KANUNU (Kanun No. 492, RG sayı 11756) m. 27", "alinti": "(1) sayılı tarifede yazılı maktu harçlar ilgili bulunduğu işlemin yapılmasından önce peşin olarak ödenir. Mahiyetleri icabı işin sonunda hesap edilip alınması gerekenler, harç alacağının doğması tarihinden itibaren 15 gün içinde ödenir."},
+      "deger_esasi": {"citation": "HARÇLAR KANUNU (Kanun No. 492, RG sayı 11756) m. 16", "alinti": "Değer ölçüsüne göre harca tabi işlemlerde (1) sayılı tarifede yazılı değerler esastır."},
+      "muafiyet_ornegi": {"citation": "TÜKETİCİNİN KORUNMASI HAKKINDA KANUN (Kanun No. 6502, RG sayı 28835) m. 73", "alinti": "Tüketici mahkemeleri nezdinde Bakanlık, tüketiciler ve tüketici örgütleri tarafından açılan davalar 2/7/1964 tarihli ve 492 sayılı Harçlar Kanununda düzenlenen harçlardan muaftır."}
+    }
+  },
+  "gider_avansi": {
+    "kaynak": "HMKGAT",
+    "dayanak": "HMK Gider Avansı Tarifesi m. 4",
+    "tebligat_kati": 5,
+    "diger_islemler_tl": 530.0,
+    "alinti": "Davacı, taraf sayısının beş katı tutarında tebligat ücreti ile diğer iş ve işlemler için 530 TL toplamını avans olarak öder.",
+    "kanun": {"citation": "HUKUK MUHAKEMELERİ KANUNU (Kanun No. 6100, RG sayı 27836) m. 120", "alinti": "Davacı, yargılama harçları ile her yıl Adalet Bakanlığınca çıkarılacak gider avansı tarifesinde belirlenecek olan tutarı, dava açarken mahkeme veznesine yatırmak zorundadır."}
+  },
+  "faiz": {
+    "kapsam": {"bas": "2006-01-01", "son": "2026-12-31", "oranlar_teyit": "2026-11-07", "not": "Ticari temerrüt faizi 2006 ilk yarısında 31.12.2005'te uygulanan avans oranına bağlıdır; kayıttaki ilk tebliğ 20.12.2005. 2027 yılının oranı 31.12.2026'da uygulanacak TCMB oranına bağlıdır ve henüz belirlenmedi."},
+    "gun_esasi": 365,
+    "esik_puan": 5,
+    "kanuni": [
+      {"bas": "2006-01-01", "oran": 9.0, "kaynak": "BKK2005_9831", "alinti": "4/12/1984 tarihli ve 3095 sayılı Kanuni Faiz ve Temerrüt Faizine İlişkin Kanunun 1 inci maddesinde öngörülen kanuni faiz oranının 1/1/2006 tarihinden geçerli olmak üzere yıllık % 12’den % 9’a indirilmesi ... kararlaştırılmıştır."},
+      {"bas": "2024-06-01", "oran": 24.0, "kaynak": "CBK8485", "alinti": "3095 sayılı Kanuni Faiz ve Temerrüt Faizine İlişkin Kanunun 1 inci maddesinde düzenlenen kanuni faiz oranının, 1/6/2024 tarihinden geçerli olmak üzere yıllık % 24 olarak uygulanmasına, mezkûr Kanunun 1 inci maddesi gereğince karar verilmiştir."},
+      {"bas": "2026-07-31", "kural": "reeskont", "carpan": 0.8, "kaynak": "K7589", "alinti": "11/1/2011 tarihli ve 6098 sayılı Türk Borçlar Kanunu ile 13/1/2011 tarihli ve 6102 sayılı Türk Ticaret Kanununa göre faiz ödenmesi gereken hallerde, miktarı sözleşme ile tespit edilmemişse bu ödeme yıllık, Türkiye Cumhuriyet Merkez Bankasının önceki yılın 31 Aralık günü kısa vadeli kredi işlemlerinde uyguladığı reeskont oranının yüzde sekseni üzerinden yapılır. Söz konusu reeskont oranı, 30 Haziran günü önceki yılın 31 Aralık günü uygulanan reeskont oranından beş puan veya daha çok farklı ise, yılın ikinci yarısında 30 Haziran günü belirlenen oranın yüzde sekseni geçerli olur."}
+    ],
+    "kurallar": {
+      "m1": {"citation": "KANUNİ FAİZ VE TEMERRÜT FAİZİNE İLİŞKİN KANUN (Kanun No. 3095, RG sayı 18610) m. 1", "alinti": "11/1/2011 tarihli ve 6098 sayılı Türk Borçlar Kanunu ile 13/1/2011 tarihli ve 6102 sayılı Türk Ticaret Kanununa göre faiz ödenmesi gereken hallerde, miktarı sözleşme ile tespit edilmemişse bu ödeme yıllık, Türkiye Cumhuriyet Merkez Bankasının önceki yılın 31 Aralık günü kısa vadeli kredi işlemlerinde uyguladığı reeskont oranının yüzde sekseni üzerinden yapılır. Söz konusu reeskont oranı, 30 Haziran günü önceki yılın 31 Aralık günü uygulanan reeskont oranından beş puan veya daha çok farklı ise, yılın ikinci yarısında 30 Haziran günü belirlenen oranın yüzde sekseni geçerli olur."},
+      "m2_1": {"citation": "KANUNİ FAİZ VE TEMERRÜT FAİZİNE İLİŞKİN KANUN (Kanun No. 3095, RG sayı 18610) m. 2", "alinti": "Bir miktar paranın ödenmesinde temerrüde düşen borçlu, sözleşme ile aksi kararlaştırılmadıkça, geçmiş günler için 1 inci maddede belirlenen orana göre temerrüt faizi ödemeye mecburdur."},
+      "m2_2": {"citation": "KANUNİ FAİZ VE TEMERRÜT FAİZİNE İLİŞKİN KANUN (Kanun No. 3095, RG sayı 18610) m. 2", "alinti": "Türkiye Cumhuriyet Merkez Bankasının önceki yılın 31 Aralık günü kısa vadeli avanslar için uyguladığı faiz oranı, yukarıda açıklanan miktardan fazla ise, arada sözleşme olmasa bile ticari işlerde temerrüt faizi bu oran üzerinden istenebilir. Söz konusu avans faiz oranı, 30 Haziran günü önceki yılın 31 Aralık günü uygulanan avans faiz oranından beş puan veya daha çok farklı ise yılın ikinci yarısında bu oran geçerli olur."},
+      "m3": {"citation": "KANUNİ FAİZ VE TEMERRÜT FAİZİNE İLİŞKİN KANUN (Kanun No. 3095, RG sayı 18610) m. 3", "alinti": "Kanuni faiz ve temerrüt faizi hesaplanırken mürekkep faiz yürütülemez."},
+      "tbk100": {"citation": "TÜRK BORÇLAR KANUNU (Kanun No. 6098, RG sayı 27836) m. 100", "alinti": "Borçlu, faiz veya giderleri ödemede gecikmemiş ise, kısmen yaptığı ödemeyi ana borçtan düşme hakkına sahiptir. Aksine anlaşma yapılamaz."},
+      "tbk120": {"citation": "TÜRK BORÇLAR KANUNU (Kanun No. 6098, RG sayı 27836) m. 120", "alinti": "Sözleşme ile kararlaştırılacak yıllık temerrüt faizi oranı, birinci fıkra uyarınca belirlenen yıllık faiz oranının yüzde yüz fazlasını aşamaz."}
+    },
+    "uyari": "Faiz dökümü ön hesaptır: faizin başlangıç tarihi (temerrüt), işin ticari olup olmadığı ve kısmi ödemeler dosyaya göre değişir ve hesaba kullanıcının girdisi olarak girer.",
+    "tcmb": [
+      {"yururluk": "2005-12-20", "reeskont": 23.0, "avans": 25.0, "rg_tarih": "2005-12-20", "rg_sayi": "26029", "url": "https://www.resmigazete.gov.tr/eskiler/2005/12/20051220-6.htm", "sha256": "9cdac381f5e9489a2ebedb347aaf14f64b5cf8bfaf8f61bcf67146520be45756", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 23, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 25 olarak tespit edilmiştir."},
+      {"yururluk": "2006-12-20", "reeskont": 27.0, "avans": 29.0, "rg_tarih": "2006-12-20", "rg_sayi": "26382", "url": "https://www.resmigazete.gov.tr/eskiler/2006/12/20061220-24.htm", "sha256": "e6f1aeebe9a499e434453180c7d371692def186cb2a07016ab4085d0eba3df36", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 27, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 29 olarak tespit edilmiştir."},
+      {"yururluk": "2007-12-28", "reeskont": 25.0, "avans": 27.0, "rg_tarih": "2007-12-28", "rg_sayi": "26740", "url": "https://www.resmigazete.gov.tr/eskiler/2007/12/20071228-13.htm", "sha256": "0d7b4a602487f8d8cc7ca29d2d34c344fc5e919411517c7810e6ba02b1562a60", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 25, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 27 olarak tespit edilmiştir."},
+      {"yururluk": "2009-04-09", "reeskont": 19.0, "avans": 20.0, "rg_tarih": "2009-04-09", "rg_sayi": "27195", "url": "https://www.resmigazete.gov.tr/eskiler/2009/04/20090409-7.htm", "sha256": "803ff97f6195aee949970b2f290c1c7cbe0e048d7db546bd9c65a21ae6832577", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 19, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 20 olarak tespit edilmiştir."},
+      {"yururluk": "2009-06-12", "reeskont": 18.0, "avans": 19.0, "rg_tarih": "2009-06-12", "rg_sayi": "27256", "url": "https://www.resmigazete.gov.tr/eskiler/2009/06/20090612-10.htm", "sha256": "bcb9385dd12c237bc4c0593eef35184f26d0b5873bf1e61d5fb7283b966911af", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 18, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 19 olarak tespit edilmiştir."},
+      {"yururluk": "2009-12-22", "reeskont": 15.0, "avans": 16.0, "rg_tarih": "2009-12-22", "rg_sayi": "27440", "url": "https://www.resmigazete.gov.tr/eskiler/2009/12/20091222-19.htm", "sha256": "41d9985a3f938ffa40b9b1716e092c8026653b784e4e655824208755dbd4a94e", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 15, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 16 olarak tespit edilmiştir."},
+      {"yururluk": "2010-12-30", "reeskont": 14.0, "avans": 15.0, "rg_tarih": "2010-12-30", "rg_sayi": "27801", "url": "https://www.resmigazete.gov.tr/eskiler/2010/12/20101230-27.htm", "sha256": "89810ed18903df92ada97f564c865212e25aca614a7ccc7c47736beec51d974e", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 14, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 15 olarak tespit edilmiştir."},
+      {"yururluk": "2011-12-29", "reeskont": 17.0, "avans": 17.75, "rg_tarih": "2011-12-29", "rg_sayi": "28157", "url": "https://www.resmigazete.gov.tr/eskiler/2011/12/20111229-11.htm", "sha256": "f85de9b560e31ebbcb225553b48b7a25db532972e40cd83e6aef529711d246d8", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 17, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 17,75 olarak tespit edilmiştir."},
+      {"yururluk": "2012-06-19", "reeskont": 16.0, "avans": 16.5, "rg_tarih": "2012-06-19", "rg_sayi": "28328", "url": "https://www.resmigazete.gov.tr/eskiler/2012/06/20120619-12.htm", "sha256": "66d39b615eadef7af382c2469413aab103a68eed4fc31785cab6b71cd084cbcf", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 16, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 16,50 olarak tespit edilmiştir."},
+      {"yururluk": "2012-12-20", "reeskont": 13.5, "avans": 13.75, "rg_tarih": "2012-12-20", "rg_sayi": "28503", "url": "https://www.resmigazete.gov.tr/eskiler/2012/12/20121220-17.htm", "sha256": "cf88659a4006b05529c75bf5771ab05a734d471c94077e84d6762bf88fba2bb0", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 13,50, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 13,75 olarak tespit edilmiştir."},
+      {"yururluk": "2013-06-21", "reeskont": 9.5, "avans": 11.0, "rg_tarih": "2013-06-21", "rg_sayi": "28684", "url": "https://www.resmigazete.gov.tr/eskiler/2013/06/20130621-11.htm", "sha256": "d297bb197a48c65a3e69bf1e1b2747f27feff45dd8adb0f60171e8f9bb6e33ce", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 9,50, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 11 olarak tespit edilmiştir."},
+      {"yururluk": "2013-12-27", "reeskont": 10.25, "avans": 11.75, "rg_tarih": "2013-12-27", "rg_sayi": "28864", "url": "https://www.resmigazete.gov.tr/eskiler/2013/12/20131227-8.htm", "sha256": "a5eb97d87ffc5a90a7512b9c166612e307671038a99a99528f7fc15e437049c9", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık % 10,25, avans işlemlerinde uygulanacak faiz oranı ise yıllık % 11,75 olarak tespit edilmiştir."},
+      {"yururluk": "2014-12-14", "reeskont": 9.0, "avans": 10.5, "rg_tarih": "2014-12-14", "rg_sayi": "29205", "url": "https://www.resmigazete.gov.tr/eskiler/2014/12/20141214-4.htm", "sha256": "f7007122ddd16daa0a6c621f9f2c807f37526bb216b4be4e44d120c952ee9738", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 9, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 10,50 olarak tespit edilmiştir."},
+      {"yururluk": "2016-12-31", "reeskont": 8.75, "avans": 9.75, "rg_tarih": "2016-12-31", "rg_sayi": "29935", "url": "https://www.resmigazete.gov.tr/eskiler/2016/12/20161231-9.htm", "sha256": "a02e159b0eee9973cf383346419e25448df68103ceb745ba5b2761620e6a0c4a", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 8,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 9,75 olarak tespit edilmiştir."},
+      {"yururluk": "2018-06-29", "reeskont": 18.5, "avans": 19.5, "rg_tarih": "2018-06-29", "rg_sayi": "30463", "url": "https://www.resmigazete.gov.tr/eskiler/2018/06/20180629-5.htm", "sha256": "b6ae2de4c7f5ff7267e4ce9e6e13cdf779550d88215cacd68b6ff05060c452f6", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 18,50, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 19,50 olarak tespit edilmiştir."},
+      {"yururluk": "2019-10-11", "reeskont": 17.25, "avans": 18.25, "rg_tarih": "2019-10-11", "rg_sayi": "30915", "url": "https://www.resmigazete.gov.tr/eskiler/2019/10/20191011-17.pdf", "sha256": "0a51357baf84f4679d6d251aa1c536383b8e9de8247970c7d2af7ce6233a219e", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 17,25, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 18,25 olarak tespit edilmiştir."},
+      {"yururluk": "2019-12-21", "reeskont": 12.75, "avans": 13.75, "rg_tarih": "2019-12-21", "rg_sayi": "30985", "url": "https://www.resmigazete.gov.tr/eskiler/2019/12/20191221-6.htm", "sha256": "5d426572454e8effdb053c16ec28664ec8bf9434545d16a037e86d72134d3811", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 12,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 13,75 olarak tespit edilmiştir."},
+      {"yururluk": "2020-06-13", "reeskont": 9.0, "avans": 10.0, "rg_tarih": "2020-06-13", "rg_sayi": "31154", "url": "https://www.resmigazete.gov.tr/eskiler/2020/06/20200613-9.htm", "sha256": "3e3e8220d1bda209e7fe57603a921ef3fb48f029316910ad93201c2f70013f57", "okuma": "metin", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 9, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 10 olarak tespit edilmiştir."},
+      {"yururluk": "2020-12-19", "reeskont": 15.75, "avans": 16.75, "rg_tarih": "2020-12-19", "rg_sayi": "31339", "url": "https://www.resmigazete.gov.tr/eskiler/2020/12/20201219-8.pdf", "sha256": "0dbb10ad8fe6291c4a90da5cf862a89ae9b7abedd4fe96826e089dd3f81e310c", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 15,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 16,75 olarak tespit edilmiştir."},
+      {"yururluk": "2021-12-31", "reeskont": 14.75, "avans": 15.75, "rg_tarih": "2022-01-02", "rg_sayi": "31707", "url": "https://www.resmigazete.gov.tr/eskiler/2022/01/20220102-7.pdf", "sha256": "0dcd485b1481f20669ea198cb35bbd76e9563251a5751ee951fc835a1efde8ae", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 14,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 15,75 olarak tespit edilmiştir.", "duzeltme": {"rg_tarih": "2022-01-03", "rg_sayi": "31708", "url": "https://www.resmigazete.gov.tr/eskiler/2022/01/20220103-3.htm", "sha256": "abfcc3e1aeba872d127a761b8f1b3f2af78fbf108dec7901e73cab175308f42a", "alinti": "“Belirlenen bu oranlar 31/12/2021 tarihinden geçerli olmak üzere yayımı tarihinde yürürlüğe girer.” şeklinde değiştirilerek düzeltilmiştir."}, "not": "Tebliğ 02.01.2022'de 'yayımı tarihinde yürürlüğe girer' diye yayımlandı; 03.01.2022 tarihli düzeltmeyle 31.12.2021'den geçerli kılındı."},
+      {"yururluk": "2022-12-31", "reeskont": 9.75, "avans": 10.75, "rg_tarih": "2022-12-31", "rg_sayi": "32060", "url": "https://www.resmigazete.gov.tr/eskiler/2022/12/20221231-8.pdf", "sha256": "18ea90b60e93dcd32a767d104bdeedf8a19c9a21ae3f9809fb36d8d357c81165", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 9,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 10,75 olarak tespit edilmiştir."},
+      {"yururluk": "2023-06-24", "reeskont": 15.75, "avans": 16.75, "rg_tarih": "2023-06-24", "rg_sayi": "32231", "url": "https://www.resmigazete.gov.tr/eskiler/2023/06/20230624-5.pdf", "sha256": "781787f9c4e47f16d2dbdfbfeb7a76691dfe85e761accc3c0d8579c9affeb318", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 15,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 16,75 olarak tespit edilmiştir."},
+      {"yururluk": "2023-09-01", "reeskont": 25.75, "avans": 26.75, "rg_tarih": "2023-09-01", "rg_sayi": "32296", "url": "https://www.resmigazete.gov.tr/eskiler/2023/09/20230901-7.pdf", "sha256": "13ed5a41849b6f939327dd22f6808a21c5f2403d7ec021adfa2f3d7b8fa238a9", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 25,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 26,75 olarak tespit edilmiştir."},
+      {"yururluk": "2023-09-28", "reeskont": 30.75, "avans": 31.75, "rg_tarih": "2023-09-28", "rg_sayi": "32323", "url": "https://www.resmigazete.gov.tr/eskiler/2023/09/20230928-7.pdf", "sha256": "f225cfeb4d5b9f6f5cc448909eda87ac53048c858ea3d77ecb07249b85334fa4", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 30,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 31,75 olarak tespit edilmiştir."},
+      {"yururluk": "2023-11-01", "reeskont": 35.75, "avans": 36.75, "rg_tarih": "2023-11-01", "rg_sayi": "32356", "url": "https://www.resmigazete.gov.tr/eskiler/2023/11/20231101-3.pdf", "sha256": "05b289a96ed1c20536ddb3c7a3d95be4eaefc0c54d58748fa2d5e876f637f030", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 35,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 36,75 olarak tespit edilmiştir."},
+      {"yururluk": "2023-12-01", "reeskont": 40.75, "avans": 41.75, "rg_tarih": "2023-12-01", "rg_sayi": "32386", "url": "https://www.resmigazete.gov.tr/eskiler/2023/12/20231201-10.pdf", "sha256": "b52c12d7458d324b840908d2946e8d7c55f69a7b110af35adf8e3bf324d6a437", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 40,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 41,75 olarak tespit edilmiştir."},
+      {"yururluk": "2023-12-23", "reeskont": 43.25, "avans": 44.25, "rg_tarih": "2023-12-23", "rg_sayi": "32408", "url": "https://www.resmigazete.gov.tr/eskiler/2023/12/20231223-12.pdf", "sha256": "785547efa8515f91d70c1c389115c7ef083dd60a9e9d03ce777e596d2e0bf29a", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 43,25, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 44,25 olarak tespit edilmiştir."},
+      {"yururluk": "2024-04-01", "reeskont": 50.75, "avans": 51.75, "rg_tarih": "2024-04-01", "rg_sayi": "32507", "url": "https://www.resmigazete.gov.tr/eskiler/2024/04/20240401-4.pdf", "sha256": "c80ab02fdd84523fe4d794a94c941358c3541a4ef864d1c727a460752f65c9b4", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 50,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 51,75 olarak tespit edilmiştir."},
+      {"yururluk": "2024-12-28", "reeskont": 48.25, "avans": 49.25, "rg_tarih": "2024-12-28", "rg_sayi": "32766", "url": "https://www.resmigazete.gov.tr/eskiler/2024/12/20241228-30.pdf", "sha256": "8283693671e11861727b437337c3fdba843bd64da0795e991825c6375d868892", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 48,25, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 49,25 olarak tespit edilmiştir."},
+      {"yururluk": "2025-03-08", "reeskont": 43.25, "avans": 44.25, "rg_tarih": "2025-03-08", "rg_sayi": "32835", "url": "https://www.resmigazete.gov.tr/eskiler/2025/03/20250308-7.pdf", "sha256": "ad15800bbdba94b871954caa9f6d91c703413a77e4d418443e697075af64d95f", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 43,25, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 44,25 olarak tespit edilmiştir."},
+      {"yururluk": "2025-09-17", "reeskont": 41.25, "avans": 42.25, "rg_tarih": "2025-09-17", "rg_sayi": "33020", "url": "https://www.resmigazete.gov.tr/eskiler/2025/09/20250917-2.pdf", "sha256": "5c9ed61d14401c4eff6f801814bf99dfbdab53e30e30b8ebee7b27d7927700bb", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 41,25, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 42,25 olarak tespit edilmiştir."},
+      {"yururluk": "2025-12-20", "reeskont": 38.75, "avans": 39.75, "rg_tarih": "2025-12-20", "rg_sayi": "33113", "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251220-12.pdf", "sha256": "07c4b98c7f30aba2a99f65f9fb7c3e9f0342e1b191541e788a5032d012e16414", "okuma": "goruntu", "alinti": "... reeskont işlemlerinde uygulanacak iskonto faiz oranı yıllık yüzde 38,75, avans işlemlerinde uygulanacak faiz oranı ise yıllık yüzde 39,75 olarak tespit edilmiştir."}
+    ]
+  },
+  "iscilik": {
+    "kaynak": "CSGBKT",
+    "kidem_gun": 30,
+    "ay_gun": 30,
+    "ihbar": [
+      {"ay_alti": 6, "sinir_dahil": false, "hafta": 2, "bent": "a", "alinti": "a) İşi altı aydan az sürmüş olan işçi için, bildirimin diğer tarafa yapılmasından başlayarak iki hafta sonra,"},
+      {"ay_alti": 18, "sinir_dahil": true, "hafta": 4, "bent": "b", "alinti": "b) İşi altı aydan birbuçuk yıla kadar sürmüş olan işçi için, bildirimin diğer tarafa yapılmasından başlayarak dört hafta sonra,"},
+      {"ay_alti": 36, "sinir_dahil": true, "hafta": 6, "bent": "c", "alinti": "c) İşi birbuçuk yıldan üç yıla kadar sürmüş olan işçi için, bildirimin diğer tarafa yapılmasından başlayarak altı hafta sonra,"},
+      {"ay_alti": null, "sinir_dahil": null, "hafta": 8, "bent": "d", "alinti": "d) İşi üç yıldan fazla sürmüş işçi için, bildirim yapılmasından başlayarak sekiz hafta sonra,"}
+    ],
+    "kurallar": {
+      "k14": {"citation": "İŞ KANUNU (Kanun No. 1475, RG 01.09.1971/13943) m. 14", "alinti": "... işçinin işe başladığı tarihten itibaren hizmet aktinin devamı süresince her geçen tam yıl için işverence işçiye 30 günlük ücreti tutarında kıdem tazminatı ödenir. Bir yıldan artan süreler için de aynı oran üzerinden ödeme yapılır."},
+      "k14_son_ucret": {"citation": "İŞ KANUNU (Kanun No. 1475, RG 01.09.1971/13943) m. 14", "alinti": "Kıdem tazminatının hesaplanması, son ücret üzerinden yapılır."},
+      "k14_giydirilmis": {"citation": "İŞ KANUNU (Kanun No. 1475, RG 01.09.1971/13943) m. 14", "alinti": "13 üncü maddesinde sözü geçen tazminat ile bu maddede yer alan kıdem tazminatına esas olacak ücretin hesabında 26 ncı maddenin birinci fıkrasında yazılı ücrete ilaveten işçiye sağlanmış olan para ve para ile ölçülmesi mümkün akdi ve kanundan doğan menfaatler de gözönünde tutulur."},
+      "k14_tavan": {"citation": "İŞ KANUNU (Kanun No. 1475, RG 01.09.1971/13943) m. 14", "alinti": "Ancak, toplu sözleşmelerle ve hizmet akitleriyle belirlenen kıdem tazminatlarının yıllık miktarı, Devlet Memurları Kanununa tabi en yüksek Devlet memuruna 5434 sayılı T.C. Emekli Sandığı Kanunu hükümlerine göre bir hizmet yılı için ödenecek azami emeklilik ikramiyesini geçemez."},
+      "k14_faiz": {"citation": "İŞ KANUNU (Kanun No. 1475, RG 01.09.1971/13943) m. 14", "alinti": "Kıdem tazminatının zamanında ödenmemesi sebebiyle açılacak davanın sonunda hakim gecikme süresi için, ödenmeyen süreye göre mevduata uygulanan en yüksek faizin ödenmesine hükmeder."},
+      "m17": {"citation": "İŞ KANUNU (Kanun No. 4857, RG sayı 25134) m. 17", "alinti": "Bildirim şartına uymayan taraf, bildirim süresine ilişkin ücret tutarında tazminat ödemek zorundadır."},
+      "m17_giydirilmis": {"citation": "İŞ KANUNU (Kanun No. 4857, RG sayı 25134) m. 17", "alinti": "Bu maddeye göre ödenecek tazminatlar ile bildirim sürelerine ait peşin ödenecek ücretin hesabında 32 nci maddenin birinci fıkrasında yazılan ücrete ek olarak işçiye sağlanmış para veya para ile ölçülmesi mümkün sözleşme ve Kanundan doğan menfaatler de göz önünde tutulur."},
+      "m17_artirma": {"citation": "İŞ KANUNU (Kanun No. 4857, RG sayı 25134) m. 17", "alinti": "Bu süreler asgari olup sözleşmeler ile artırılabilir."},
+      "gvk25": {"citation": "GELİR VERGİSİ KANUNU (GVK) (Kanun No. 193, RG sayı 10700) m. 25", "alinti": "Aşağıda yazılı tazminat ve yardımlar Gelir Vergisinden müstesnadır: ... 7. a) 25/8/1971 tarihli ve 1475 sayılı İş Kanunu ve 20/4/1967 tarihli ve 854 sayılı Deniz İş Kanununa göre ödenmesi gereken kıdem tazminatlarının tamamı ..."}
+    },
+    "uyari": "İşçilik alacağı ön hesaptır ve BRÜTTÜR: hak kazanma koşulları (fesih nedeni, bildirim süresine uyulup uyulmadığı) ve kesintiler hesaba girmez.",
+    "kidem_tavani": [
+      {"bas": "2016-01-01", "son": "2016-06-30", "tutar_tl": 4092.53, "alinti": "01.01.2016 - 30.06.2016 (**) 4.092,53 ₺"},
+      {"bas": "2016-07-01", "son": "2016-12-31", "tutar_tl": 4297.21, "alinti": "01.07.2016 - 31.12.2016 (**) 4.297,21 ₺"},
+      {"bas": "2017-01-01", "son": "2017-06-30", "tutar_tl": 4426.16, "alinti": "01.01.2017 - 30.06.2017 (**) 4.426,16 ₺"},
+      {"bas": "2017-07-01", "son": "2017-12-31", "tutar_tl": 4732.48, "alinti": "01.07.2017 - 31.12.2017 (**) 4.732,48 ₺"},
+      {"bas": "2018-01-01", "son": "2018-06-30", "tutar_tl": 5001.76, "alinti": "01.01.2018 - 30.06.2018 (**) 5.001,76 ₺"},
+      {"bas": "2018-07-01", "son": "2018-12-31", "tutar_tl": 5434.42, "alinti": "01.07.2018 - 31.12.2018 (**) 5.434,42 ₺"},
+      {"bas": "2019-01-01", "son": "2019-06-30", "tutar_tl": 6017.6, "alinti": "01.01.2019 - 30.06.2019 (**) 6.017,60 ₺"},
+      {"bas": "2019-07-01", "son": "2019-12-31", "tutar_tl": 6379.86, "alinti": "01.07.2019 - 31.12.2019 (**) 6.379,86 ₺"},
+      {"bas": "2020-01-01", "son": "2020-06-30", "tutar_tl": 6730.15, "alinti": "01.01.2020 - 30.06.2020 (**) 6.730,15 ₺"},
+      {"bas": "2020-07-01", "son": "2020-12-31", "tutar_tl": 7117.17, "alinti": "01.07.2020 - 31.12.2020 (**) 7.117,17 ₺"},
+      {"bas": "2021-01-01", "son": "2021-06-30", "tutar_tl": 7638.96, "alinti": "01.01.2021 - 30.06.2021 (**) 7.638,96 ₺"},
+      {"bas": "2021-07-01", "son": "2021-12-31", "tutar_tl": 8284.51, "alinti": "01.07.2021 - 31.12.2021 (**) 8.284,51 ₺"},
+      {"bas": "2022-01-01", "son": "2022-06-30", "tutar_tl": 10848.59, "alinti": "01.01.2022 - 30.06.2022 (**) 10.848,59 ₺"},
+      {"bas": "2022-07-01", "son": "2022-12-31", "tutar_tl": 15371.4, "alinti": "01.07.2022 - 31.12.2022 (**) 15.371,40 ₺"},
+      {"bas": "2023-01-01", "son": "2023-06-30", "tutar_tl": 19982.83, "alinti": "01.01.2023 - 30.06.2023 (**) 19.982,83 ₺"},
+      {"bas": "2023-07-01", "son": "2023-12-31", "tutar_tl": 23489.83, "alinti": "01.07.2023 - 31.12.2023 (**) 23.489,83 ₺"},
+      {"bas": "2024-01-01", "son": "2024-06-30", "tutar_tl": 35058.58, "alinti": "01.01.2024 - 30.06.2024 (**) 35.058,58 ₺"},
+      {"bas": "2024-07-01", "son": "2024-12-31", "tutar_tl": 41828.42, "alinti": "01.07.2024 - 31.12.2024 (**) 41.828,42 ₺"},
+      {"bas": "2025-01-01", "son": "2025-06-30", "tutar_tl": 46655.43, "alinti": "01.01.2025 - 30.06.2025 (**) 46.655,43 ₺"},
+      {"bas": "2025-07-01", "son": "2025-12-31", "tutar_tl": 53919.68, "alinti": "01.07.2025 - 31.12.2025 (**) 53.919,68 ₺", "genelge": "Hazine ve Maliye Bakanlığı, 2025 Yılı Temmuz Ayına Ait Mali ve Sosyal Haklar Genelgesi, 07.07.2025 tarih ve 4098345 sayılı yazı (ÇSGB duyurusu 08.07.2025: https://www.csgb.gov.tr/cgm/duyurular/08072025/, SHA-256 553a7dd091fd7c126f9265792e14587325c2f8fcb8cfba197d303cdecfd80c99)"},
+      {"bas": "2026-01-01", "son": "2026-06-30", "tutar_tl": 64948.77, "alinti": "01.01.2026 - 30.06.2026 (**) 64.948,77 ₺", "hesap_kaynagi": "CSGBKT2026A"},
+      {"bas": "2026-07-01", "son": "2026-12-31", "tutar_tl": 73729.87, "alinti": "01.07.2026 - 31.12.2026 (**) 73.729,87 ₺", "hesap_kaynagi": "CSGBKT2026B"}
+    ]
+  },
+  "dogrulanamayanlar": [
+    "Alt sınırın peşin harca uygulanışı: hesap, karar ve ilam harcını önce alt sınırla, sonra dörtte birini (m. 28/a) alır. Uygulamanın bu sırayla yapıldığı resmî metinden teyit edilemedi.",
+    "Maktu karar ve ilam harcının (732 TL) dava açılırken peşin alınıp alınmadığı: 492 s. K. m. 27 maktu harçların ilgili işlemden önce ödeneceğini söyler; ilgili işlem karardır. Hesap bu kalemi toplama katmaz, ayrıca gösterir.",
+    "İstinaf ve temyiz başvurusunda (1) sayılı tarife A-I-3 başvurma harcının (1.124,50 TL) IV bölümündeki istinaf/temyiz harcıyla birlikte alınıp alınmadığı resmî metinden çıkarılamadı. Hesap A-I-3'ü toplama katmaz, ayrıca gösterir.",
+    "Tebligat ücretinin tutarı gider avansı tarifesinde yazmaz; kullanıcıdan istenir, tahmin edilmez.",
+    "AAÜT tarifesi iş, aile, asliye ticaret ve kadastro mahkemelerini ayrıca saymaz; bu mahkemelerde hangi sıranın (ör. 2.2.10 Asliye) esas alındığı teyit edilmeli.",
+    "AAÜT m. 6'daki yarıya indirme (ön inceleme tutanağından önce sona erme) hesaba girmez: yarıya indirmenin m. 13/1'deki maktu tabandan önce mi sonra mı uygulandığı metinden açıkça çıkmıyor.",
+    "Danışmada kısmi saat: tarife 'takip eden her saat için' der; yarım saatin nasıl sayılacağı yazmaz. Hesap yalnız tam saat kabul eder.",
+    "Faiz: gün sayımı. Hesap faizi başlangıç gününden bitiş gününden önceki güne kadar işletir (gün = bitiş − başlangıç) ve yılı 365 gün sayar (artık yılda da). 3095 ve TBK bu sayımı yazmaz; uygulamaya dayanır.",
+    "Faiz: 7589 sayılı Kanun 3095 m. 1 için geçiş hükmü içermez (m. 26/1-c: yayımı tarihinde yürürlük). Hesap 31.07.2026'dan önceki günlere önceki oranı (%24), bu tarihten sonraki günlere yeni kuralı uygular; önceki ilişkilerden doğan faize bu dönemsel uygulama resmî metinden teyit edilemedi.",
+    "Faiz: 01.01.2006-01.06.2024 arasında kanuni faizi %9'dan başka bir orana çeken Bakanlar Kurulu ya da Cumhurbaşkanı Kararı bulunmadığı tam teyit edilemedi: mevzuat.gov.tr dizininde 2018 öncesi Bakanlar Kurulu kararları eksik (BKK 2005/9831 de dizinde yok, RG fihristinden bulundu).",
+    "Faiz: 3095 m. 2/2 'beş puan veya daha çok farklı' der; hesap farkın mutlak değerine bakar (oran yükselse de düşse de). 30.06.2025'te avans oranındaki fark tam 5 puandır (49,25 → 44,25); hesap 2025'in ikinci yarısında 44,25'i uygular.",
+    "Faiz: her dönemin faizi kuruşa yuvarlanır, toplam yuvarlanmış dönemlerin toplamıdır; yuvarlama yöntemi resmî metinde yok.",
+    "İşçilik: 30 günlük ücretin aylık ücrete, günlük ücretin aylık ücretin otuzda birine eşit sayılması uygulamaya dayanır; kanun metni bu bölmeyi yazmaz.",
+    "İşçilik: hizmet süresi işe giriş ve çıkış günleri dahil sayılır; bir yıldan artan süre kalan gün / 365 ile oranlanır (m. 14 'aynı oran üzerinden' der, yöntem yazmaz). Ay/12 + gün/365 gibi başka yöntemler küçük farklar verir.",
+    "İşçilik: kıdem tavanı iş sözleşmesinin sona erdiği (çıkış) tarihteki dönemden alınır; tarih seçimi uygulamaya dayanır.",
+    "İşçilik: bir yıldan kısa çalışmada kıdem tazminatı hesaplanmaz. m. 14 'her geçen tam yıl' ve 'bir yıldan artan süreler' der; en az bir yıl şartı bu ifadelerden çıkarılır, ayrıca yazılı değildir.",
+    "İşçilik: hangi ek ödemelerin (yol, yemek, ikramiye, prim) giydirilmiş ücrete katılacağı 1475 m. 14 ve 4857 m. 17'deki 'para ve para ile ölçülmesi mümkün ... menfaatler' ifadesine ve uygulamaya göre belirlenir; hesap girilen tutarı olduğu gibi ekler.",
+    "İşçilik: 4857 m. 17'deki 'birbuçuk yıla kadar' ve 'üç yıla kadar' sınırlarında hesap tam 18 ve tam 36 ayı alt dilime sayar.",
+    "İşçilik: kıdem tavanı Resmî Gazete'de yayımlanmaz; değerler ÇSGB tablosundandır. Hazine ve Maliye Bakanlığının genelgeleri bu çalışmada ayrıca indirilmedi (yalnız 2025 Temmuz genelgesinin tarih ve sayısı ÇSGB duyurusundan).",
+    "İşçilik: tutarlar brüttür. GVK m. 25/7-a kıdem tazminatını gelir vergisinden istisna tutar; damga vergisi ve ihbar tazminatının vergilendirilmesi hesaba girmez, net tutar hesaplanmaz."
+  ],
+  "uyarilar": [
+    "Vekâlet ücreti çıktısı Avukatlık Asgari Ücret Tarifesi'nin öngördüğü ASGARİ tutardır; önerilen ya da uygun ücret değildir.",
+    "Harç ön hesaptır; tahakkuk mahkeme veznesince yapılır. Harç muafiyetleri ve indirimleri hesaba girmez.",
+    "Maktu harçlar her yıl Ocak'ta Harçlar Kanunu Genel Tebliği ile, avukatlık asgari ücretleri her yıl Türkiye Barolar Birliği tarifesiyle değişir; veri sürümünü kontrol edin."
+  ],
+  "izlenen": {
+    "aciklama": "Resmî Gazete nöbetçisi (tazelik.py) günlük fihristi ve o günün mükerrer sayılarını tarar. Başlığı aşağıdaki desenlerden birine uyan ve 'bilinen' listesinde olmayan yayım ilgili kartı kilitler: toplam kesin sonuç olarak verilmez. Desenler Türkçe katlanmış başlıkta (küçük harf, şapkasız, ç→c, ğ→g, ı/İ→i, ö→o, ş→s, ü→u) düzenli ifadedir; 'karar' bölüm başlığında ya da başlıkta, 'ayrica' başlıkta ayrıca aranır, 'haric' varsa eşleşmez.",
+    "fihrist": "https://www.resmigazete.gov.tr/eskiler/YYYY/MM/YYYYMMDD.htm; mükerrer sayılar YYYYMMDDM<n>.htm",
+    "kartlar": {
+      "vekalet": [
+        "AAUT2026"
+      ],
+      "harc": [
+        "HKGT98",
+        "HMKGAT"
+      ],
+      "faiz": [
+        "K7589",
+        "CBK8485",
+        "TCMB20251220"
+      ],
+      "iscilik": [
+        "CSGBKT"
+      ]
+    },
+    "kisa_adlar": {
+      "AAUT2026": "Avukatlık Asgari Ücret Tarifesi",
+      "HKGT98": "Harçlar Kanunu Genel Tebliği (Seri No: 98)",
+      "HMKGAT": "HMK Gider Avansı Tarifesi",
+      "K7589": "3095 sayılı Kanun m. 1 (7589 ile değişik)",
+      "CBK8485": "Kanuni faiz %24 (CB Kararı 8485)",
+      "TCMB20251220": "TCMB reeskont ve avans oranları",
+      "CSGBKT": "Kıdem tazminatı tavanı"
+    },
+    "gecerlilik": {
+      "faiz": {"son": "2026-12-31", "ad": "Faiz oranı verisi", "url": "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Temel+Faaliyetler/Para+Politikasi/Reeskont+ve+Avans+Faiz+Oranlari", "neden": "Yeni yılın faiz oranı önceki yılın 31 Aralık günü uygulanan TCMB oranına bağlıdır; bu oran veriye işlenmedi."},
+      "iscilik": {"son": "2026-12-31", "ad": "Kıdem tazminatı tavanı", "url": "https://www.csgb.gov.tr/%C4%B1statistikler/calisma-hayati-%C4%B1statistikleri/kidem-tazminati-tavan-miktari/", "neden": "Yeni dönemin kıdem tazminatı tavanı (Mali ve Sosyal Haklar genelgesi) veriye işlenmedi."}
+    },
+    "desenler": [
+      {
+        "kod": "aaut",
+        "ad": "Avukatlık Asgari Ücret Tarifesi",
+        "kartlar": [
+          "vekalet"
+        ],
+        "baslik": "avukatlik asgari ucret tarife"
+      },
+      {
+        "kod": "harc_teblig",
+        "ad": "Harçlar Kanunu Genel Tebliği",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "harclar kanunu genel tebli"
+      },
+      {
+        "kod": "harc_cbk",
+        "ad": "Harç tutarlarını ya da tarifelerini değiştiren Cumhurbaşkanı Kararı",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "harclar kanunu|\\bharc(?:i|in|a|lar[a-z]*)?\\b",
+        "karar": "cumhurbaskani karar|karar sayisi",
+        "haric": "yurt disina cikis harc"
+      },
+      {
+        "kod": "gider_avansi",
+        "ad": "Hukuk Muhakemeleri Kanunu Gider Avansı Tarifesi",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "hukuk muhakemeleri kanunu gider avansi tarife"
+      },
+      {
+        "kod": "k492",
+        "ad": "492 sayılı Harçlar Kanunu değişikliği",
+        "kartlar": [
+          "harc"
+        ],
+        "baslik": "harclar kanun",
+        "ayrica": "degisiklik"
+      },
+      {
+        "kod": "k1136",
+        "ad": "1136 sayılı Avukatlık Kanunu değişikliği",
+        "kartlar": [
+          "vekalet"
+        ],
+        "baslik": "avukatlik kanun",
+        "ayrica": "degisiklik"
+      },
+      {
+        "kod": "tcmb_faiz",
+        "ad": "TCMB reeskont ve avans faiz oranları tebliği",
+        "kartlar": [
+          "faiz"
+        ],
+        "baslik": "re+skont|avans islemlerinde"
+      },
+      {
+        "kod": "kanuni_faiz",
+        "ad": "Kanuni faiz ya da temerrüt faizi düzenlemesi",
+        "kartlar": [
+          "faiz"
+        ],
+        "baslik": "kanuni faiz|temerrut faiz|\\b3095\\b",
+        "haric": "gec odeme"
+      },
+      {
+        "kod": "is_kanunu",
+        "ad": "İş Kanunu değişikliği",
+        "kartlar": [
+          "iscilik"
+        ],
+        "baslik": "\\bis kanun",
+        "ayrica": "degisiklik"
+      },
+      {
+        "kod": "kidem",
+        "ad": "Kıdem tazminatı düzenlemesi",
+        "kartlar": [
+          "iscilik"
+        ],
+        "baslik": "kidem tazminat"
+      },
+      {
+        "kod": "hakem_kurulu",
+        "ad": "Kamu Görevlileri Hakem Kurulu kararı (memur katsayıları, kıdem tavanı)",
+        "kartlar": [
+          "iscilik"
+        ],
+        "baslik": "kamu gorevlileri hakem kurulu"
+      },
+      {
+        "kod": "k5434",
+        "ad": "5434 sayılı Emekli Sandığı Kanunu değişikliği (emeklilik ikramiyesi, kıdem tavanı)",
+        "kartlar": [
+          "iscilik"
+        ],
+        "baslik": "emekli sandigi kanun",
+        "ayrica": "degisiklik"
+      }
+    ],
+    "bilinen": [
+      {
+        "kaynak": "AAUT2026",
+        "rg_tarih": "2026-11-03",
+        "rg_sayi": "33419",
+        "mukerrer": null,
+        "baslik": "Avukatlık Asgari Ücret Tarifesi",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2026/11/20261103-3.htm"
+      },
+      {
+        "kaynak": "HKGT98",
+        "rg_tarih": "2025-12-31",
+        "rg_sayi": "33124",
+        "mukerrer": "5",
+        "baslik": "Harçlar Kanunu Genel Tebliği (Seri No: 98)",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231M5-28.pdf"
+      },
+      {
+        "kaynak": null,
+        "rg_tarih": "2025-12-31",
+        "rg_sayi": "33124",
+        "mukerrer": "5",
+        "baslik": "Harçlar Kanunu Genel Tebliği (Seri No: 99)",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231M5-29.pdf",
+        "not": "Seri No: 98 ile aynı mükerrer sayıda yayımlandı."
+      },
+      {
+        "kaynak": "HKGT98",
+        "rg_tarih": "2025-12-31",
+        "rg_sayi": "33124",
+        "mukerrer": null,
+        "baslik": "2026 Yılında Motorlu Taşıtlar Vergisi Tutarlarına Uygulanacak Yeniden Değerleme Oranı, Her Bir Kağıttan Alınacak Damga Vergisine İlişkin Üst Sınıra Uygulanacak Yeniden Değerleme Oranı ile Maktu Damga Vergisi ve Harç Tutarlarının Yeniden Belirlenmesi Hakkında Karar (Karar Sayısı: 10783)",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/12/20251231-30.pdf",
+        "not": "Maktu harçları 2026 için %18,95 artıran karar; tutarları Tebliğ 98 eki ilan eder (Tebliğ m. 3/3) ve veri o ekten okundu."
+      },
+      {
+        "kaynak": "HMKGAT",
+        "rg_tarih": "2025-10-28",
+        "rg_sayi": "33061",
+        "mukerrer": null,
+        "baslik": "Hukuk Muhakemeleri Kanunu Gider Avansı Tarifesi",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2025/10/20251028-2.htm"
+      }
+    ],
+    "sinirlar": [
+      "Torba kanunlar başlıktan yakalanamaz: 492 ya da 1136 sayılı Kanunu değiştiren hüküm başka adlı bir kanunun içinde olabilir. Öneri (henüz yok): mevzuat.gov.tr'deki 492 ve 1136 kayıtlarının değişiklik listesine haftada bir bakan ek denetim.",
+      "Desenler yalnız fihrist başlığına bakar; tarifeyi dolaylı değiştiren ve başlığında harç ya da tarife adı geçmeyen yayım yakalanmaz.",
+      "Sunucu bulguyu bellekte tutar. Süreç yeniden başlarsa yalnız son 7 gün (derlenme gününden eskisi değil) yeniden taranır; daha eski ve veriye işlenmemiş yayım GitHub nöbetçisinin açtığı issue ile izlenir.",
+      "Faiz ve işçilik kartları da torba kanunları başlıktan yakalayamaz: 3095 sayılı Kanunu değiştiren 7589 sayılı Kanunun adı 'Yargının Etkin ve Verimli İşlemesine Yönelik Bazı Kanunlarda Değişiklik Yapılmasına Dair Kanun'dur ve hiçbir desene uymaz.",
+      "Kıdem tazminatı tavanı Resmî Gazete'de yayımlanmaz (Hazine ve Maliye Bakanlığı genelgesi); nöbetçi tavanın Temmuz değişikliğini fihristten göremez. Bu yüzden faiz ve işçilik kartlarının verisi 'gecerlilik' tarihinden (31.12.2026) sonra kendiliğinden kilitlenir: yeni dönem verisi işlenene kadar hesap kesin toplam vermez."
+    ]
+  }
+}

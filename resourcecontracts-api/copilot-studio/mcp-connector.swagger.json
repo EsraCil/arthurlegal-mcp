@@ -5,7 +5,7 @@
     "description": "No-auth MCP server over the ResourceContracts.org repository of petroleum and mining contracts (api.resourcecontracts.org; NRGI/CCSI, CC BY-SA 4.0). Tools: search_contracts, count_contracts, get_contract_metadata, get_contract_text (paginated by PDF page), get_contract_annotations (curated key clauses), list_countries, list_resources, list_years, list_annotation_categories. Use as a Copilot Studio custom MCP connector.",
     "version": "1.0.0"
   },
-  "host": "machine-sticks-seat-centres.trycloudflare.com",
+  "host": "REPLACE-ME.example.com",
   "basePath": "/",
   "schemes": [
     "https"

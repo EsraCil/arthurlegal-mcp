@@ -391,7 +391,7 @@ class KapaliykenTest(_Temel):
     def _ana_blogu_calistir(self, ortam_ek):
         """server.py __main__ bloğunun TAMAMI (gerçek kod, AST'den); ağır parçalar sahte.
 
-        build, _warm_resident, build_directory ve run sahtedir: arka uç yüklenmez, ağa çıkılmaz,
+        build, _warm_resident, _warm_epdk, build_directory ve run sahtedir: arka uç yüklenmez, ağa çıkılmaz,
         sunucu açılmaz. Döner: run'a verilen araçlar ve anahtar kelimeler, sahte dizin araçları ve
         görünümler, stdout, stderr.
         """
@@ -410,6 +410,7 @@ class KapaliykenTest(_Temel):
             "DIRECTORY_PATH": "/directory/mcp", "INSTRUCTIONS_HEADER": "talimat",
             "_instructions": [], "_tools": araclar, "_loaded": [], "_failed": [],
             "_resources": gorunumler, "build": lambda: None, "_warm_resident": lambda: None,
+            "_warm_epdk": lambda: None,
             "build_directory": lambda: (dizin_araclari, "dizin talimatı", list(gorunumler)),
             "run": lambda tools, **kw: cagrilar.append((list(tools), kw)),
         }

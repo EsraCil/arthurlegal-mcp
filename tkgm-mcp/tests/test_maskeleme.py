@@ -80,7 +80,7 @@ class Sizinti(unittest.TestCase):
         self.assertTrue(any("TCKN" in x for x in kv["maskelenen"]))
         self.assertTrue(any("MALİK" in x for x in kv["maskelenen"]))
         self.assertTrue(any("ÜÇÜNCÜ kişi" in x for x in kv["maskelenmeyen"]))
-        self.assertIn("Arthur Mask", kv["daha_fazlasi"])
+        self.assertIn("ArthurMask", kv["daha_fazlasi"])
 
 
 class Kaliplar(unittest.TestCase):

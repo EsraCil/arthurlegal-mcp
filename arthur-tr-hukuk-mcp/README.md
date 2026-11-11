@@ -9,7 +9,8 @@ Yargıtay · Danıştay · BAM · yerel mahkeme · KYB · Anayasa Mahkemesi · U
 mevzuat (12 tür, madde ağacı, gerekçe) · Resmî Gazete · **Rekabet Kurumu · EPDK · SPK · BDDK ·
 KVKK · BTK · GİB · Sigorta Tahkim Komisyonu**
 
-24 araç. Standart kütüphane; tek opsiyonel bağımlılık `pypdf`. Ücretli arama anahtarı yok
+25 araç. Standart kütüphane; opsiyonel bağımlılıklar `pypdf` (PDF metni) ve `pypdfium2` (taranmış RG eki
+sayfaları). Ücretli arama anahtarı yok
 (Brave / Tavily / OpenRouter gerekmez). Yerel SQLite indeks: FTS5 + trigram + vektör
 (Voyage, OpenAI-uyumlu veya yerel Ollama).
 
@@ -25,8 +26,8 @@ kelime paylaşmadığı kararı da bulabilen bir yerel indeks koyar.
 ## Kurulum
 
 ```bash
-git clone https://github.com/beerbottle90/arthur-tr-hukuk-mcp
-cd arthur-tr-hukuk-mcp
+git clone https://github.com/beerbottle90/arthurlegal-mcp
+cd arthurlegal-mcp/arthur-tr-hukuk-mcp
 pip install pypdf          # opsiyonel ama PDF'ler için gerekli
 python server.py           # stdio
 ```
@@ -48,13 +49,13 @@ HTTP (claude.ai connector, Copilot Studio): `python server.py --transport http -
 | AYM | `aym_ara` `aym_getir` | Kararlar Bilgi Bankası (norm + bireysel) |
 | Uyuşmazlık | `uyusmazlik_ara` `uyusmazlik_getir` | kararlar.uyusmazlik.gov.tr |
 | Mevzuat | `mevzuat_ara` `mevzuat_getir` `mevzuat_icindekiler` `mevzuat_madde_getir` `mevzuat_gerekce` `mevzuat_icinde_ara` | Bedesten mevzuat |
-| Resmî Gazete | `resmi_gazete_fihrist` `resmi_gazete_getir` `resmi_gazete_tara` | resmigazete.gov.tr |
+| Resmî Gazete | `resmi_gazete_fihrist` `resmi_gazete_getir` `resmi_gazete_ek_sayfa` `resmi_gazete_tara` | resmigazete.gov.tr |
 | Kurum | `kurum_karari_ara` `kurum_karari_getir` `kurum_listesi` `spk_bulten_icinde_ara` | 8 kurum, tek arayüz |
 | Yerel indeks | `semantik_ara` `belge_getir` | `data/index.db` |
 | Yardımcı | `hukuk_arastirma_rehberi` `status` | — |
 
 Her sonuç `citation` taşır ve kayıttan üretilir; model esas/karar numarası uydurmaz. Erişilemeyen
-kaynak `error` / `upstream_blocked` / `unavailable` döner — boş liste değil.
+kaynak `error` (çoğu zaman `error_code` ile) ya da `unavailable` döner — boş liste değil.
 
 ### Konu taraması — `resmi_gazete_tara(konu=…)`
 
@@ -175,7 +176,7 @@ asla crawl yapmaz. `flyctl secrets set EMBEDDINGS_API_KEY=…` semantik kanalı 
 ## Test
 
 ```bash
-PYTHONIOENCODING=utf-8 python tests/test_offline.py     # ağ yok, 55 test
+PYTHONIOENCODING=utf-8 python tests/test_offline.py     # ağ yok, 56 test
 ```
 
 ## Lisans

@@ -166,6 +166,9 @@ class StatusProbeTest(unittest.TestCase):
         out = server._t_status({})
         self.assertFalse(out["de_live"]["reachable"])
         self.assertIn("German backend", out["warning"])
+        # The two gesetze-im-internet.de tools run in-process and keep working.
+        self.assertIn("de_norm_getir", out["warning"])
+        self.assertNotIn("every de_ tool", out["warning"])
 
     def test_status_names_the_build_that_answered(self) -> None:
         # v17, v18 and v19 all said "1.1.0"; the image tag tells them apart.
@@ -262,6 +265,14 @@ class ShapingTest(unittest.TestCase):
             fixed = fixed.replace(old, server._RII_CURRENT)
         self.assertNotIn("small beta slice", fixed)
         self.assertIn("84,474", fixed)
+
+    def test_stale_oldp_description_is_corrected(self) -> None:
+        # de-eli 0.5.4, de_oldp_case_search (live text, 2026-11-10).
+        stale = ("It is the only source here that\ncovers STATE courts and the only one with full-text "
+                 "search. Database ODbL v1.0;")
+        fixed = stale.replace(server._OLDP_STALE, server._OLDP_CURRENT)
+        self.assertNotIn("the only one with full-text search", fixed)
+        self.assertIn("de_case_search", fixed)
 
 
 class WarmResidentTest(unittest.TestCase):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MCP server entry point — one endpoint over nine legal-scholarship indexes.
+"""MCP server entry point — one endpoint over ten legal-scholarship sources.
 
 Dependency-free: MCP is implemented in pure standard library (see
 ``lexscholar/mcp_server.py``), so it runs on a stock Python 3.9 — no ``mcp``

@@ -181,7 +181,7 @@ def etkinlestir(tools: Iterable[Any], surumler: Optional[Dict[str, str]] = None,
 def arka_uc_surumleri(yuklenenler: Iterable[Dict[str, Any]]) -> Dict[str, str]:
     """server.py'nin ``_loaded`` listesinden önek → sürüm.
 
-    Sürüm modülün kendi beyanıdır: ``__version__`` (v1.6 sunucuları, ``srv_tr`` 0.5.1 gibi),
+    Sürüm modülün kendi beyanıdır: ``__version__`` (v1.6 sunucuları, ``srv_tr`` 0.6.1 gibi),
     yoksa ``SERVER_VERSION`` (eski sözlük biçimli sunucular), yoksa paketin ``__version__``'ı.
     Modülü olmayan (de-eli vekili) ya da sürüm bildirmeyen önek listeye girmez.
     """
@@ -539,8 +539,14 @@ def _madde_araligi(metin: Any) -> Optional[str]:
 # Dönen metin                                                                  #
 # --------------------------------------------------------------------------- #
 def _donen(deger: Any) -> Dict[str, Any]:
-    """Modele giden metnin kendisi mcpcore._as_text(value): özet onun üzerinden alınır."""
-    metin = mcpcore._as_text(deger)
+    """Modele giden metnin kendisi mcpcore._as_text(value): özet onun üzerinden alınır.
+
+    ContentResult (metin + görüntü bloğu) için modele giden metin bloklarıdır; görüntü baytı kayda girmez."""
+    bloklar = getattr(deger, "mcp_content", None)
+    if isinstance(bloklar, list):
+        metin = "\n".join(b.get("text", "") for b in bloklar if isinstance(b, dict) and b.get("type") == "text")
+    else:
+        metin = mcpcore._as_text(deger)
     return {"sha256": hashlib.sha256(metin.encode("utf-8", "surrogatepass")).hexdigest(),
             "ilk": metin[:ILK_KARAKTER]}
 

@@ -10,20 +10,20 @@ time. One endpoint means one.
 
 How it is put together, and why
 -------------------------------
-The nine standard-library servers are **loaded in-process**, not proxied. Their
+The standard-library servers and the three older ones are **loaded in-process**, not proxied. Their
 tool handlers are called directly, so aggregation costs nothing measurable — and
 the whole thing ships as a single container with no network between the parts.
 de-eli runs on FastMCP and is async, so it is proxied over HTTP when reachable
 (measured at ~15 ms against a ~1,400 ms search: about 1%).
 
 **Every tool is prefixed with its jurisdiction.** This is not cosmetic. Across
-the ten servers `get_act` means five different things, `search_legislation`
-three, `search_acts` three. Merging them unprefixed would route a Spanish query
+the underlying servers `get_act` means six different things, `search_legislation`
+four, `search_acts` three. Merging them unprefixed would route a Spanish query
 to a Finnish server and answer confidently with the wrong country's law — the
 one failure mode this whole package exists to prevent.
 
-**The nine per-server `server_status` tools collapse into one.** Nine tools that
-each answer "am I healthy" is nine ways to ask the same question; `status`
+**The per-server `server_status` tools collapse into one.** A tool per backend that
+each answers "am I healthy" is that many ways to ask the same question; `status`
 answers it once for everything, and reports which backends failed to load rather
 than quietly serving fewer tools.
 
@@ -49,14 +49,18 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcpcore import Dispatcher, McpError, Resource, Tool, run  # noqa: E402
 from tool_titles import annotate  # noqa: E402
 
-__version__ = "1.8.1"
+__version__ = "1.9.3"
 
 # The Claude connector directory listing points here, not at /mcp. Same server,
-# narrower profile: the land-registry tools stay on /mcp only, and the
-# instructions describe the tools instead of directing Claude. Every other tool
-# is the same object on both paths.
+# narrower profile: the land-registry and fee calculator tools and the Official Gazette
+# annex page reader stay on /mcp only, and the instructions describe the tools instead of
+# directing Claude. Every other tool is the same object on both paths.
 DIRECTORY_PATH = "/directory/mcp"
-DIRECTORY_EXCLUDED_PREFIXES: Tuple[str, ...] = ("tkgm",)
+DIRECTORY_EXCLUDED_PREFIXES: Tuple[str, ...] = ("tkgm", "hesap")
+# Single tools kept off the directory. tr_resmi_gazete_ek_sayfa answers with a page image.
+DIRECTORY_EXCLUDED_TOOLS = frozenset(("tr_resmi_gazete_ek_sayfa",))
+# Result keys that name a tool the directory does not list; its copy of the tool drops them.
+DIRECTORY_DROPPED_KEYS: Dict[str, Tuple[str, ...]] = {"tr_resmi_gazete_getir": ("ek_okuma",)}
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Deployed bundle: every backend sits next to this file.
@@ -68,8 +72,8 @@ AL = HERE
 STDLIB_BACKENDS = [
     # Türkiye loads FIRST on purpose: every backend does `import retrieval` by bare
     # name and Python caches the first copy. arthur-tr-hukuk-mcp's retrieval.py is the
-    # same module plus dotless-ı query expansion, so letting it win costs the
-    # others nothing and keeps Turkish queries working.
+    # canonical copy (with dotless-ı query expansion); the other backends here carry it
+    # byte for byte (tests/test_retrieval.py), so edit it there first and copy it over.
     ("tr", os.path.join(AL, "arthur-tr-hukuk-mcp"), "srv_tr",
      "🇹🇷 Türkiye — içtihat + mevzuat + 8 düzenleyici kurum + Resmî Gazete"),
     ("nl", os.path.join(ROOT, "nl-rechtspraak-mcp"), "srv_nl", "🇳🇱 Hollanda — içtihat + mevzuat"),
@@ -92,6 +96,13 @@ STDLIB_BACKENDS = [
     # file paths.
     ("tkgm", os.path.join(ROOT, "tkgm-mcp"), "srv_tkgm",
      "🇹🇷 Tapu-kadastro — canlı parsel (TKGM Parsel Sorgu, dakikada en çok 30 istek), rapor, kroki"),
+    # Fee calculator cards: no files. The code does the arithmetic; amounts and rates come from hesap-mcp/veri, each
+    # row quoting the official text it was taken from (interest rates: the central bank communiques in the Official
+    # Gazette; severance ceiling: the labour ministry table, which the Gazette does not publish). Its only network access is the freshness check
+    # (hesap-mcp/tazelik.py): about once a day it reads the Official Gazette's daily index pages; a new
+    # tariff publication, or an index it could not read, is reported on the result instead of a firm total.
+    ("hesap", os.path.join(ROOT, "hesap-mcp"), "srv_hesap",
+     "🇹🇷 Hesap kartları — avukatlık asgari ücreti, yargı harcı, gider avansı, faiz, kıdem ve ihbar (hesabı kod yapar)"),
     # German statute text from gesetze-im-internet.de. NeuRIS, behind the proxied
     # de-eli tools, lacks the core codes in its test phase (BGB, HGB, StGB, ZPO ...),
     # so the text of a norm comes from here: same de_ prefix, different tool names.
@@ -241,7 +252,7 @@ class _DeEliProxy:
     A session does not outlive the de-eli process. The MCP Streamable HTTP spec
     answers a request carrying an unknown session id with HTTP 404, after which
     the client must initialize again. Before this was handled, one de-eli restart
-    left all fifteen de_ tools failing with "Not Found" until the aggregator itself
+    left all fifteen de-eli tools failing with "Not Found" until the aggregator itself
     restarted (observed live on 2026-10-09).
     """
 
@@ -351,6 +362,11 @@ _RII_STALE = (
 _RII_CURRENT = (
     "like NeuRIS's `/v1/rechtsprechung` (de_case_search), which since 2026 carries the same "
     "courts from 2010 with full-text search (84,474 decisions on 2026-10-09)")
+# de-eli 0.5.4 also calls OLDP "the only one with full-text search"; for the federal courts that
+# sent full-text questions to the community source instead of NeuRIS.
+_OLDP_STALE = "and the only one with full-text search."
+_OLDP_CURRENT = ("and its only full-text search for them; for the federal courts NeuRIS's "
+                 "de_case_search searches full text too.")
 
 
 def _de_call(proxy: _DeEliProxy, name: str, args: Dict[str, Any]) -> Any:
@@ -544,6 +560,7 @@ def _load_de_eli(url: str) -> None:
         description = spec.get("description", "")
         for stale in _RII_STALE:
             description = description.replace(stale, _RII_CURRENT)
+        description = description.replace(_OLDP_STALE, _OLDP_CURRENT)
         _tools.append(Tool(name, "[%s] %s" % (label, description),
                            spec.get("inputSchema", {"type": "object", "properties": {}}),
                            make(name)))
@@ -587,6 +604,19 @@ def _warm_resident() -> Optional[threading.Thread]:
     thread = threading.Thread(target=warm, name="resident-warmup", daemon=True)
     thread.start()
     return thread
+
+
+def _warm_epdk() -> Optional[threading.Thread]:
+    """Warm the EPDK decision lists once, slowly, in the background (F-067).
+
+    The first EPDK search on a cold cache fetched ~126 category lists back to back (~40 s). The
+    pacing, the on/off switch (EPDK_ISITMA; default on only under MCP_TRANSPORT=http) and the
+    refresh of stale lists live in arthur-tr-hukuk-mcp/sources/epdk.py.
+    """
+    mod = sys.modules.get("sources.epdk")
+    if mod is None or not callable(getattr(mod, "acilista_isit", None)):
+        return None
+    return mod.acilista_isit()
 
 
 def _runtime() -> Dict[str, Any]:
@@ -662,7 +692,8 @@ def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any
         **_runtime(),
         "backends_loaded": loaded,
         "tools_exposed": len(_tools) if exposed is None else exposed,
-        "note": "Every tool is prefixed with its jurisdiction (%s). Across the underlying "
+        "note": "Every research tool is prefixed with its jurisdiction or source (%s); `status` "
+                "and the `al_` desk tools belong to the endpoint itself. Across the underlying "
                 "servers `get_act` means six different things, so the prefix is "
                 "what keeps a Spanish question from being answered with Finnish law."
                 % ", ".join("%s_" % p for p in prefixes),
@@ -689,7 +720,7 @@ def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any
         out["backend_status"] = detail
     # de-eli is a separate process, so "loaded at boot" says nothing about now.
     # Probe it live: a dead or wedged German backend must show up here instead of
-    # as fifteen tools that each fail on their own.
+    # as de-eli tools that each fail on their own.
     if _de_proxy is not None:
         try:
             out["de_live"] = {"reachable": True, "tools": _de_proxy.ping(),
@@ -697,7 +728,9 @@ def _status(exclude: Tuple[str, ...] = (), exposed: Optional[int] = None) -> Any
         except Exception as exc:  # noqa: BLE001
             out["de_live"] = {"reachable": False, "error": "%s: %s" % (type(exc).__name__, exc)}
             out["warning"] = (out.get("warning", "") + " The German backend is loaded but "
-                              "not answering: every de_ tool will fail until it is back.").strip()
+                              "not answering: its de_ tools (de-eli) will fail until it is back; "
+                              "de_norm_getir and de_gesetz_ara (gesetze-im-internet.de) are not "
+                              "affected.").strip()
     return _scrub_status(out) if _public_status() else out
 
 
@@ -748,7 +781,8 @@ except ImportError:
 # (the tkgm_ tools below are on this endpoint).
 MASA_TOOLS = ("tr_mevzuat_madde_getir", "tr_mevzuat_ara", "tr_mevzuat_icindekiler", "tr_ictihat_ara", "tr_ictihat_getir",
               "tr_kurum_karari_ara", "tr_kurum_karari_getir", "tr_semantik_ara", "tr_belge_getir",
-              "tr_spk_bulten_icinde_ara", "status")
+              "tr_spk_bulten_icinde_ara", "status", "hesap_kalemleri", "hesap_vekalet_ucreti", "hesap_yargi_harci",
+              "hesap_faiz", "hesap_iscilik_alacagi")
 REMOTE_MODULES = {
     "tapu": {"durum": "claude"}, "beyin": {"durum": "masaustu"}, "mask": {"durum": "masaustu"},
     "uyap": {"durum": "masaustu"}, "donna": {"durum": "hazir"},
@@ -774,7 +808,15 @@ def _attach_views() -> None:
         meta = al_arayuz.arac_meta(tool.name)
         if meta:
             tool.meta = meta
-    tanim = al_arayuz.masa_araci()
+    # "uzak": in Claude Desktop the same chat may also have the lawyer's local install (arthurlegal-yerel), whose
+    # desk runs memory, masking and UYAP and is the only one that keeps the query history: Claude gives a desk
+    # view a fresh browser store in every conversation and this endpoint stores no query. Which desk opens is not
+    # left to the model's choice: with arthurlegal-yerel in the required connector list the desk is not opened
+    # and the result sends Claude to the local al_masasi. "Connected" does not mean that tool is callable (Claude
+    # Desktop lets a user switch a server's tools off one by one, and they stay off; the classic interface has no
+    # local desk): the note then tells Claude to open this desk with uzakta_kal=true and say why, and the desk
+    # itself never hands over twice in one conversation.
+    tanim = al_arayuz.masa_araci("uzak")
     able = [t.name for t in _tools if t.name in MASA_TOOLS]
     # The chat transcript sits behind the full-screen desk and the desk cannot read it: Claude hands
     # the answer over with al_masaya_yaz and the host reopens the desk with it. Main endpoint only.
@@ -786,7 +828,8 @@ def _attach_views() -> None:
         able.append("al_masada_basla")
     _tools.append(Tool(
         tanim["name"], tanim["description"], tanim["inputSchema"],
-        lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum"), args.get("baglayicilar")),
+        lambda args: al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES, args.get("bolum"), args.get("baglayicilar"),
+                                           yerele_devret=args.get("uzakta_kal") is not True),
         meta=al_arayuz.arac_meta("al_masasi")))
     if teslim:
         def hand_over(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -794,7 +837,7 @@ def _attach_views() -> None:
                 return al_arayuz.teslim_cevabi(args, al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES))
             except al_arayuz.TeslimHatasi as exc:
                 raise McpError(str(exc)) from None
-        tanim = teslim()
+        tanim = teslim("uzak")
         _tools.append(Tool(tanim["name"], tanim["description"], tanim["inputSchema"], hand_over,
                            meta=al_arayuz.arac_meta("al_masaya_yaz")))
     if basla:
@@ -804,7 +847,7 @@ def _attach_views() -> None:
                 return al_arayuz.baslangic_cevabi(args, al_arayuz.masa_cevabi("uzak", able, REMOTE_MODULES))
             except al_arayuz.TeslimHatasi as exc:
                 raise McpError(str(exc)) from None
-        tanim = basla()
+        tanim = basla("uzak")
         _tools.append(Tool(tanim["name"], tanim["description"], tanim["inputSchema"], start,
                            meta=al_arayuz.arac_meta("al_masada_basla")))
     for k in al_arayuz.kaynaklar():
@@ -814,11 +857,11 @@ def _attach_views() -> None:
 
 INSTRUCTIONS_HEADER = """MADDE ATFI KURALI: Bir kanun maddesini (not, sözleşme, protokol, dilekçe veya karar gövdesi dâhil) yazmadan önce tr_mevzuat_madde_getir(number="6769", madde_no="120") ile metnini ve başlığını çekin; yanıttaki citation alanını birebir kullanın ve maddeye yüklediğiniz içeriğin (hakkın sahibi, şart, süre, sonuç) başlık ve metinle örtüştüğünü kontrol edin. Çekilemeyen maddeyi ezberden yazmayın; açıkça "UYARI: veri çekilemedi, teyidiniz gerekli: https://www.mevzuat.gov.tr/" yazın.
 
-CANLI VERİ: Araç veri getiremezse (hata, `unavailable`, `upstream_blocked`, onay yok) hafızadan doldurmayın; aynı UYARI satırını aracın `source_url`'si ya da kaynağın resmî giriş sayfasıyla yazın; bağlantı uydurulmaz, "[doğrulayın]" etiketi kullanılmaz.
+CANLI VERİ: Araç veri getiremezse (hata, `error_code`, `unavailable`, `upstream_blocked`, onay yok) hafızadan doldurmayın; aynı UYARI satırını aracın `source_url`'si ya da kaynağın resmî giriş sayfasıyla yazın; bağlantı uydurulmaz, "[doğrulayın]" etiketi kullanılmaz.
 
-ArthurLegal — 15 yargı çevresi tek uçta.
+ArthurLegal — 12 yargı çevresi ve 5 ek kaynak (LEI, doktrin, sözleşme, tapu-kadastro, hesap kartları) tek uçta.
 
-ARAÇ ÖNEKLERİ. Her araç ait olduğu yargı çevresinin önekini taşır:
+ARAÇ ÖNEKLERİ. Her araştırma aracı ait olduğu yargı çevresinin ya da kaynağın önekini taşır:
 `tr_` Türkiye (içtihat, mevzuat, EPDK/Rekabet/SPK/BDDK/KVKK/BTK/GİB/Sigorta Tahkim,
 Resmî Gazete, semantik arşiv; KİK/Sayıştay/TÜRKPATENT/İSTAÇ YOK — resmi uçları cevap vermiyor) · `nl_` Hollanda · `pl_` Polonya ·
 `at_` Avusturya · `ie_` İrlanda · `fi_` Finlandiya · `es_` İspanya · `uk_` Birleşik Krallık ·
@@ -826,7 +869,10 @@ Resmî Gazete, semantik arşiv; KİK/Sayıştay/TÜRKPATENT/İSTAÇ YOK — resm
 `gleif_` tüzel kişi kimliği (LEI) · `scholar_` doktrin · `contracts_` sözleşme emsali ·
 `tkgm_` tapu-kadastro: parseli TKGM Parsel Sorgu'dan canlı getirir (il/ilçe/mahalle + ada/parsel,
 koordinat ya da yer adı; dosya İSTEMEYİN), rapor, ölçü, kroki; ilk canlı çağrıda onay kartı döner,
-önce `tkgm_baslangic`.
+önce `tkgm_baslangic`. `hesap_` hesap kartları: avukatlık asgari ücreti, yargı harcı, gider avansı, faiz dökümü
+(kanuni, ticari temerrüt), kıdem ve ihbar tazminatı (brüt); hesabı kod yapar, tutarı ve oranı kendiniz
+hesaplamayın; cevapta aracın tazelik satırını aynen yazın.
+`status` ve `al_` ArthurLegal Masası araçları bu uca aittir, bir yargı çevresine değil.
 
 TÜRKİYE İÇİN GİRİŞ NOKTASI: karmaşık Türk hukuku sorusunda önce `tr_hukuk_arastirma_rehberi`
 (hangi soru için hangi araç), sonra `tr_kurum_listesi` (8 kurumun filtreleri).
@@ -850,9 +896,11 @@ if al_arayuz is not None and getattr(al_arayuz, "TESLIM_KURALI", None):
     INSTRUCTIONS_HEADER = _head + "\n\n" + al_arayuz.TESLIM_KURALI + _sep + _rest
 
 
-# Directory profile: describes what the tools return, in English, and gives no
-# orders to Claude (the directory rejects instructions that tell Claude how to
-# behave). The facts are the same as in INSTRUCTIONS_HEADER.
+# Directory profile header: describes what the tools return, in English, without the
+# citation rule that opens INSTRUCTIONS_HEADER. The backend sections that follow it
+# (build_directory) are the same as on /mcp, in their own language and with their own
+# usage rules; only the Turkish one loses its opening citation rule. The facts are the
+# same as in INSTRUCTIONS_HEADER.
 DIRECTORY_INSTRUCTIONS_HEADER = """ArthurLegal MCP: read-only legal research across twelve jurisdictions, plus legal-entity identity (LEI), open-access legal scholarship and published resource contracts, behind one endpoint.
 
 TOOL PREFIXES. Each tool name starts with the jurisdiction or source it answers for:
@@ -861,7 +909,7 @@ The prefix is part of the meaning: `get_act` is a different operation in differe
 
 CITATIONS. Results carry a `citation` field built from the official record, and a `source_url` where the source provides one; both are meant to be quoted as returned. For a Turkish statutory article, `tr_mevzuat_madde_getir` returns the article text, its heading and a ready citation in one call.
 
-UNAVAILABLE SOURCES. When an official source cannot be reached, a tool returns an error or a result marked `unavailable` / `upstream_blocked`, together with the official source page. That means the answer is missing, not that no such law or decision exists. `status` shows which jurisdictions are loaded and how much each has indexed.
+UNAVAILABLE SOURCES. When an official source cannot be reached, a tool returns an error (`error`, `error_code`) or a result marked `unavailable` / `upstream_blocked`, together with the official source page. That means the answer is missing, not that no such law or decision exists. `status` shows which jurisdictions are loaded and how much each has indexed.
 
 INTERACTIVE VIEWS. In clients that render MCP Apps, `tr_mevzuat_madde_getir` shows its result as an article card, `tr_ictihat_ara` as a list of decisions, and `al_masasi` opens the ArthurLegal desk (Turkish interface: legislation, case law and regulator decisions in one panel). Other clients receive the same data as text.
 
@@ -871,7 +919,19 @@ Each section below describes one jurisdiction's sources and citation conventions
 
 
 def _directory_excluded(name: str) -> bool:
-    return any(name.startswith(p + "_") for p in DIRECTORY_EXCLUDED_PREFIXES)
+    return name in DIRECTORY_EXCLUDED_TOOLS or any(name.startswith(p + "_") for p in DIRECTORY_EXCLUDED_PREFIXES)
+
+
+def _directory_handler(name: str, handler: Callable[[Dict[str, Any]], Any]) -> Callable[[Dict[str, Any]], Any]:
+    """The handler as the directory serves it: without result keys that point at /mcp-only tools."""
+    drop = DIRECTORY_DROPPED_KEYS.get(name)
+    if not drop:
+        return handler
+
+    def without(args: Dict[str, Any]) -> Any:
+        out = handler(args)
+        return {k: v for k, v in out.items() if k not in drop} if isinstance(out, dict) else out
+    return without
 
 
 def _directory_section(prefix: str, text: str) -> str:
@@ -888,8 +948,8 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
     # the directory takes no instructions. There the desk keeps the answer in the chat and the tools
     # keep their own cards (article, decision list); copies, because Tool has __slots__.
     kart = getattr(al_arayuz, "kart_meta", None) if al_arayuz is not None else None
-    tools = [Tool(t.name, t.description, t.input_schema, t.handler, meta=kart(t.name) if kart else t.meta,
-                  title=t.title, annotations=t.annotations)
+    tools = [Tool(t.name, t.description, t.input_schema, _directory_handler(t.name, t.handler),
+                  meta=kart(t.name) if kart else t.meta, title=t.title, annotations=t.annotations)
              for t in _tools
              if t.name not in ("status", "al_masasi", "al_masaya_yaz", "al_masada_basla")
              and not _directory_excluded(t.name)]
@@ -903,8 +963,11 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
     desk = next((t for t in _tools if t.name == "al_masasi"), None)
     if desk is not None:
         able = [t.name for t in tools if t.name in MASA_TOOLS]
+        # Own description and schema: no pointer to another server, no hand-over sentence (those tools are not
+        # here), no uzakta_kal and no required list; the directory desk never redirects to another server.
+        dizin = al_arayuz.masa_araci("dizin")
         directory_desk = Tool(
-            desk.name, desk.description, desk.input_schema,
+            desk.name, dizin["description"], dizin["inputSchema"],
             lambda args: al_arayuz.masa_cevabi("uzak", able, DIRECTORY_MODULES, args.get("bolum"),
                                                args.get("baglayicilar")),
             meta=desk.meta)
@@ -918,6 +981,7 @@ def build_directory() -> Tuple[List[Tool], str, List[Resource]]:
 if __name__ == "__main__":
     build()
     _warm_resident()
+    _warm_epdk()
     text = INSTRUCTIONS_HEADER + "\n\n" + "\n\n".join(_instructions)
     directory_tools, directory_text, directory_views = build_directory()
     sys.stderr.write("arthurlegal-mcp: %d backend, %d araç (%s: %d)"

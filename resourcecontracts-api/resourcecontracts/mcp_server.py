@@ -60,12 +60,18 @@ def _search_kwargs(args: Dict[str, Any]) -> Dict[str, Any]:
 # upstream index scores mostly on the title and party names.
 _POOL_MULTIPLIER = 4
 _POOL_MAX = 120
+# A small page still reranks a real pool. For a one-word query the upstream gives every hit the same
+# score (2026-11-10, "mining": 5,126 hits, all 0.45166105), so its order says nothing; per_page=3 left
+# 12 candidates, none of them a mining contract (PSAs, timber concessions). The first ones in its order
+# sit at positions 24-31.
+_POOL_MIN = 40
 
 
 def _t_search_contracts(args: Dict[str, Any]) -> Any:
     per_page = int(args.get("per_page", 20))
-    rank = bool(args.get("rerank", True))
-    pool = min(max(per_page * _POOL_MULTIPLIER, per_page), _POOL_MAX) if rank else per_page
+    # An empty query browses: nothing to rerank, so the page is the page (a wider pool came back whole).
+    rank = bool(args.get("rerank", True)) and bool((args.get("query") or "").strip())
+    pool = min(max(per_page * _POOL_MULTIPLIER, per_page, _POOL_MIN), _POOL_MAX) if rank else per_page
 
     out = _client.search(
         args.get("query", ""),
@@ -74,7 +80,7 @@ def _t_search_contracts(args: Dict[str, Any]) -> Any:
         group=args.get("group", "metadata"),
         **_search_kwargs(args),
     )
-    if not rank or not isinstance(out, dict) or not (args.get("query") or "").strip():
+    if not rank or not isinstance(out, dict):
         return out
 
     ranked = semantic_rerank(
@@ -190,7 +196,8 @@ TOOLS: List[Dict[str, Any]] = [
             "contracts. Combine a free-text query with filters (country, resource, "
             "year, contract_type, document_type, language, company_name, "
             "corporate_group, annotation_category, annotated). Returns total, "
-            "country/year/resource facets, and results (id, name, year_signed, "
+            "country/year/resource facets (distinct values among the fetched "
+            "candidates, not counts), and results (id, name, year_signed, "
             "contract_type, resource, countries, language). Use id with "
             "get_contract_metadata / get_contract_text / get_contract_annotations."
         ),

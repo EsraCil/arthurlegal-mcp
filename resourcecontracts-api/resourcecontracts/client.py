@@ -50,6 +50,17 @@ class ResourceContractsError(RuntimeError):
     """Raised for transport errors or non-2xx / invalid API responses."""
 
 
+def _facet_values(raw: Any) -> Any:
+    """A facet as the list of its distinct values.
+
+    The API deduplicates the values of the hits it returned and keeps their positions, so a facet with
+    gaps arrives as an object -- {"0": "ST", "7": "CD"} -- that reads like counts. They are not counts.
+    """
+    if isinstance(raw, dict):
+        return list(raw.values())
+    return raw
+
+
 class ResourceContractsClient:
     """Thin, polite client over the ResourceContracts.org public API."""
 
@@ -149,7 +160,8 @@ class ResourceContractsClient:
             (``"metadata"``, ``"text"``, ``"annotations"`` or a ``|``-joined mix).
 
         Returns ``{"total", "from", "per_page", "facets": {country, year,
-        resource}, "results": [...]}``. Each hit carries id, name, year_signed,
+        resource}, "results": [...]}``. A facet is the list of distinct values among the hits of this
+        page (no counts). Each hit carries id, name, year_signed,
         contract_type, document_type, resource, countries, language, ...
         """
         params = {
@@ -177,9 +189,9 @@ class ResourceContractsClient:
             "from": from_,
             "per_page": per_page,
             "facets": {
-                "country": data.get("country"),
-                "year": data.get("year"),
-                "resource": data.get("resource"),
+                "country": _facet_values(data.get("country")),
+                "year": _facet_values(data.get("year")),
+                "resource": _facet_values(data.get("resource")),
             },
             "results": data.get("results") or [],
         }

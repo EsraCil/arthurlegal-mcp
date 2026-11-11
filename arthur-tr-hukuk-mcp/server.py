@@ -16,7 +16,8 @@ BDDK, Sigorta Tahkim — and puts a local FTS5 + vector index behind them
 so a question asked in plain Turkish finds a decision that shares none of its
 words.
 
-Standard library only. ``pypdf`` is the one optional dependency (PDF text).
+Standard library only. Optional: ``pypdf`` (PDF text) and ``pypdfium2`` (scanned Official
+Gazette annex pages that are not plain JPEG).
 
 Tool families
 -------------
@@ -48,7 +49,7 @@ import sources  # noqa: E402
 from sources import bedesten_ictihat, bedesten_mevzuat, anayasa, uyusmazlik, resmi_gazete, spk  # noqa: E402
 from textx import HAS_PYPDF  # noqa: E402
 
-__version__ = "0.5.1"
+__version__ = "0.7.0"
 INDEX_PATH = os.environ.get("INDEX_PATH") or os.path.join(HERE, "data", "index.db")
 
 _index: Optional[retrieval.Index] = None
@@ -271,11 +272,24 @@ def _triyaj_durum() -> Dict[str, Any]:
     return triyaj.kunye()
 
 
+def _ek_durumu(idx) -> Optional[Dict[str, Any]]:
+    """Açılışta gömülü indeksin üstüne işlenen ekler (kök indeks_ek.py, start.sh): dosya ve belge sayısı,
+    en yeni ekin tarihi, atlanan dosya. Ek yoksa None: status bugünkü gibi kalır."""
+    try:
+        deger = json.loads(idx.get_state("ek", "") or "null")
+    except ValueError:
+        return None
+    return deger if isinstance(deger, dict) else None
+
+
 def t_status(args: Dict[str, Any]) -> Any:
     idx = index()
     by_kurum = {}
     try:
-        for row in idx.db.execute("SELECT subject, COUNT(*) AS n, MIN(date) AS d0, MAX(date) AS d1 FROM docs GROUP BY subject"):
+        # NULLIF: a record with no date (EPDK 8, KVKK 1; the source gives none) sorts first and
+        # made the whole range start at "".
+        for row in idx.db.execute("SELECT subject, COUNT(*) AS n, COALESCE(MIN(NULLIF(date, '')), '') AS d0, "
+                                  "MAX(date) AS d1 FROM docs GROUP BY subject"):
             by_kurum[row["subject"] or "?"] = {"docs": row["n"], "from": row["d0"], "to": row["d1"]}
     except Exception:  # noqa: BLE001
         pass
@@ -290,6 +304,9 @@ def t_status(args: Dict[str, Any]) -> Any:
         "rate_limits": {"bedesten": "10 istek / 30 sn (yerel kova: %s sn/istek)" % os.environ.get("BEDESTEN_RATE_REFILL_S", "3.5")},
         "note": "Yüklenememiş kaynak = ERİŞİLEMEZ, boş değil. status'u sonuçlar ince göründüğünde çağırın.",
     }
+    ek = _ek_durumu(idx)
+    if ek:
+        out["local_index"]["index_updates"] = ek
     return out
 
 
@@ -321,6 +338,8 @@ GUIDE = """arthur-tr-hukuk-mcp — hangi soru için hangi araç
    Kuruma özel filtreler: kurum_listesi. Metin: kurum_karari_getir(kurum, id)
    SPK bülteni içinde: spk_bulten_icinde_ara(bulten="2026/27", query)
    Yayım teyidi ve RG künyesi: resmi_gazete_fihrist(date) / resmi_gazete_tara(query, date_from, date_to)
+   Ekler (tarife, cetvel, form): resmi_gazete_getir(url) sayfadaki ek bağlantılarını 'ekler' olarak verir;
+     ek PDF'inde 'taranmis_sayfalar' metin katmanı olmayan sayfalardır, tutarları metinde YOKTUR.
    Konu taraması: resmi_gazete_tara(konu="enerji"|"rekabet"|"vergi"|"icra", date_from, date_to)
      Yerel, ağsız, ücretsiz bir ön eleme. Başlıkta konu adı geçmese de yakalar —
      "Konkordato Gider Avansı Tarifesi" icradır ama 'icra' yazmaz. Etiketli gövdede
@@ -409,7 +428,12 @@ def build_tools() -> List[Tool]:
              mv.WITHIN_SCHEMA, _wrap(mv.search_within)),
         Tool("resmi_gazete_fihrist", "Bir günün Resmî Gazete fihristi (bölüm + başlık + link). Kurul kararlarının yayım teyidi.",
              rg.SOURCE.search_schema, _wrap(rg.fihrist)),
-        Tool("resmi_gazete_getir", "Resmî Gazete belge metni (fihrist url'sinden).", rg.SOURCE.get_schema, _wrap(rg.get)),
+        Tool("resmi_gazete_getir", "Resmî Gazete belge metni (fihrist url'sinden). HTML sayfada ek bağlantıları "
+             "'ekler' olarak döner; ek PDF'inde sayfa sayısını ve metin katmanı olmayan (taranmış) sayfaları "
+             "'taranmis_sayfalar' olarak bildirir.", rg.SOURCE.get_schema, _wrap(rg.get)),
+        Tool("resmi_gazete_ek_sayfa", "Resmî Gazete ek PDF'inin TEK sayfası (tarife, cetvel, form). Metni olan "
+             "sayfa metin döner; taranmış sayfa görüntü olarak döner, tutarları görüntüden siz okursunuz. "
+             "Yalnız www.resmigazete.gov.tr adresleri.", rg.EK_SAYFA_SCHEMA, _wrap(rg.ek_sayfa)),
         Tool("resmi_gazete_tara", "Tarih aralığında (≤60 gün) fihrist tarar; gün başına bir istek. "
              "query harfi harfine arar; konu ise yerel bir ön eleme ile başlıkta konu adı geçmeyen "
              "kalemleri de yakalar ('Katı Yakıtların Kontrolü Yönetmeliği' -> enerji). En az biri gerekir.",
@@ -467,7 +491,7 @@ KİK, Sayıştay, TÜRKPATENT ve İSTAÇ bilinçli olarak YOK: resmi uçları ç
 reCAPTCHA, DNS). Bu kurumlar sorulursa bunu söyleyin; sonuç uydurmayın.
 
 İLK ÇAĞRI. Karmaşık soruda önce `hukuk_arastirma_rehberi`; sonuçlar ince göründüğünde `status`. Yüklenememiş
-kaynak ERİŞİLEMEZ demektir, "karar yok" demek değildir. `unavailable: true` veya `upstream_blocked: true`
+kaynak ERİŞİLEMEZ demektir, "karar yok" demek değildir. `unavailable: true`, `upstream_blocked: true` ya da `error` / `error_code`
 taşıyan yanıtı boş sonuç gibi yorumlamayın; bilginin ardından "UYARI: veri çekilemedi, teyidiniz gerekli: <bağlantı>" yazın.
 
 TEYİT BAĞLANTISI. Araç o belge için `source_url` döndürdüyse o adres; döndürmediyse kaynağın resmî giriş sayfası:

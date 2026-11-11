@@ -20,11 +20,15 @@ Citation contract: ``EPDK, 26.12.2024 tarihli ve 13134 sayılı Kurul Kararı (R
 
 from __future__ import annotations
 
+import os
+import queue
 import re
+import sys
+import threading
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from net import Http, HttpError
+from net import Http, HttpError, TokenBucket
 from textx import OLE_MAGIC, doc_to_text, html_to_text, iso_tarih, paginate, pdf_to_text, strip_tags, count_hits
 from sources import Source
 
@@ -50,11 +54,141 @@ def _fresh(store: Dict[str, Any], key: str):
     return None
 
 
+# --------------------------------------------------------------------------- #
+# Arka planda ısıtma (F-067)
+# --------------------------------------------------------------------------- #
+# Soğuk önbellekte ilk arama beş piyasa sayfasını ve ~126 kategoriyi art arda çekiyordu: ~40 sn, istemcinin
+# zaman aşımına yakın. Barındırılan sunucu açılıştan sonra tek bir arka plan işçisiyle listeyi BİR KEZ,
+# iki istek arasında ISITMA_ARALIGI saniye bekleyerek çeker (makine başına ~131 istek, ~9 dk; iki makine
+# toplamı dakikada en çok 30 istek, TKGM için seçilen sınırla aynı). Süresi
+# (_TTL) geçen kayıt aramada bekletilmeden verilir ve aynı işçi onu aynı hızla tazeler: tazeleme yalnız
+# EPDK arandığında olur, kendi kendine yinelenmez. Kayıt _BAYAT_SINIR'dan eskiyse ya da işçi yoksa (yerel
+# kurulum, crawl.py, testler) eski davranış sürer: arama listeyi kendisi çeker. Üst üste _HATA_SINIRI
+# hatada işçi sıradaki işleri bırakır; site yanıt vermezken istek yağdırmaz.
+ISITMA_ARALIGI = 4.0
+_BAYAT_SINIR = 24 * 3600
+_HATA_SINIRI = 3
+
+
+class _Tazeleyici:
+    """Tek arka plan işçisi. Aynı işi iki kez sıraya almaz; istekler arasını kova açar."""
+
+    def __init__(self, aralik: float, log) -> None:
+        self.kova = TokenBucket(capacity=1, refill_s=max(float(aralik), 0.001), max_wait=3600)
+        self.sira: "queue.Queue[Tuple[str, ...]]" = queue.Queue()
+        self.bekleyen: set = set()
+        self.kilit = threading.Lock()
+        self.log = log
+        self.ardisik_hata = 0
+        self.thread: Optional[threading.Thread] = None
+
+    def ekle(self, is_: Tuple[str, ...]) -> None:
+        with self.kilit:
+            if is_ in self.bekleyen:
+                return
+            self.bekleyen.add(is_)
+        self.sira.put(is_)
+
+    def calis(self) -> None:
+        while True:
+            self._yap(self.sira.get())
+
+    def bosalt(self) -> None:
+        """Sıradaki işleri bu iş parçacığında bitirir (testler)."""
+        while True:
+            try:
+                is_ = self.sira.get_nowait()
+            except queue.Empty:
+                return
+            self._yap(is_)
+
+    def _yap(self, is_: Tuple[str, ...]) -> None:
+        try:
+            if is_[0] == "piyasa":
+                market = is_[1]
+                if _fresh(_tree, market) is None:
+                    self.kova.acquire()
+                    _kategorileri_cek(market)
+                for c in _tree[market][1]:
+                    if _fresh(_lists, c["id"]) is None:
+                        self.ekle(("liste", c["id"], market, c["label"], c["path"]))
+            elif _fresh(_lists, is_[1]) is None:
+                self.kova.acquire()
+                _listeyi_cek(*is_[1:])
+            self.ardisik_hata = 0
+        except Exception as exc:  # noqa: BLE001 - ısıtma bir iyileştirme; hata yalnız aramanın kendisinin çekmesi demek
+            self.ardisik_hata += 1
+            self.log("epdk ısıtma %s %s: %s" % (is_[0], is_[1], exc))
+            if self.ardisik_hata >= _HATA_SINIRI:
+                self._birak()
+        finally:
+            with self.kilit:
+                self.bekleyen.discard(is_)
+
+    def _birak(self) -> None:
+        birakilan = 0
+        while True:
+            try:
+                is_ = self.sira.get_nowait()
+            except queue.Empty:
+                break
+            birakilan += 1
+            with self.kilit:
+                self.bekleyen.discard(is_)
+        self.ardisik_hata = 0
+        self.log("epdk ısıtma: üst üste %d hata, sıradaki %d iş bırakıldı" % (_HATA_SINIRI, birakilan))
+
+
+_isci: Optional[_Tazeleyici] = None
+_isci_kilit = threading.Lock()
+
+
+def isit(aralik: float = ISITMA_ARALIGI, log=None) -> Optional[threading.Thread]:
+    """İşçiyi başlatır (bir kez) ve beş piyasanın listesini ısıtma sırasına koyar."""
+    global _isci
+    with _isci_kilit:
+        if _isci is None:
+            _isci = _Tazeleyici(aralik, log or (lambda m: sys.stderr.write(m + "\n")))
+            _isci.thread = threading.Thread(target=_isci.calis, name="epdk-isitma", daemon=True)
+            _isci.thread.start()
+        for m in PAGES:
+            _isci.ekle(("piyasa", m))
+        return _isci.thread
+
+
+def acilista_isit(ortam: Optional[Dict[str, str]] = None) -> Optional[threading.Thread]:
+    """Sunucu açılışında çağrılır. EPDK_ISITMA=0 kapatır, =1 her taşımada açar; ayar yoksa yalnız barındırılan
+    HTTP sunucusunda (MCP_TRANSPORT=http) açıktır: yerel stdio kurulumu her açılışta EPDK'ya istek atmaz."""
+    ortam = os.environ if ortam is None else ortam
+    ayar = (ortam.get("EPDK_ISITMA") or "").strip()
+    if ayar == "0" or (ayar != "1" and ortam.get("MCP_TRANSPORT") != "http"):
+        return None
+    return isit()
+
+
+def _onbellekten(store: Dict[str, Any], key: str, is_: Tuple[str, ...]):
+    """Taze kayıt; yoksa işçi varken _BAYAT_SINIR'dan genç bayat kayıt (işçi tazeler); yoksa None."""
+    hit = store.get(key)
+    if not hit:
+        return None
+    yas = time.time() - hit[0]
+    if yas < _TTL:
+        return hit[1]
+    if _isci is not None and yas < _BAYAT_SINIR:
+        _isci.ekle(is_)
+        return hit[1]
+    return None
+
+
 def categories(market: str) -> List[Dict[str, str]]:
     """Category leaves of one market page, with their accordion path as context."""
-    cached = _fresh(_tree, market)
+    cached = _onbellekten(_tree, market, ("piyasa", market))
     if cached is not None:
         return cached
+    return _kategorileri_cek(market)
+
+
+def _kategorileri_cek(market: str) -> List[Dict[str, str]]:
     html = _http.get_text(PAGES[market], headers={"X-Requested-With": ""})
     out: List[Dict[str, str]] = []
     path: List[str] = []
@@ -74,9 +208,13 @@ def categories(market: str) -> List[Dict[str, str]]:
 
 
 def decisions(fid: str, market: str = "", category: str = "", path: str = "") -> List[Dict[str, Any]]:
-    cached = _fresh(_lists, fid)
+    cached = _onbellekten(_lists, fid, ("liste", fid, market, category, path))
     if cached is not None:
         return cached
+    return _listeyi_cek(fid, market, category, path)
+
+
+def _listeyi_cek(fid: str, market: str = "", category: str = "", path: str = "") -> List[Dict[str, Any]]:
     data = _http.post_json("/Detay/GetFastAccessList", {"fId": fid},
                            headers={"X-Requested-With": "XMLHttpRequest", "Referer": BASE + PAGES.get(market, "/")})
     out: List[Dict[str, Any]] = []

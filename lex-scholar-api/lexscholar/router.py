@@ -1,6 +1,6 @@
 """Deterministic source router — pick the 2-3 sources that fit the question.
 
-The point of this module is that a query should **not** hit all nine sources.
+The point of this module is that a query should **not** hit all eight discovery sources.
 Blind fan-out is slow, rude to the upstreams, and would burn OpenAlex's metered
 budget (~100 anonymous searches/day) on questions DOAJ answers for free.
 

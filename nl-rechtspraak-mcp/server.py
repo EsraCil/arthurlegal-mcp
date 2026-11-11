@@ -12,6 +12,7 @@ Case-law search needs an index first:
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict
 
 from mcpcore import McpError, Tool, run
@@ -32,7 +33,8 @@ search**, and it silently ignores parameters it does not recognise — passing
 `q=energie` returns all 3,751,381 decisions while looking like a search result.
 This server therefore never forwards a keyword to that API. Case-law keyword
 search is served from a LOCAL INDEX (`search_caselaw`), whose coverage is
-whatever has been crawled. Call `server_status` to see that coverage before
+whatever has been crawled. Call `status` (`server_status` when this backend
+runs on its own) to see that coverage before
 concluding something does not exist. `browse_caselaw` uses only the filters the
 API genuinely honours (date, court, legal area).
 
@@ -87,7 +89,7 @@ def _t_search_caselaw(args: Dict[str, Any]) -> Any:
                 "can repair the index offline with `python crawl.py "
                 "--backfill-court`; until then, search without `court` and read "
                 "the court from each result." % missing)
-    out["index_coverage"] = _index.get_state("coverage") or "unknown — call server_status"
+    out["index_coverage"] = _index.get_state("coverage") or "unknown — call status (server_status when run standalone)"
     out["coverage_warning"] = (
         "Searches the LOCAL index only, not all 3.75M Dutch decisions. Absence "
         "from these results is not evidence that no such decision exists."
@@ -154,6 +156,15 @@ def _t_vocabulary(args: Dict[str, Any]) -> Any:
         raise McpError(str(exc)) from exc
 
 
+def _index_updates() -> Dict[str, Any]:
+    """Updates applied at boot on top of the baked index (indeks_ek.py at the repository root)."""
+    try:
+        value = json.loads(_index.get_state("ek") or "null")
+    except ValueError:
+        return {}
+    return {"index_updates": value} if isinstance(value, dict) else {}
+
+
 def _t_status(args: Dict[str, Any]) -> Any:
     return {
         "server": "nl-rechtspraak-mcp",
@@ -172,6 +183,7 @@ def _t_status(args: Dict[str, Any]) -> Any:
             "unknown parameters: ?q=, ?keyword= and ?text= all return the "
             "unfiltered 3,751,381. Verified 2026-08-30."
         ),
+        **_index_updates(),
         **embeddings_status(),
     }
 

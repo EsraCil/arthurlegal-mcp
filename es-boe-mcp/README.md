@@ -88,9 +88,18 @@ python server.py --transport http --port 8000
 
 ```sh
 python crawl.py --max 0
+python crawl.py --backfill-text      # optional: the first 8,000 characters of each act's text in force (one request per act)
+python crawl.py --repair-status      # no requests: re-derive the status column from the stored text head (vectors kept)
 ```
 
 Direct fetches and browsing work without it; keyword search does not.
+
+Status: BOE's list flags an act only as spent (`vigencia agotada`) or not. An act whose stored text
+head opens with BOE's own note of an unqualified repeal or annulment already in effect ("Norma
+derogada[, con efectos de <fecha>,] por …") is indexed as `derogada` / `anulada`; a qualified note
+(`salvo`, `en cuanto se oponga`, `sin perjuicio de`, a later date) leaves it `vigente`.
+`only_in_force=true` keeps only `vigente`. A re-crawl skips rows that would not change, so their
+vectors are kept.
 
 ### Connecting from claude.ai
 
