@@ -19,6 +19,7 @@ genel; kişisel veri içermez.
   python duman_testi.py ... --json sonuc.json
 
 Çıkış kodu: hepsi TAMAM ise 0; yalnız ERISIM varsa 2; ADRES, BOS ya da HATA varsa 1.
+Günlük koşuda sonuçtan issue açan adım: duman_nobetci.py.
 """
 
 from __future__ import annotations
@@ -94,7 +95,9 @@ KONTROLLER: List[Kontrol] = [
      "kurum_karari_getir", (lambda a, i, k=k, alan=alan: {"kurum": k, "id": a.get(alan) if alan == "issue" else i[alan]}))
     for k, q, alan in (
         ("rekabet", {"query": "birleşme"}, "karar_id"),
-        ("epdk", {"query": "lisans"}, "id"),
+        # EPDK: tek piyasa, üç kategori. Piyasa verilmezse soğuk önbellekte beş piyasa sayfası ve ~126 liste
+        # art arda çekilir (sources/epdk.py); günlük denetim kuruma bu kadar istek atmamalı.
+        ("epdk", {"market": "elektrik", "params": {"max_categories": 3}}, "id"),
         ("spk", {"query": "bülten"}, "bulten"),
         ("bddk", {"query": "karar"}, "id"),
         ("kvkk", {"query": "veri sorumlusu"}, "id"),
